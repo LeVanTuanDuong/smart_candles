@@ -16,6 +16,7 @@ import '../screens/meditation_guide_screen.dart';
 import '../services/chatbot_service.dart' show ChatbotService;
 import '../services/temperature_history_service.dart';
 import '../models/temperature_history_entry.dart';
+import '../services/global_music_player_service.dart';
 
 class DashboardHomeScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -41,6 +42,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     isConnected: true,
   );
   MoodType? _suggestedMood;
+  final GlobalMusicPlayerService _globalMusicPlayer = GlobalMusicPlayerService();
 
   @override
   void initState() {
@@ -48,6 +50,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     _deviceStatus = widget.deviceStatus;
     // Initialize with default mood to show suggestions from the start
     _suggestedMood = MoodType.normal;
+    
+    // Listen to global music player changes
+    _globalMusicPlayer.addListener(_onMusicPlayerChanged);
 
     // Save initial temperature to history
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -63,6 +68,25 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
         DangerAlertDialog.show(context, _deviceStatus.temperature);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _globalMusicPlayer.removeListener(_onMusicPlayerChanged);
+    super.dispose();
+  }
+
+  void _onMusicPlayerChanged() {
+    if (mounted) {
+      setState(() {
+        // Update device status based on global music player
+        _deviceStatus = _deviceStatus.copyWith(
+          isMusicPlaying: _globalMusicPlayer.isPlaying,
+          currentMusic: _globalMusicPlayer.currentTrack?.name,
+          musicVolume: _globalMusicPlayer.volume,
+        );
+      });
+    }
   }
 
   @override
@@ -204,58 +228,67 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
             // Music Control Widget (always show with suggested or current music)
             MusicControlHome(
               musicTitle:
+                  _globalMusicPlayer.currentTrack?.name ??
                   _deviceStatus.currentMusic ??
                   ChatbotService.getMusicSuggestions(
                     _suggestedMood ?? MoodType.normal,
                   ).first,
               musicSubtitle:
-                  _deviceStatus.currentMusic != null && _suggestedMood != null
+                  _globalMusicPlayer.currentTrack?.category ??
+                  (_deviceStatus.currentMusic != null && _suggestedMood != null
                   ? '(Gợi ý)'
-                  : '',
-              isPlaying: _deviceStatus.isMusicPlaying,
-              volume: _deviceStatus.musicVolume,
+                  : ''),
+              isPlaying: _globalMusicPlayer.isPlaying || _deviceStatus.isMusicPlaying,
+              volume: _globalMusicPlayer.volume,
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => MeditationGuideScreen(
                       currentTrack:
+                          _globalMusicPlayer.currentTrack?.name ??
                           _deviceStatus.currentMusic ??
                           ChatbotService.getMusicSuggestions(
                             _suggestedMood ?? MoodType.normal,
                           ).first,
-                      isPlaying: _deviceStatus.isMusicPlaying,
+                      isPlaying: _globalMusicPlayer.isPlaying || _deviceStatus.isMusicPlaying,
                     ),
                   ),
                 );
               },
-              onPlayPause: () {
-                // If no current music, set it from suggestion
-                if (_deviceStatus.currentMusic == null) {
-                  final currentMood = _suggestedMood ?? MoodType.normal;
-                  final suggestedMusic = ChatbotService.getMusicSuggestions(
-                    currentMood,
-                  ).first;
-                  _updateStatus(
-                    _deviceStatus.copyWith(
-                      isMusicPlaying: true,
-                      currentMusic: suggestedMusic,
-                    ),
-                  );
+              onPlayPause: () async {
+                // Use global music player if there's a current track
+                if (_globalMusicPlayer.currentTrack != null) {
+                  await _globalMusicPlayer.togglePlayPause();
                 } else {
-                  _updateStatus(
-                    _deviceStatus.copyWith(
-                      isMusicPlaying: !_deviceStatus.isMusicPlaying,
-                    ),
-                  );
+                  // If no current music, set it from suggestion
+                  if (_deviceStatus.currentMusic == null) {
+                    final currentMood = _suggestedMood ?? MoodType.normal;
+                    final suggestedMusic = ChatbotService.getMusicSuggestions(
+                      currentMood,
+                    ).first;
+                    _updateStatus(
+                      _deviceStatus.copyWith(
+                        isMusicPlaying: true,
+                        currentMusic: suggestedMusic,
+                      ),
+                    );
+                  } else {
+                    _updateStatus(
+                      _deviceStatus.copyWith(
+                        isMusicPlaying: !_deviceStatus.isMusicPlaying,
+                      ),
+                    );
+                  }
                 }
               },
               onPrevious: () {
-                // Handle previous track
+                // Handle previous track (TODO: implement playlist)
               },
               onNext: () {
-                // Handle next track
+                // Handle next track (TODO: implement playlist)
               },
-              onVolumeChanged: (newVolume) {
+              onVolumeChanged: (newVolume) async {
+                await _globalMusicPlayer.setVolume(newVolume);
                 _updateStatus(_deviceStatus.copyWith(musicVolume: newVolume));
               },
             ),

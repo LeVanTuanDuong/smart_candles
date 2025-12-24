@@ -1,12 +1,13 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'package:just_audio/just_audio.dart';
 import '../models/music_track.dart';
 import '../services/music_service.dart';
+import '../services/global_music_player_service.dart';
 
 class MusicLibraryScreen extends StatefulWidget {
   const MusicLibraryScreen({super.key});
@@ -21,24 +22,39 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
   Map<String, List<MusicTrack>> _tracksByCategory = {};
   List<MusicTrack> _uploadedTracks = [];
   bool _isLoading = true;
-  AudioPlayer? _audioPlayer;
+  final GlobalMusicPlayerService _globalMusicPlayer =
+      GlobalMusicPlayerService();
   String? _currentlyPlayingId;
-  bool _isPlaying = false;
+  bool _isLoadingTrack = false; // Prevent multiple simultaneous play requests
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
-      setState(() {}); // Rebuild when tab changes
+      // Only rebuild if tab actually changed
+      if (_tabController.indexIsChanging ||
+          _tabController.index != _tabController.previousIndex) {
+        setState(() {});
+      }
     });
+    // Listen to global music player changes
+    _globalMusicPlayer.addListener(_onMusicPlayerChanged);
     _loadTracks();
+  }
+
+  void _onMusicPlayerChanged() {
+    if (mounted) {
+      setState(() {
+        _currentlyPlayingId = _globalMusicPlayer.currentTrack?.id;
+      });
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _audioPlayer?.dispose();
+    _globalMusicPlayer.removeListener(_onMusicPlayerChanged);
     super.dispose();
   }
 
@@ -60,12 +76,10 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
   void _showAddMusicDialog() {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
-    final urlController = TextEditingController();
     String selectedCategory = MusicService.getDefaultCategories().first;
     XFile? selectedImage;
     PlatformFile? selectedAudio;
     final ImagePicker imagePicker = ImagePicker();
-    bool useUrl = false;
 
     showDialog(
       context: context,
@@ -101,10 +115,12 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                     border: OutlineInputBorder(),
                   ),
                   items: MusicService.getDefaultCategories()
-                      .map((category) => DropdownMenuItem(
-                            value: category,
-                            child: Text(category),
-                          ))
+                      .map(
+                        (category) => DropdownMenuItem(
+                          value: category,
+                          child: Text(category),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
@@ -173,52 +189,81 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                   ),
                 ],
                 const SizedBox(height: 16),
-                // Audio source selection
-                Row(
-                  children: [
-                    Expanded(
-                      child: ChoiceChip(
-                        label: const Text('Tải lên file'),
-                        selected: !useUrl,
-                        onSelected: (selected) {
-                          setDialogState(() {
-                            useUrl = false;
-                            urlController.clear();
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ChoiceChip(
-                        label: const Text('Link nhạc'),
-                        selected: useUrl,
-                        onSelected: (selected) {
-                          setDialogState(() {
-                            useUrl = true;
-                            selectedAudio = null;
-                          });
-                        },
-                      ),
-                    ),
-                  ],
+                // Audio file selection - only allow file upload
+                const Text(
+                  'Chọn file nhạc:',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(height: 16),
-                if (!useUrl)
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.upload_file),
-                    label: const Text('Chọn file nhạc'),
-                    onPressed: () async {
-                      FilePickerResult? result = await FilePicker.platform.pickFiles(
-                        type: FileType.audio,
-                      );
-                      if (result != null && result.files.single.path != null) {
-                        setDialogState(() {
-                          selectedAudio = result.files.single;
-                        });
-                      }
-                    },
-                  ),
+                const SizedBox(height: 8),
+                Builder(
+                  builder: (context) {
+                    bool isPickingFile = false;
+                    return StatefulBuilder(
+                      builder: (context, setButtonState) {
+                        return OutlinedButton.icon(
+                          icon: isPickingFile
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.upload_file),
+                          label: Text(
+                            isPickingFile
+                                ? 'Đang chọn...'
+                                : 'Chọn file nhạc từ thư viện',
+                          ),
+                          onPressed: isPickingFile
+                              ? null
+                              : () async {
+                                  setButtonState(() => isPickingFile = true);
+                                  try {
+                                    FilePickerResult? result = await FilePicker
+                                        .platform
+                                        .pickFiles(type: FileType.audio);
+                                    if (result != null &&
+                                        result.files.single.path != null) {
+                                      setDialogState(() {
+                                        selectedAudio = result.files.single;
+                                      });
+                                    }
+                                  } catch (e) {
+                                    // Handle multiple_request exception gracefully
+                                    if (e.toString().contains(
+                                      'multiple_request',
+                                    )) {
+                                      // User cancelled or another request started - ignore silently
+                                      print(
+                                        'File picker cancelled or multiple request',
+                                      );
+                                    } else {
+                                      // Show error for other exceptions
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Lỗi khi chọn file: ${e.toString()}',
+                                            ),
+                                            duration: const Duration(
+                                              seconds: 2,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  } finally {
+                                    setButtonState(() => isPickingFile = false);
+                                  }
+                                },
+                        );
+                      },
+                    );
+                  },
+                ),
                 if (selectedAudio != null) ...[
                   const SizedBox(height: 8),
                   Container(
@@ -248,15 +293,6 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                     ),
                   ),
                 ],
-                if (useUrl)
-                  TextField(
-                    controller: urlController,
-                    decoration: const InputDecoration(
-                      labelText: 'Link nhạc (URL)',
-                      border: OutlineInputBorder(),
-                      hintText: 'https://...',
-                    ),
-                  ),
               ],
             ),
           ),
@@ -267,60 +303,80 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
             ),
             ElevatedButton(
               onPressed: () async {
-                if (nameController.text.trim().isNotEmpty &&
-                    (!useUrl || urlController.text.trim().isNotEmpty)) {
-                  String? imagePath;
-                  String? audioPath;
-                  String? audioUrl;
-
-                  // Save image if selected
-                  if (selectedImage != null) {
-                    try {
-                      final appDir = await getApplicationDocumentsDirectory();
-                      final fileName =
-                          'music_${DateTime.now().millisecondsSinceEpoch}${path.extension(selectedImage!.path)}';
-                      final savedImage = File(path.join(appDir.path, fileName));
-                      await File(selectedImage!.path).copy(savedImage.path);
-                      imagePath = savedImage.path;
-                    } catch (e) {
-                      print('Error saving image: $e');
-                    }
-                  }
-
-                  // Handle audio
-                  if (useUrl) {
-                    audioUrl = urlController.text.trim();
-                  } else if (selectedAudio != null && selectedAudio!.path != null) {
-                    try {
-                      // Save audio file
-                      final appDir = await getApplicationDocumentsDirectory();
-                      final fileName = 'audio_${DateTime.now().millisecondsSinceEpoch}${path.extension(selectedAudio!.path!)}';
-                      final savedAudio = File(path.join(appDir.path, fileName));
-                      await File(selectedAudio!.path!).copy(savedAudio.path);
-                      audioPath = savedAudio.path;
-                    } catch (e) {
-                      print('Error saving audio file: $e');
-                    }
-                  }
-
-                  final track = MusicTrack(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                    name: nameController.text.trim(),
-                    description: descriptionController.text.trim(),
-                    imagePath: imagePath,
-                    audioPath: audioPath,
-                    audioUrl: audioUrl,
-                    category: selectedCategory,
-                    isUploaded: true,
-                    addedDate: DateTime.now(),
+                // Validate: need name and audio file
+                if (nameController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Vui lòng nhập tên nhạc'),
+                      duration: Duration(seconds: 2),
+                    ),
                   );
+                  return;
+                }
 
-                  await MusicService.addUploadedTrack(track);
+                if (selectedAudio == null || selectedAudio!.path == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Vui lòng chọn file nhạc từ thư viện'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
 
-                  if (mounted) {
-                    Navigator.of(context).pop();
-                    _loadTracks();
+                String? imagePath;
+                String? audioPath;
+
+                // Save image if selected
+                if (selectedImage != null) {
+                  try {
+                    final appDir = await getApplicationDocumentsDirectory();
+                    final fileName =
+                        'music_${DateTime.now().millisecondsSinceEpoch}${path.extension(selectedImage!.path)}';
+                    final savedImage = File(path.join(appDir.path, fileName));
+                    await File(selectedImage!.path).copy(savedImage.path);
+                    imagePath = savedImage.path;
+                  } catch (e) {
+                    print('Error saving image: $e');
                   }
+                }
+
+                // Save audio file
+                try {
+                  final appDir = await getApplicationDocumentsDirectory();
+                  final fileName =
+                      'audio_${DateTime.now().millisecondsSinceEpoch}${path.extension(selectedAudio!.path!)}';
+                  final savedAudio = File(path.join(appDir.path, fileName));
+                  await File(selectedAudio!.path!).copy(savedAudio.path);
+                  audioPath = savedAudio.path;
+                } catch (e) {
+                  print('Error saving audio file: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Lỗi khi lưu file nhạc: $e'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
+
+                final track = MusicTrack(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  name: nameController.text.trim(),
+                  description: descriptionController.text.trim(),
+                  imagePath: imagePath,
+                  audioPath: audioPath,
+                  audioUrl: null, // No URL, only local file
+                  category: selectedCategory,
+                  isUploaded: true,
+                  addedDate: DateTime.now(),
+                );
+
+                await MusicService.addUploadedTrack(track);
+
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  _loadTracks();
                 }
               },
               child: const Text('Thêm'),
@@ -333,13 +389,14 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
 
   void _showEditMusicDialog(MusicTrack track) {
     final nameController = TextEditingController(text: track.name);
-    final descriptionController = TextEditingController(text: track.description);
-    final urlController = TextEditingController(text: track.audioUrl ?? '');
+    final descriptionController = TextEditingController(
+      text: track.description,
+    );
     String selectedCategory = track.category;
     XFile? selectedImage;
     String? currentImagePath = track.imagePath;
+    PlatformFile? selectedAudio;
     final ImagePicker imagePicker = ImagePicker();
-    bool useUrl = track.audioUrl != null;
 
     showDialog(
       context: context,
@@ -374,10 +431,12 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                     border: OutlineInputBorder(),
                   ),
                   items: MusicService.getDefaultCategories()
-                      .map((category) => DropdownMenuItem(
-                            value: category,
-                            child: Text(category),
-                          ))
+                      .map(
+                        (category) => DropdownMenuItem(
+                          value: category,
+                          child: Text(category),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
@@ -487,42 +546,137 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                   ),
                 ],
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ChoiceChip(
-                        label: const Text('Tải lên file'),
-                        selected: !useUrl,
-                        onSelected: (selected) {
-                          setDialogState(() {
-                            useUrl = false;
-                            urlController.clear();
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ChoiceChip(
-                        label: const Text('Link nhạc'),
-                        selected: useUrl,
-                        onSelected: (selected) {
-                          setDialogState(() => useUrl = selected);
-                        },
-                      ),
-                    ),
-                  ],
+                // Audio file selection - only allow file upload
+                const Text(
+                  'Chọn file nhạc mới (tùy chọn):',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(height: 16),
-                if (useUrl)
-                  TextField(
-                    controller: urlController,
-                    decoration: const InputDecoration(
-                      labelText: 'Link nhạc (URL)',
-                      border: OutlineInputBorder(),
-                      hintText: 'https://...',
+                const SizedBox(height: 8),
+                if (track.audioPath != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.audio_file,
+                          size: 20,
+                          color: Colors.blue,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'File hiện tại: ${path.basename(track.audioPath!)}',
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 8),
+                ],
+                Builder(
+                  builder: (context) {
+                    bool isPickingFile = false;
+                    return StatefulBuilder(
+                      builder: (context, setButtonState) {
+                        return OutlinedButton.icon(
+                          icon: isPickingFile
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.upload_file),
+                          label: Text(
+                            isPickingFile
+                                ? 'Đang chọn...'
+                                : 'Chọn file nhạc mới từ thư viện',
+                          ),
+                          onPressed: isPickingFile
+                              ? null
+                              : () async {
+                                  setButtonState(() => isPickingFile = true);
+                                  try {
+                                    FilePickerResult? result = await FilePicker
+                                        .platform
+                                        .pickFiles(type: FileType.audio);
+                                    if (result != null &&
+                                        result.files.single.path != null) {
+                                      setDialogState(() {
+                                        selectedAudio = result.files.single;
+                                      });
+                                    }
+                                  } catch (e) {
+                                    // Handle multiple_request exception gracefully
+                                    if (e.toString().contains(
+                                      'multiple_request',
+                                    )) {
+                                      // User cancelled or another request started - ignore silently
+                                      print(
+                                        'File picker cancelled or multiple request',
+                                      );
+                                    } else {
+                                      // Show error for other exceptions
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Lỗi khi chọn file: ${e.toString()}',
+                                            ),
+                                            duration: const Duration(
+                                              seconds: 2,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  } finally {
+                                    setButtonState(() => isPickingFile = false);
+                                  }
+                                },
+                        );
+                      },
+                    );
+                  },
+                ),
+                if (selectedAudio != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.audio_file, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            selectedAudio!.name,
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () {
+                            setDialogState(() => selectedAudio = null);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -533,52 +687,89 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
             ),
             ElevatedButton(
               onPressed: () async {
-                if (nameController.text.trim().isNotEmpty) {
-                  String? imagePath = currentImagePath;
-                  String? audioUrl;
-
-                  // Save new image if selected
-                  if (selectedImage != null) {
-                    try {
-                      // Delete old image
-                      if (track.imagePath != null &&
-                          File(track.imagePath!).existsSync()) {
-                        try {
-                          await File(track.imagePath!).delete();
-                        } catch (e) {
-                          print('Error deleting old image: $e');
-                        }
-                      }
-
-                      final appDir = await getApplicationDocumentsDirectory();
-                      final fileName =
-                          'music_${DateTime.now().millisecondsSinceEpoch}${path.extension(selectedImage!.path)}';
-                      final savedImage = File(path.join(appDir.path, fileName));
-                      await File(selectedImage!.path).copy(savedImage.path);
-                      imagePath = savedImage.path;
-                    } catch (e) {
-                      print('Error saving image: $e');
-                    }
-                  }
-
-                  if (useUrl) {
-                    audioUrl = urlController.text.trim();
-                  }
-
-                  final updatedTrack = track.copyWith(
-                    name: nameController.text.trim(),
-                    description: descriptionController.text.trim(),
-                    imagePath: imagePath,
-                    audioUrl: audioUrl,
-                    category: selectedCategory,
+                if (nameController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Vui lòng nhập tên nhạc'),
+                      duration: Duration(seconds: 2),
+                    ),
                   );
+                  return;
+                }
 
-                  await MusicService.updateUploadedTrack(updatedTrack);
+                String? imagePath = currentImagePath;
+                String? audioPath = track
+                    .audioPath; // Keep existing audio if no new file selected
 
-                  if (mounted) {
-                    Navigator.of(context).pop();
-                    _loadTracks();
+                // Save new image if selected
+                if (selectedImage != null) {
+                  try {
+                    // Delete old image
+                    if (track.imagePath != null &&
+                        File(track.imagePath!).existsSync()) {
+                      try {
+                        await File(track.imagePath!).delete();
+                      } catch (e) {
+                        print('Error deleting old image: $e');
+                      }
+                    }
+
+                    final appDir = await getApplicationDocumentsDirectory();
+                    final fileName =
+                        'music_${DateTime.now().millisecondsSinceEpoch}${path.extension(selectedImage!.path)}';
+                    final savedImage = File(path.join(appDir.path, fileName));
+                    await File(selectedImage!.path).copy(savedImage.path);
+                    imagePath = savedImage.path;
+                  } catch (e) {
+                    print('Error saving image: $e');
                   }
+                }
+
+                // Save new audio file if selected
+                if (selectedAudio != null && selectedAudio!.path != null) {
+                  try {
+                    // Delete old audio file if exists
+                    if (track.audioPath != null &&
+                        File(track.audioPath!).existsSync()) {
+                      try {
+                        await File(track.audioPath!).delete();
+                      } catch (e) {
+                        print('Error deleting old audio file: $e');
+                      }
+                    }
+
+                    final appDir = await getApplicationDocumentsDirectory();
+                    final fileName =
+                        'audio_${DateTime.now().millisecondsSinceEpoch}${path.extension(selectedAudio!.path!)}';
+                    final savedAudio = File(path.join(appDir.path, fileName));
+                    await File(selectedAudio!.path!).copy(savedAudio.path);
+                    audioPath = savedAudio.path;
+                  } catch (e) {
+                    print('Error saving audio file: $e');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Lỗi khi lưu file nhạc: $e'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                    return;
+                  }
+                }
+
+                final updatedTrack = track.copyWith(
+                  name: nameController.text.trim(),
+                  description: descriptionController.text.trim(),
+                  imagePath: imagePath,
+                  audioPath: audioPath,
+                  audioUrl: null, // Remove URL, only use local file
+                  category: selectedCategory,
+                );
+
+                await MusicService.updateUploadedTrack(updatedTrack);
+
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  _loadTracks();
                 }
               },
               child: const Text('Lưu'),
@@ -592,7 +783,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
   Future<void> _deleteTrack(String trackId) async {
     await MusicService.deleteUploadedTrack(trackId);
     await _loadTracks();
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -604,106 +795,104 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
   }
 
   Future<void> _playTrack(MusicTrack track) async {
+    if (!mounted) return;
+
+    // Allow switching tracks even if one is loading - this is user intent
+    // Reset loading state first to allow new track to play
+    if (_isLoadingTrack) {
+      print('🔄 Switching to new track while previous one was loading...');
+      _isLoadingTrack = false;
+    }
+
+    // If clicking the same track that's already playing, toggle pause/play
+    if (_currentlyPlayingId == track.id && _globalMusicPlayer.isPlaying) {
+      await _globalMusicPlayer.togglePlayPause();
+      return;
+    }
+
+    setState(() {
+      _isLoadingTrack = true;
+      _currentlyPlayingId =
+          track.id; // Update immediately to show loading state
+    });
+
     try {
-      // Stop current playback if playing
-      if (_audioPlayer != null && _isPlaying) {
-        await _audioPlayer!.stop();
-        await _audioPlayer!.dispose();
+      // Use global music player service to play track
+      // This will sync with the Home screen music control
+      final globalPlayer = GlobalMusicPlayerService();
+      await globalPlayer.playTrack(track);
+
+      // Update local state to show which track is playing
+      if (mounted) {
+        setState(() {
+          _currentlyPlayingId = track.id;
+          _isLoadingTrack = false;
+        });
       }
 
-      // Get audio URL
-      String? audioUrl = track.audioUrl;
-      if (audioUrl == null || audioUrl.isEmpty) {
-        if (track.audioPath != null && File(track.audioPath!).existsSync()) {
-          // Play from local file
-          _audioPlayer = AudioPlayer();
-          await _audioPlayer!.setFilePath(track.audioPath!);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Không tìm thấy file nhạc'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-          return;
-        }
-      } else {
-        // Play from URL
-        _audioPlayer = AudioPlayer();
-        
-        // Handle Openwhyd URL format
-        if (audioUrl.startsWith('https://openwhyd.org/')) {
-          // Try to get the actual stream URL from Openwhyd
-          // For now, try direct URL
-          try {
-            await _audioPlayer!.setUrl(audioUrl);
-          } catch (e) {
-            print('Error playing Openwhyd URL: $e');
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Không thể phát nhạc từ link này'),
-                duration: Duration(seconds: 2),
-              ),
-            );
-            return;
-          }
-        } else {
-          await _audioPlayer!.setUrl(audioUrl);
-        }
-      }
-
-      setState(() {
-        _currentlyPlayingId = track.id;
-        _isPlaying = true;
-      });
-
-      // Play audio
-      await _audioPlayer!.play();
-
-      // Listen for playback completion
-      _audioPlayer!.playerStateStream.listen((state) {
-        if (state.processingState == ProcessingState.completed) {
-          setState(() {
-            _isPlaying = false;
-            _currentlyPlayingId = null;
-          });
-        }
-      });
+      print('✅ Started playing via global player: ${track.name}');
     } catch (e) {
       print('Error playing track: $e');
       if (mounted) {
+        // Provide user-friendly error message
+        String errorMessage = 'Không thể phát nhạc. Vui lòng thử lại.';
+        final errorStr = e.toString().toLowerCase();
+
+        if (errorStr.contains('offline') ||
+            errorStr.contains('network') ||
+            errorStr.contains('connection') ||
+            errorStr.contains('socketexception') ||
+            errorStr.contains('failed host lookup')) {
+          errorMessage =
+              'Không có kết nối internet. Vui lòng kiểm tra mạng và thử lại.';
+        } else if (errorStr.contains('not found') || errorStr.contains('404')) {
+          errorMessage = 'Không tìm thấy file nhạc. Vui lòng chọn track khác.';
+        } else if (errorStr.contains('cannot play') ||
+            errorStr.contains('youtube')) {
+          errorMessage =
+              'Track này không thể phát được. Vui lòng chọn track khác.';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Lỗi khi phát nhạc: $e'),
-            duration: const Duration(seconds: 2),
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
-      setState(() {
-        _isPlaying = false;
-        _currentlyPlayingId = null;
-      });
+      if (mounted) {
+        setState(() {
+          // Only clear current track if it's the one that failed
+          if (_currentlyPlayingId == track.id) {
+            _currentlyPlayingId = null;
+          }
+          _isLoadingTrack = false;
+        });
+      }
     }
   }
 
   Future<void> _pauseTrack() async {
-    if (_audioPlayer != null && _isPlaying) {
-      await _audioPlayer!.pause();
-      setState(() {
-        _isPlaying = false;
-      });
+    if (!mounted) return;
+    try {
+      await _globalMusicPlayer.togglePlayPause();
+    } catch (e) {
+      print('Error pausing track: $e');
     }
   }
 
   Future<void> _stopTrack() async {
-    if (_audioPlayer != null) {
-      await _audioPlayer!.stop();
-      await _audioPlayer!.dispose();
-      _audioPlayer = null;
-      setState(() {
-        _isPlaying = false;
-        _currentlyPlayingId = null;
-      });
+    if (!mounted) return;
+    try {
+      await _globalMusicPlayer.stop();
+      if (mounted) {
+        setState(() {
+          _currentlyPlayingId = null;
+          _isLoadingTrack = false;
+        });
+      }
+    } catch (e) {
+      print('Error stopping track: $e');
     }
   }
 
@@ -718,10 +907,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
         ),
         title: const Text(
           'Thư viện Nhạc',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.orange.shade600,
         elevation: 0,
@@ -740,10 +926,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(
               controller: _tabController,
-              children: [
-                _buildLibraryTab(),
-                _buildUploadTab(),
-              ],
+              children: [_buildLibraryTab(), _buildUploadTab()],
             ),
       floatingActionButton: _tabController.index == 1
           ? FloatingActionButton(
@@ -775,6 +958,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _tracksByCategory.length,
+      // Use keys to optimize rebuilds
       itemBuilder: (context, index) {
         final category = _tracksByCategory.keys.elementAt(index);
         final tracks = _tracksByCategory[category]!;
@@ -795,7 +979,13 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                 ),
               ),
             ),
-            ...tracks.map((track) => _buildMusicCard(track, isUploaded: track.isUploaded)),
+            ...tracks.map(
+              (track) => _buildMusicCard(
+                track,
+                isUploaded: track.isUploaded,
+                key: ValueKey(track.id),
+              ),
+            ),
           ],
         );
       },
@@ -828,13 +1018,29 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
       padding: const EdgeInsets.all(16),
       itemCount: _uploadedTracks.length,
       itemBuilder: (context, index) {
-        return _buildMusicCard(_uploadedTracks[index], isUploaded: true);
+        final track = _uploadedTracks[index];
+        return _buildMusicCard(
+          track,
+          isUploaded: true,
+          key: ValueKey(track.id),
+        );
       },
     );
   }
 
-  Widget _buildMusicCard(MusicTrack track, {required bool isUploaded}) {
+  Widget _buildMusicCard(
+    MusicTrack track, {
+    required bool isUploaded,
+    Key? key,
+  }) {
+    final isCurrentlyPlaying =
+        _currentlyPlayingId == track.id && _globalMusicPlayer.isPlaying;
+    final isLoadingThisTrack =
+        _currentlyPlayingId == track.id &&
+        (_isLoadingTrack || _globalMusicPlayer.isLoading);
+
     return Container(
+      key: key,
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.amber[50],
@@ -880,47 +1086,41 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                 const SizedBox(height: 4),
                 Text(
                   track.description,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (track.audioUrl != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Row(
-                      children: [
-                        Icon(Icons.link, size: 12, color: Colors.blue.shade600),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Phát trực tiếp',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.blue.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
               ],
             ),
           ),
           // Play button
           IconButton(
-            icon: Icon(
-              _currentlyPlayingId == track.id && _isPlaying
-                  ? Icons.pause_circle_filled
-                  : Icons.play_circle_filled,
-              color: Colors.red.shade600,
-              size: 32,
-            ),
+            icon: isLoadingThisTrack
+                ? const SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    isCurrentlyPlaying
+                        ? Icons.pause_circle_filled
+                        : Icons.play_circle_filled,
+                    color: Colors.red.shade600,
+                    size: 32,
+                  ),
             onPressed: () {
-              if (_currentlyPlayingId == track.id && _isPlaying) {
+              // Allow switching tracks even if one is loading
+              // Only prevent if clicking the same track that's loading
+              if (_isLoadingTrack && _currentlyPlayingId == track.id) {
+                return; // Prevent multiple taps on the same loading track
+              }
+
+              if (isCurrentlyPlaying) {
                 _pauseTrack();
               } else {
-                if (_currentlyPlayingId != null) {
+                // Stop current track if playing a different one
+                if (_currentlyPlayingId != null &&
+                    _currentlyPlayingId != track.id) {
                   _stopTrack();
                 }
                 _playTrack(track);
@@ -972,7 +1172,10 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                             _deleteTrack(track.id);
                             Navigator.of(context).pop();
                           },
-                          child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+                          child: const Text(
+                            'Xóa',
+                            style: TextStyle(color: Colors.red),
+                          ),
                         ),
                       ],
                     ),
@@ -989,7 +1192,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
     // Check if imagePath is a URL or local file
     if (track.imagePath != null && track.imagePath!.isNotEmpty) {
       // Check if it's a URL
-      if (track.imagePath!.startsWith('http://') || 
+      if (track.imagePath!.startsWith('http://') ||
           track.imagePath!.startsWith('https://')) {
         return ClipRRect(
           borderRadius: const BorderRadius.only(
@@ -1010,7 +1213,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                   child: CircularProgressIndicator(
                     value: loadingProgress.expectedTotalBytes != null
                         ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
+                              loadingProgress.expectedTotalBytes!
                         : null,
                   ),
                 ),
@@ -1026,10 +1229,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
               topLeft: Radius.circular(12),
               bottomLeft: Radius.circular(12),
             ),
-            child: Image.file(
-              File(track.imagePath!),
-              fit: BoxFit.cover,
-            ),
+            child: Image.file(File(track.imagePath!), fit: BoxFit.cover),
           );
         }
       }
@@ -1083,7 +1283,11 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
               bottomLeft: Radius.circular(12),
             ),
           ),
-          child: const Icon(Icons.self_improvement, color: Colors.white, size: 40),
+          child: const Icon(
+            Icons.self_improvement,
+            color: Colors.white,
+            size: 40,
+          ),
         );
       default:
         return Container(
@@ -1093,4 +1297,3 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
     }
   }
 }
-

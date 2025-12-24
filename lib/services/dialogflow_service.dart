@@ -30,6 +30,8 @@ class DialogflowService {
   // Service account credentials
   static Map<String, dynamic>? _serviceAccount;
   static AutoRefreshingAuthClient? _authClient;
+  static bool _isOffline =
+      false; // Track offline state to avoid repeated attempts
 
   // Check if service account is configured
   static bool _hasServiceAccount() {
@@ -59,6 +61,11 @@ class DialogflowService {
   static Future<void> _initializeAuthClient() async {
     if (_serviceAccount == null) return;
 
+    // Skip if we know we're offline
+    if (_isOffline) {
+      return;
+    }
+
     try {
       print('🔵 Dialogflow: Initializing auth client...');
 
@@ -68,9 +75,31 @@ class DialogflowService {
       _authClient = await clientViaServiceAccount(credentials, scopes);
 
       print('✅ Dialogflow: Auth client initialized');
+      _isOffline = false; // Reset offline flag on success
     } catch (e, stackTrace) {
-      print('❌ Error initializing auth client: $e');
-      print('Stack trace: $stackTrace');
+      // Check if it's a network error
+      final errorStr = e.toString().toLowerCase();
+      final isNetworkError =
+          errorStr.contains('socketexception') ||
+          errorStr.contains('failed host lookup') ||
+          errorStr.contains('network') ||
+          errorStr.contains('connection');
+
+      if (isNetworkError) {
+        if (!_isOffline) {
+          // Only log once when first detecting offline
+          print(
+            '⚠️ Network error detected - device is offline. Dialogflow will use fallback responses.',
+          );
+          _isOffline = true;
+        }
+        // Don't print full error stack when offline to reduce log noise
+      } else {
+        // Log non-network errors normally
+        print('❌ Error initializing auth client: $e');
+        print('Stack trace: $stackTrace');
+      }
+
       _authClient = null;
     }
   }
@@ -79,6 +108,11 @@ class DialogflowService {
   static Future<String?> _getAccessToken() async {
     if (_authClient != null) {
       return _authClient!.credentials.accessToken.data;
+    }
+
+    // Skip if offline to avoid repeated failed attempts
+    if (_isOffline) {
+      return null;
     }
 
     // Try to initialize if not already done
@@ -252,8 +286,26 @@ class DialogflowService {
         return 'Xin chào! Hôm nay bạn cảm thấy thế nào? Bạn đang mệt, buồn hay căng thẳng?';
       }
     } catch (e, stackTrace) {
-      print('❌ Error getting greeting from Dialogflow: $e');
-      print('Stack trace: $stackTrace');
+      // Check if it's a network error
+      final errorStr = e.toString().toLowerCase();
+      final isNetworkError =
+          errorStr.contains('socketexception') ||
+          errorStr.contains('failed host lookup') ||
+          errorStr.contains('network') ||
+          errorStr.contains('connection') ||
+          errorStr.contains('offline');
+
+      if (isNetworkError) {
+        if (!_isOffline) {
+          print('⚠️ Network error - using offline fallback');
+          _isOffline = true;
+        }
+        // Don't print full error when offline
+      } else {
+        print('❌ Error getting greeting from Dialogflow: $e');
+        print('Stack trace: $stackTrace');
+      }
+
       return 'Xin chào! Hôm nay bạn cảm thấy thế nào? Bạn đang mệt, buồn hay căng thẳng?';
     }
   }
@@ -286,10 +338,27 @@ class DialogflowService {
         return 'Xin lỗi, mình không hiểu. Bạn có thể nói rõ hơn không?';
       }
     } catch (e, stackTrace) {
+      // Check if it's a network error
+      final errorStr = e.toString().toLowerCase();
+      final isNetworkError =
+          errorStr.contains('socketexception') ||
+          errorStr.contains('failed host lookup') ||
+          errorStr.contains('network') ||
+          errorStr.contains('connection') ||
+          errorStr.contains('offline');
+
+      if (isNetworkError) {
+        if (!_isOffline) {
+          print('⚠️ Network error - device is offline');
+          _isOffline = true;
+        }
+        return 'Xin lỗi, không thể kết nối đến server. Vui lòng kiểm tra kết nối internet.';
+      }
+
+      // Log non-network errors
       print('❌ Error getting response from Dialogflow: $e');
       print('Stack trace: $stackTrace');
 
-      final errorStr = e.toString().toLowerCase();
       if (errorStr.contains('not configured') || errorStr.contains('project')) {
         return 'Xin lỗi, Dialogflow chưa được cấu hình. Vui lòng kiểm tra cấu hình.';
       }
@@ -297,9 +366,6 @@ class DialogflowService {
           errorStr.contains('token') ||
           errorStr.contains('unauthorized')) {
         return 'Xin lỗi, có lỗi xác thực. Vui lòng kiểm tra access token.';
-      }
-      if (errorStr.contains('network') || errorStr.contains('connection')) {
-        return 'Xin lỗi, không thể kết nối đến Dialogflow. Vui lòng kiểm tra internet.';
       }
 
       return 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.';
