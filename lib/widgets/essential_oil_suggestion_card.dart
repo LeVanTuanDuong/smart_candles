@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/mood_type.dart';
+import '../screens/essential_oil_library_screen.dart';
 
 class EssentialOilSuggestionCard extends StatelessWidget {
   final MoodType mood;
@@ -41,21 +42,29 @@ class EssentialOilSuggestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const EssentialOilLibraryScreen(),
           ),
-        ],
-      ),
-      child: Row(
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
         children: [
           // Essential oil bottle icon
           Container(
@@ -169,6 +178,7 @@ class EssentialOilSuggestionCard extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }
