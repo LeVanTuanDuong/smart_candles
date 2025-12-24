@@ -13,11 +13,13 @@ import '../screens/settings_screen.dart';
 import '../screens/mood_journal_screen.dart';
 import '../screens/safety_history_screen.dart';
 import '../screens/meditation_guide_screen.dart';
+import '../screens/music_library_screen.dart';
 import '../services/chatbot_service.dart' show ChatbotService;
 import '../services/temperature_history_service.dart';
 import '../models/temperature_history_entry.dart';
 import '../services/global_music_player_service.dart';
 import '../services/suggestion_service.dart';
+import '../services/music_service.dart';
 
 class DashboardHomeScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -89,6 +91,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
         if (_suggestionService.detectedMood != null) {
           _suggestedMood = _suggestionService.detectedMood;
         }
+        // Suggestions (essential oil, music, light) are automatically updated
+        // via _suggestionService.essentialOilSuggestion and _suggestionService.musicSuggestion
       });
     }
   }
@@ -121,6 +125,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   }
 
   void _updateStatus(DeviceStatus newStatus) {
+    if (!mounted) return; // Don't update if widget is disposed
+    
     setState(() {
       // Save temperature history if temperature changed
       if (_deviceStatus.temperature != newStatus.temperature) {
@@ -133,10 +139,12 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       }
 
       _deviceStatus = newStatus;
-      // Check for danger temperature
-      if (newStatus.temperature > 50.0) {
+      // Check for danger temperature (only if still mounted)
+      if (newStatus.temperature > 50.0 && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          DangerAlertDialog.show(context, newStatus.temperature);
+          if (mounted) {
+            DangerAlertDialog.show(context, newStatus.temperature);
+          }
         });
       }
     });
@@ -144,6 +152,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   }
 
   void _handleMoodSelected(MoodType mood) {
+    if (!mounted) return; // Don't update if widget is disposed
+    
     setState(() {
       _selectedMood = mood;
       _suggestedMood = mood;
@@ -322,22 +332,112 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
               musicType: _suggestionService.musicSuggestion ?? ChatbotService.getMusicSuggestions(
                 _suggestedMood ?? MoodType.normal,
               ).first,
-              onPlayPressed: () {
-                final currentMood = _suggestedMood ?? MoodType.normal;
-                final suggestedMusic = ChatbotService.getMusicSuggestions(
-                  currentMood,
-                ).first;
-                _updateStatus(
-                  _deviceStatus.copyWith(
-                    isMusicPlaying: true,
-                    currentMusic: suggestedMusic,
-                  ),
-                );
-                // Update suggested mood if it was null
-                if (_suggestedMood == null) {
-                  setState(() {
-                    _suggestedMood = currentMood;
-                  });
+              onPlayPressed: () async {
+                // Get the suggested music type
+                final musicType = _suggestionService.musicSuggestion ?? 
+                    ChatbotService.getMusicSuggestions(
+                      _suggestedMood ?? MoodType.normal,
+                    ).first;
+                
+                print('🎵 Playing suggested music: $musicType');
+                
+                // Map music type to category
+                String category = 'Thiền'; // default
+                if (musicType.toLowerCase().contains('piano')) {
+                  category = 'Nhạc Piano';
+                } else if (musicType.toLowerCase().contains('ambient')) {
+                  category = 'Ambient';
+                } else if (musicType.toLowerCase().contains('nature') || 
+                          musicType.toLowerCase().contains('mưa') || 
+                          musicType.toLowerCase().contains('thiên nhiên')) {
+                  category = 'Thiên nhiên';
+                } else if (musicType.toLowerCase().contains('thiền') || 
+                          musicType.toLowerCase().contains('meditation')) {
+                  category = 'Thiền';
+                }
+                
+                // Get tracks for this category
+                final tracks = MusicService.getDefaultTracksForCategory(category);
+                
+                if (tracks.isNotEmpty) {
+                  final track = tracks.first;
+                  
+                  // Check if track has valid audio source
+                  if (track.audioUrl != null && track.audioUrl!.isNotEmpty) {
+                    // Play the track using GlobalMusicPlayerService
+                    try {
+                      await _globalMusicPlayer.playTrack(track);
+                      
+                      // Update device status (only if still mounted)
+                      if (mounted) {
+                        _updateStatus(
+                          _deviceStatus.copyWith(
+                            isMusicPlaying: true,
+                            currentMusic: track.name,
+                          ),
+                        );
+                      }
+                      
+                      print('✅ Successfully playing: ${track.name}');
+                    } catch (e) {
+                      print('❌ Error playing track: $e');
+                      // Show error message to user
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Không thể phát nhạc. Vui lòng tải lên file nhạc từ thư viện.',
+                            ),
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                    }
+                  } else {
+                    // Track doesn't have audio source - prompt user to upload
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Vui lòng tải lên file nhạc từ thư viện để phát "$musicType".',
+                          ),
+                          duration: const Duration(seconds: 3),
+                          action: SnackBarAction(
+                            label: 'Mở thư viện',
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const MusicLibraryScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                } else {
+                  // No tracks available - prompt user to upload
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Chưa có nhạc cho "$musicType". Vui lòng tải lên từ thư viện.',
+                        ),
+                        duration: const Duration(seconds: 3),
+                        action: SnackBarAction(
+                          label: 'Mở thư viện',
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const MusicLibraryScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  }
                 }
               },
             ),

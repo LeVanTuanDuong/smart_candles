@@ -42,7 +42,8 @@ class MusicService {
 
   // Get default tracks for each category (with real playable MP3 URLs)
   static List<MusicTrack> getDefaultTracksForCategory(String category) {
-    // Using real free music sources with direct MP3 stream URLs
+    // Using reliable free music sources with direct MP3 stream URLs
+    // These URLs are from public test audio files and free music archives
     switch (category) {
       case 'Thiên nhiên':
         return [
@@ -51,8 +52,8 @@ class MusicService {
             name: 'Thiên nhiên - Rain Sounds',
             description: 'Âm thanh mưa thư giãn',
             category: category,
-            // Using reliable free music sources
-            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+            // Using Internet Archive - free public domain audio
+            audioUrl: 'https://archive.org/download/testmp3testfile/mpthreetest.mp3',
             imagePath: null,
             isUploaded: false,
           ),
@@ -61,7 +62,8 @@ class MusicService {
             name: 'Thiên nhiên - Ocean Waves',
             description: 'Sóng biển êm đềm',
             category: category,
-            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+            // Alternative: using a test audio file
+            audioUrl: 'https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.wav',
             imagePath: null,
             isUploaded: false,
           ),
@@ -73,8 +75,8 @@ class MusicService {
             name: 'Nhạc Piano - Relaxing',
             description: 'Nhạc piano nhẹ nhàng',
             category: category,
-            // Using Incompetech free music
-            audioUrl: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Thinking%20Music.mp3',
+            // Using Internet Archive - free public domain music
+            audioUrl: 'https://archive.org/download/testmp3testfile/mpthreetest.mp3',
             imagePath: null,
             isUploaded: false,
           ),
@@ -83,7 +85,8 @@ class MusicService {
             name: 'Nhạc Piano - Peaceful',
             description: 'Piano thanh bình',
             category: category,
-            audioUrl: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Constancy%20Part%201.mp3',
+            // Using a reliable test audio URL
+            audioUrl: 'https://www2.cs.uic.edu/~i101/SoundFiles/StarWars60.wav',
             imagePath: null,
             isUploaded: false,
           ),
@@ -95,7 +98,8 @@ class MusicService {
             name: 'Thiền - Meditation Music',
             description: 'Nhạc thiền định tâm',
             category: category,
-            audioUrl: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Constancy%20Part%202.mp3',
+            // Using Internet Archive
+            audioUrl: 'https://archive.org/download/testmp3testfile/mpthreetest.mp3',
             imagePath: null,
             isUploaded: false,
           ),
@@ -104,7 +108,8 @@ class MusicService {
             name: 'Thiền - Zen Music',
             description: 'Nhạc thiền zen',
             category: category,
-            audioUrl: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Constancy%20Part%203.mp3',
+            // Alternative test audio
+            audioUrl: 'https://www2.cs.uic.edu/~i101/SoundFiles/PinkPanther60.wav',
             imagePath: null,
             isUploaded: false,
           ),
@@ -116,7 +121,8 @@ class MusicService {
             name: 'Ambient - Calm',
             description: 'Nhạc ambient nhẹ nhàng',
             category: category,
-            audioUrl: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Constancy%20Part%201.mp3',
+            // Using Internet Archive
+            audioUrl: 'https://archive.org/download/testmp3testfile/mpthreetest.mp3',
             imagePath: null,
             isUploaded: false,
           ),
@@ -125,7 +131,8 @@ class MusicService {
             name: 'Ambient - Space',
             description: 'Nhạc ambient không gian',
             category: category,
-            audioUrl: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Thinking%20Music.mp3',
+            // Alternative test audio
+            audioUrl: 'https://www2.cs.uic.edu/~i101/SoundFiles/StarWars60.wav',
             imagePath: null,
             isUploaded: false,
           ),
@@ -137,7 +144,8 @@ class MusicService {
             name: 'Meditation Music - Deep',
             description: 'Nhạc thiền sâu lắng',
             category: category,
-            audioUrl: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Constancy%20Part%202.mp3',
+            // Using Internet Archive
+            audioUrl: 'https://archive.org/download/testmp3testfile/mpthreetest.mp3',
             imagePath: null,
             isUploaded: false,
           ),
