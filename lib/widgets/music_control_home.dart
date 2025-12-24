@@ -29,8 +29,8 @@ class MusicControlHome extends StatelessWidget {
     return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
+      decoration: BoxDecoration(
+        color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -39,7 +39,7 @@ class MusicControlHome extends StatelessWidget {
               offset: const Offset(0, 4),
             ),
           ],
-        ),
+      ),
         child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -62,70 +62,70 @@ class MusicControlHome extends StatelessWidget {
                 child: Container(
                   width: 80,
                   height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800],
+            decoration: BoxDecoration(
+              color: Colors.grey[800],
                     borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
+            ),
+            child: const Icon(
                     Icons.piano,
-                    color: Colors.white,
+              color: Colors.white,
                     size: 40,
                   ),
-                ),
-              ),
+            ),
+          ),
               const SizedBox(width: 16),
               // Music info - tappable
-              Expanded(
+          Expanded(
                 child: GestureDetector(
                   onTap: onTap,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                       const Text(
-                        'Music',
-                        style: TextStyle(
+                  'Music',
+                  style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
                         musicSubtitle.isNotEmpty 
                             ? '$musicTitle $musicSubtitle'
                             : musicTitle,
-                        style: TextStyle(
+                    style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[700],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+                ],
+                  ),
+            ),
+          ),
               // Playback controls - not tappable (use their own onPressed)
-              IconButton(
-                icon: const Icon(Icons.skip_previous),
-                onPressed: onPrevious,
-                color: Colors.grey[700],
+          IconButton(
+            icon: const Icon(Icons.skip_previous),
+            onPressed: onPrevious,
+            color: Colors.grey[700],
                 iconSize: 28,
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.purple[600],
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                  onPressed: onPlayPause,
-                  color: Colors.white,
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.purple[600],
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+              onPressed: onPlayPause,
+              color: Colors.white,
                   iconSize: 28,
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.skip_next),
-                onPressed: onNext,
-                color: Colors.grey[700],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.skip_next),
+            onPressed: onNext,
+            color: Colors.grey[700],
                 iconSize: 28,
               ),
             ],

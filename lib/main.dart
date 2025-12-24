@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
+import 'services/dialogflow_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Load Dialogflow service account
+  await DialogflowService.loadServiceAccount();
   runApp(const MyApp());
 }
 

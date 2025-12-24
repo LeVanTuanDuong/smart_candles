@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/message.dart';
 import '../models/mood_type.dart';
 import '../services/chatbot_service.dart';
-import '../services/gemini_service.dart';
+import '../services/dialogflow_service.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/mood_buttons_chat.dart';
 
@@ -42,7 +42,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     });
 
     try {
-      final greeting = await GeminiService.getGreetingMessage();
+      final greeting = await DialogflowService.getGreetingMessage();
       if (mounted) {
         setState(() {
           _messages.add(ChatMessage(
@@ -52,9 +52,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           ));
           _isLoading = false;
         });
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToBottom();
-        });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
       }
     } catch (e) {
       print('Error loading greeting: $e');
@@ -99,8 +99,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   Future<void> _handleUserInput(String input) async {
     if (_isLoading) return;
-
-    setState(() {
+      
+      setState(() {
       _isLoading = true;
     });
 
@@ -108,22 +108,22 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _conversationHistory.add(input);
 
     try {
-      // Get response from Gemini
-      final response = await GeminiService.getResponse(input, conversationHistory: _conversationHistory);
+      // Get response from Dialogflow
+      final response = await DialogflowService.getResponse(input, conversationHistory: _conversationHistory);
       
       // Add bot response to conversation history
       _conversationHistory.add(response);
 
       // Analyze mood if not already selected
       if (!_hasSelectedMood) {
-        final detectedMood = await GeminiService.analyzeMood(input);
+        final detectedMood = await DialogflowService.analyzeMood(input);
         
         if (detectedMood != null) {
           _hasSelectedMood = true;
-          widget.onMoodSelected?.call(detectedMood);
+      widget.onMoodSelected?.call(detectedMood);
 
-          // Get suggestions from Gemini
-          final suggestions = await GeminiService.getSuggestions(detectedMood);
+          // Get suggestions from Dialogflow
+          final suggestions = await DialogflowService.getSuggestions(detectedMood);
           
           // Add bot response
           if (mounted) {
@@ -198,14 +198,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         setState(() {
           _isLoading = false;
         });
-        _scrollToBottom();
+      _scrollToBottom();
       }
     } catch (e, stackTrace) {
       print('❌ Error handling user input: $e');
       print('Stack trace: $stackTrace');
       
       if (mounted) {
-        setState(() {
+      setState(() {
           _isLoading = false;
           
           // Provide more specific error message
@@ -220,13 +220,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             errorMessage = 'Xin lỗi, không thể kết nối. Vui lòng kiểm tra internet.';
           }
           
-          _messages.add(ChatMessage(
+        _messages.add(ChatMessage(
             text: errorMessage,
-            isBot: true,
-            timestamp: DateTime.now(),
-          ));
-        });
-        _scrollToBottom();
+          isBot: true,
+          timestamp: DateTime.now(),
+        ));
+      });
+      _scrollToBottom();
       }
     }
   }
@@ -247,9 +247,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     widget.onMoodSelected?.call(mood);
 
     try {
-      // Get response and suggestions from Gemini
-      final response = await GeminiService.getResponse('Tôi cảm thấy ${mood.label.toLowerCase()}');
-      final suggestions = await GeminiService.getSuggestions(mood);
+      // Get response and suggestions from Dialogflow
+      final response = await DialogflowService.getResponse('Tôi cảm thấy ${mood.label.toLowerCase()}');
+      final suggestions = await DialogflowService.getSuggestions(mood);
 
       if (mounted) {
         setState(() {
@@ -302,7 +302,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           _messages.addAll(suggestions);
           _isLoading = false;
         });
-        _scrollToBottom();
+    _scrollToBottom();
       }
     }
   }
@@ -412,13 +412,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                               ),
                             )
                           : IconButton(
-                              icon: const Icon(
-                                Icons.arrow_upward,
-                                color: Colors.white,
-                                size: 20,
-                              ),
+                        icon: const Icon(
+                          Icons.arrow_upward,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                               onPressed: _isLoading ? null : () => _sendMessage(_textController.text),
-                            ),
+                      ),
                     ),
                   ],
                 ),
