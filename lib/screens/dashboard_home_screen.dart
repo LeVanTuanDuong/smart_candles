@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/device_status.dart';
 import '../models/mood_type.dart';
@@ -20,6 +21,8 @@ import '../models/temperature_history_entry.dart';
 import '../services/global_music_player_service.dart';
 import '../services/suggestion_service.dart';
 import '../services/music_service.dart';
+import '../services/settings_service.dart';
+import '../services/bluetooth_service.dart';
 
 class DashboardHomeScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -47,6 +50,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   MoodType? _suggestedMood;
   final GlobalMusicPlayerService _globalMusicPlayer = GlobalMusicPlayerService();
   final SuggestionService _suggestionService = SuggestionService();
+  final BluetoothService _bluetoothService = BluetoothService();
+  StreamSubscription? _temperatureSubscription;
 
   @override
   void initState() {
@@ -61,6 +66,14 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     // Listen to suggestion service changes
     _suggestionService.addListener(_onSuggestionChanged);
 
+    // Listen to Bluetooth service for temperature updates
+    _bluetoothService.addListener(_onBluetoothTemperatureUpdate);
+
+    // Start reading temperature from Bluetooth if connected
+    if (_bluetoothService.isConnected) {
+      _startTemperatureReading();
+    }
+
     // Save initial temperature to history
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final historyEntry = TemperatureHistoryEntry(
@@ -70,9 +83,39 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       );
       TemperatureHistoryService.saveEntry(historyEntry);
 
-      // Check for danger temperature
-      if (_deviceStatus.temperature > 50.0) {
-        DangerAlertDialog.show(context, _deviceStatus.temperature);
+      // Check for danger temperature using settings threshold
+      _checkTemperatureThreshold(_deviceStatus.temperature);
+    });
+  }
+
+  void _onBluetoothTemperatureUpdate() {
+    if (!mounted) return;
+
+    // Update temperature from Bluetooth
+    final bluetoothTemp = _bluetoothService.currentTemperature;
+    if (bluetoothTemp != _deviceStatus.temperature) {
+      final newStatus = _deviceStatus.copyWith(
+        temperature: bluetoothTemp,
+        isBluetoothConnected: _bluetoothService.isConnected,
+      );
+      _updateStatus(newStatus);
+    } else if (_bluetoothService.isConnected != _deviceStatus.isBluetoothConnected) {
+      final newStatus = _deviceStatus.copyWith(
+        isBluetoothConnected: _bluetoothService.isConnected,
+      );
+      _updateStatus(newStatus);
+    }
+  }
+
+  void _startTemperatureReading() {
+    // Request temperature reading every 5 seconds
+    _temperatureSubscription = Stream.periodic(const Duration(seconds: 5))
+        .listen((_) async {
+      if (_bluetoothService.isConnected) {
+        final temp = await _bluetoothService.readTemperature();
+        if (temp != null && mounted) {
+          _onBluetoothTemperatureUpdate();
+        }
       }
     });
   }
@@ -115,12 +158,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.deviceStatus != widget.deviceStatus) {
       _deviceStatus = widget.deviceStatus;
-      // Check for danger temperature
-      if (_deviceStatus.temperature > 50.0) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          DangerAlertDialog.show(context, _deviceStatus.temperature);
-        });
-      }
+      // Check for danger temperature using settings threshold
+      _checkTemperatureThreshold(_deviceStatus.temperature);
     }
   }
 
@@ -139,16 +178,39 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       }
 
       _deviceStatus = newStatus;
-      // Check for danger temperature (only if still mounted)
-      if (newStatus.temperature > 50.0 && mounted) {
+      // Check for danger temperature using settings threshold
+      _checkTemperatureThreshold(newStatus.temperature);
+    });
+    widget.onStatusChanged(newStatus);
+  }
+
+  Future<void> _checkTemperatureThreshold(double temperature) async {
+    if (!mounted) return;
+    
+    try {
+      // Get temperature threshold from settings
+      final threshold = await SettingsService.getTemperatureThreshold();
+      final notificationsEnabled = await SettingsService.getNotificationsEnabled();
+      
+      // Check if temperature exceeds threshold
+      if (temperature > threshold && notificationsEnabled && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
-            DangerAlertDialog.show(context, newStatus.temperature);
+            DangerAlertDialog.show(context, temperature);
           }
         });
       }
-    });
-    widget.onStatusChanged(newStatus);
+    } catch (e) {
+      print('Error checking temperature threshold: $e');
+      // Fallback to default threshold (50.0)
+      if (temperature > 50.0 && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            DangerAlertDialog.show(context, temperature);
+          }
+        });
+      }
+    }
   }
 
   void _handleMoodSelected(MoodType mood) {

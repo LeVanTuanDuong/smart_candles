@@ -7,6 +7,7 @@ import '../services/suggestion_service.dart';
 import '../services/chatbot_response_variations.dart';
 import '../services/emotion_analysis_service.dart';
 import '../services/conversation_manager.dart';
+import '../services/settings_service.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/mood_buttons_chat.dart';
 import '../services/chatbot_flow_service.dart';
@@ -338,12 +339,24 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         finalMusic = musicMap[musicRequest] ?? finalMusic;
       }
 
-      // Apply custom suggestions
-      widget.onMusicSuggested?.call(finalMusic);
-      widget.onLightSuggested?.call(finalLight);
+      // Check automation settings before applying
+      final autoLightEnabled = await SettingsService.getAutoLightEnabled();
+      final autoMusicEnabled = await SettingsService.getAutoMusicEnabled();
+
+      // Apply essential oil suggestion (always)
       widget.onEssentialOilSuggested?.call(
         suggestions['essential_oil'] ?? _currentMood!.essentialOil,
       );
+
+      // Apply music only if auto music is enabled
+      if (autoMusicEnabled) {
+        widget.onMusicSuggested?.call(finalMusic);
+      }
+
+      // Apply light only if auto light is enabled
+      if (autoLightEnabled) {
+        widget.onLightSuggested?.call(finalLight);
+      }
 
       // Mark as successful
       _lastAdjustmentSuccess = true;
@@ -428,7 +441,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     }
   }
 
-  void _applySuggestionsAutomatically() {
+  Future<void> _applySuggestionsAutomatically() async {
     print('🔵 Applying suggestions automatically...');
 
     // Find the last message with suggestion data
@@ -453,10 +466,22 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
       // Try to apply suggestions with error handling
       try {
-        // Apply suggestions automatically
+        // Check automation settings before applying
+        final autoLightEnabled = await SettingsService.getAutoLightEnabled();
+        final autoMusicEnabled = await SettingsService.getAutoMusicEnabled();
+
+        // Apply essential oil suggestion (always)
         widget.onEssentialOilSuggested?.call(data['essential_oil'] as String);
-        widget.onMusicSuggested?.call(data['music'] as String);
-        widget.onLightSuggested?.call(data['light_mode'] as String);
+
+        // Apply music only if auto music is enabled
+        if (autoMusicEnabled) {
+          widget.onMusicSuggested?.call(data['music'] as String);
+        }
+
+        // Apply light only if auto light is enabled
+        if (autoLightEnabled) {
+          widget.onLightSuggested?.call(data['light_mode'] as String);
+        }
 
         // Mark as successful
         _lastAdjustmentSuccess = true;
@@ -531,9 +556,24 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           );
 
           try {
+            // Check automation settings before applying
+            final autoLightEnabled =
+                await SettingsService.getAutoLightEnabled();
+            final autoMusicEnabled =
+                await SettingsService.getAutoMusicEnabled();
+
+            // Apply essential oil suggestion (always)
             widget.onEssentialOilSuggested?.call(suggestions['primary']!.first);
-            widget.onMusicSuggested?.call(musicSuggestions.first['type']!);
-            widget.onLightSuggested?.call(lightSuggestion['mode'] as String);
+
+            // Apply music only if auto music is enabled
+            if (autoMusicEnabled) {
+              widget.onMusicSuggested?.call(musicSuggestions.first['type']!);
+            }
+
+            // Apply light only if auto light is enabled
+            if (autoLightEnabled) {
+              widget.onLightSuggested?.call(lightSuggestion['mode'] as String);
+            }
 
             _lastAdjustmentSuccess = true;
             _lastAdjustmentTime = DateTime.now();

@@ -7,6 +7,8 @@ import '../models/mood_type.dart';
 import '../models/music_track.dart';
 import '../services/global_music_player_service.dart';
 import '../services/music_service.dart';
+import '../services/settings_service.dart';
+import '../services/bluetooth_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
     temperature: 35.0,
     isBluetoothConnected: false,
   );
+  final BluetoothService _bluetoothService = BluetoothService();
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +92,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 
-  void _handleLightSuggested(String lightMode) {
+  void _handleLightSuggested(String lightMode) async {
+    // Check if auto light is enabled
+    final autoLightEnabled = await SettingsService.getAutoLightEnabled();
+    if (!autoLightEnabled) {
+      print('⚠️ Auto light is disabled in settings');
+      return;
+    }
+    
+    // Control light via Bluetooth if connected
+    if (_bluetoothService.isConnected) {
+      await _bluetoothService.setLightOn(true);
+      await _bluetoothService.setLightMode(lightMode);
+    }
+    
     setState(() {
       _deviceStatus = _deviceStatus.copyWith(
         isLightOn: true,
@@ -103,6 +119,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _handleMusicSuggested(String music) async {
+    // Check if auto music is enabled
+    final autoMusicEnabled = await SettingsService.getAutoMusicEnabled();
+    if (!autoMusicEnabled) {
+      print('⚠️ Auto music is disabled in settings');
+      return;
+    }
+    
     // Automatically play music when chatbot suggests it
     try {
       final globalPlayer = GlobalMusicPlayerService();

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/device_status.dart';
+import '../services/settings_service.dart';
+import '../services/bluetooth_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -21,11 +23,156 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoLightEnabled = true;
   bool _autoMusicEnabled = true;
   double _temperatureThreshold = 50.0;
+  final BluetoothService _bluetoothService = BluetoothService();
+  bool _isConnecting = false;
 
   @override
   void initState() {
     super.initState();
     _deviceStatus = widget.deviceStatus;
+    _loadSettings();
+    _initializeBluetooth();
+    
+    // Listen to Bluetooth connection changes
+    _bluetoothService.addListener(_onBluetoothStateChanged);
+  }
+
+  @override
+  void dispose() {
+    _bluetoothService.removeListener(_onBluetoothStateChanged);
+    super.dispose();
+  }
+
+  void _onBluetoothStateChanged() {
+    if (mounted) {
+      setState(() {
+        _deviceStatus = _deviceStatus.copyWith(
+          isBluetoothConnected: _bluetoothService.isConnected,
+        );
+      });
+      widget.onStatusChanged(_deviceStatus);
+    }
+  }
+
+  Future<void> _initializeBluetooth() async {
+    final initialized = await _bluetoothService.initialize();
+    if (!initialized && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng bật Bluetooth để kết nối với nến thông minh'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  Future<void> _connectToDevice() async {
+    if (_isConnecting) return;
+
+    setState(() {
+      _isConnecting = true;
+    });
+
+    try {
+      // First, check if Bluetooth is ready
+      final isReady = await _bluetoothService.isBluetoothReady();
+      if (!isReady) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ Vui lòng bật Bluetooth trong Cài đặt và thử lại'),
+              duration: Duration(seconds: 4),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Start scanning for devices
+      await _bluetoothService.startScan(timeout: const Duration(seconds: 10));
+
+      // Show scanning message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đang tìm kiếm thiết bị Smart Candle...'),
+            duration: Duration(seconds: 10),
+          ),
+        );
+      }
+
+      // Wait a bit for connection
+      await Future.delayed(const Duration(seconds: 12));
+
+      if (_bluetoothService.isConnected && mounted) {
+        _updateStatus(_deviceStatus.copyWith(
+          isBluetoothConnected: true,
+        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Đã kết nối với Smart Candle'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Không tìm thấy thiết bị. Vui lòng đảm bảo nến đã bật và ở gần.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        String errorMessage = 'Lỗi kết nối: $e';
+        
+        // Provide user-friendly error messages
+        final errorStr = e.toString().toLowerCase();
+        if (errorStr.contains('bluetooth must be turned on') ||
+            errorStr.contains('cbmanagerstate') ||
+            errorStr.contains('unsupported') ||
+            errorStr.contains('bluetooth chưa được bật')) {
+          errorMessage = 'Vui lòng bật Bluetooth trong Cài đặt của thiết bị và thử lại';
+        } else if (errorStr.contains('permission') || errorStr.contains('quyền')) {
+          errorMessage = 'Vui lòng cấp quyền Bluetooth cho ứng dụng trong Cài đặt';
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 4),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Đóng',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isConnecting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final settings = await SettingsService.loadAllSettings();
+      setState(() {
+        _temperatureThreshold = settings['temperatureThreshold'] as double;
+        _notificationsEnabled = settings['notificationsEnabled'] as bool;
+        _autoLightEnabled = settings['autoLightEnabled'] as bool;
+        _autoMusicEnabled = settings['autoMusicEnabled'] as bool;
+      });
+    } catch (e) {
+      print('Error loading settings: $e');
+    }
   }
 
   void _updateStatus(DeviceStatus newStatus) {
@@ -97,15 +244,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ? 'Đã kết nối với ESP32'
                         : 'Chưa kết nối',
                   ),
-                  trailing: Switch(
-                    value: _deviceStatus.isBluetoothConnected,
-                    onChanged: (value) {
-                      _updateStatus(_deviceStatus.copyWith(
-                        isBluetoothConnected: value,
-                      ));
-                    },
-                    activeColor: Colors.blue[600],
-                  ),
+                  trailing: _isConnecting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Switch(
+                          value: _deviceStatus.isBluetoothConnected,
+                          onChanged: (value) async {
+                            await SettingsService.setBluetoothEnabled(value);
+                            if (value) {
+                              // Connect to ESP32
+                              await _connectToDevice();
+                            } else {
+                              // Disconnect
+                              await _bluetoothService.disconnect();
+                              _updateStatus(_deviceStatus.copyWith(
+                                isBluetoothConnected: false,
+                              ));
+                            }
+                          },
+                          activeColor: Colors.blue[600],
+                        ),
                 ),
               ],
             ),
@@ -232,11 +393,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             child: const Text('Hủy'),
                           ),
                           TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _temperatureThreshold = _temperatureThreshold;
-                              });
-                              Navigator.pop(context);
+                            onPressed: () async {
+                              // Save temperature threshold
+                              await SettingsService.setTemperatureThreshold(
+                                _temperatureThreshold,
+                              );
+                              if (mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Đã lưu ngưỡng cảnh báo: ${_temperatureThreshold.toStringAsFixed(1)}°C',
+                                    ),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              }
                             },
                             child: const Text('Lưu'),
                           ),
@@ -251,10 +423,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Thông báo'),
                   subtitle: const Text('Nhận cảnh báo khi nhiệt độ cao'),
                   value: _notificationsEnabled,
-                  onChanged: (value) {
+                  onChanged: (value) async {
                     setState(() {
                       _notificationsEnabled = value;
                     });
+                    await SettingsService.setNotificationsEnabled(value);
                   },
                   activeColor: Colors.blue[600],
                 ),
@@ -270,10 +443,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Tự động bật đèn'),
                   subtitle: const Text('Bật đèn theo gợi ý của chatbot'),
                   value: _autoLightEnabled,
-                  onChanged: (value) {
+                  onChanged: (value) async {
                     setState(() {
                       _autoLightEnabled = value;
                     });
+                    await SettingsService.setAutoLightEnabled(value);
                   },
                   activeColor: Colors.amber[600],
                 ),
@@ -283,10 +457,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Tự động phát nhạc'),
                   subtitle: const Text('Phát nhạc theo gợi ý của chatbot'),
                   value: _autoMusicEnabled,
-                  onChanged: (value) {
+                  onChanged: (value) async {
                     setState(() {
                       _autoMusicEnabled = value;
                     });
+                    await SettingsService.setAutoMusicEnabled(value);
                   },
                   activeColor: Colors.purple[600],
                 ),
