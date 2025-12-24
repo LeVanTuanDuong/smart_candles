@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/music_library_screen.dart';
 
 class MusicSuggestionCard extends StatelessWidget {
   final String musicType;
@@ -12,21 +13,29 @@ class MusicSuggestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const MusicLibraryScreen(),
           ),
-        ],
-      ),
-      child: Row(
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
         children: [
           // Nature image placeholder
           Container(
@@ -150,6 +159,7 @@ class MusicSuggestionCard extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }
