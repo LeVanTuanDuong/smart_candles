@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>App cần truy cập thư viện ảnh để thêm hình ảnh tinh dầu</string>
+	<key>NSCameraUsageDescription</key>
+	<string>App cần truy cập camera để chụp ảnh tinh dầu</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>App cần lưu ảnh vào thư viện</string>
 </dict>
 </plist>

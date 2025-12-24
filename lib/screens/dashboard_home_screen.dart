@@ -6,10 +6,16 @@ import '../widgets/temperature_card_home.dart';
 import '../widgets/chatbot_section_home.dart';
 import '../widgets/essential_oil_suggestion_card.dart';
 import '../widgets/music_suggestion_card.dart';
+import '../widgets/music_control_home.dart';
 import '../widgets/smartwatch_card_home.dart';
 import '../widgets/danger_alert_dialog.dart';
 import '../screens/settings_screen.dart';
+import '../screens/mood_journal_screen.dart';
+import '../screens/safety_history_screen.dart';
+import '../screens/meditation_guide_screen.dart';
 import '../services/chatbot_service.dart' show ChatbotService;
+import '../services/temperature_history_service.dart';
+import '../models/temperature_history_entry.dart';
 
 class DashboardHomeScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -40,8 +46,19 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   void initState() {
     super.initState();
     _deviceStatus = widget.deviceStatus;
-    // Check initial temperature
+    // Initialize with default mood to show suggestions from the start
+    _suggestedMood = MoodType.normal;
+
+    // Save initial temperature to history
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final historyEntry = TemperatureHistoryEntry(
+        timestamp: DateTime.now(),
+        temperature: _deviceStatus.temperature,
+        status: _deviceStatus.status,
+      );
+      TemperatureHistoryService.saveEntry(historyEntry);
+
+      // Check for danger temperature
       if (_deviceStatus.temperature > 50.0) {
         DangerAlertDialog.show(context, _deviceStatus.temperature);
       }
@@ -64,6 +81,16 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
   void _updateStatus(DeviceStatus newStatus) {
     setState(() {
+      // Save temperature history if temperature changed
+      if (_deviceStatus.temperature != newStatus.temperature) {
+        final historyEntry = TemperatureHistoryEntry(
+          timestamp: DateTime.now(),
+          temperature: newStatus.temperature,
+          status: newStatus.status,
+        );
+        TemperatureHistoryService.saveEntry(historyEntry);
+      }
+
       _deviceStatus = newStatus;
       // Check for danger temperature
       if (newStatus.temperature > 50.0) {
@@ -120,11 +147,29 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
         elevation: 0,
         centerTitle: true,
         actions: [
+          // Calendar icon
+          IconButton(
+            icon: Icon(Icons.calendar_today, color: Colors.grey[800]),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const MoodJournalScreen(),
+                ),
+              );
+            },
+          ),
+          // Notification icon
           Stack(
             children: [
               IconButton(
                 icon: Icon(Icons.notifications_none, color: Colors.grey[800]),
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const SafetyHistoryScreen(),
+                    ),
+                  );
+                },
               ),
               Positioned(
                 right: 8,
@@ -156,20 +201,92 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
               onChatbotTap: widget.onNavigateToChatbot,
             ),
 
-            // Essential Oil Suggestion Card
-            if (_suggestedMood != null)
-              EssentialOilSuggestionCard(mood: _suggestedMood!),
+            // Music Control Widget (always show with suggested or current music)
+            MusicControlHome(
+              musicTitle:
+                  _deviceStatus.currentMusic ??
+                  ChatbotService.getMusicSuggestions(
+                    _suggestedMood ?? MoodType.normal,
+                  ).first,
+              musicSubtitle:
+                  _deviceStatus.currentMusic != null && _suggestedMood != null
+                  ? '(Gợi ý)'
+                  : '',
+              isPlaying: _deviceStatus.isMusicPlaying,
+              volume: _deviceStatus.musicVolume,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => MeditationGuideScreen(
+                      currentTrack:
+                          _deviceStatus.currentMusic ??
+                          ChatbotService.getMusicSuggestions(
+                            _suggestedMood ?? MoodType.normal,
+                          ).first,
+                      isPlaying: _deviceStatus.isMusicPlaying,
+                    ),
+                  ),
+                );
+              },
+              onPlayPause: () {
+                // If no current music, set it from suggestion
+                if (_deviceStatus.currentMusic == null) {
+                  final currentMood = _suggestedMood ?? MoodType.normal;
+                  final suggestedMusic = ChatbotService.getMusicSuggestions(
+                    currentMood,
+                  ).first;
+                  _updateStatus(
+                    _deviceStatus.copyWith(
+                      isMusicPlaying: true,
+                      currentMusic: suggestedMusic,
+                    ),
+                  );
+                } else {
+                  _updateStatus(
+                    _deviceStatus.copyWith(
+                      isMusicPlaying: !_deviceStatus.isMusicPlaying,
+                    ),
+                  );
+                }
+              },
+              onPrevious: () {
+                // Handle previous track
+              },
+              onNext: () {
+                // Handle next track
+              },
+              onVolumeChanged: (newVolume) {
+                _updateStatus(_deviceStatus.copyWith(musicVolume: newVolume));
+              },
+            ),
 
-            // Music Suggestion Card
-            if (_suggestedMood != null)
-              MusicSuggestionCard(
-                musicType: ChatbotService.getMusicSuggestions(
-                  _suggestedMood!,
-                ).first,
-                onPlayPressed: () {
-                  _updateStatus(_deviceStatus.copyWith(isMusicPlaying: true));
-                },
-              ),
+            // Essential Oil Suggestion Card (always show with current or default mood)
+            EssentialOilSuggestionCard(mood: _suggestedMood ?? MoodType.normal),
+
+            // Music Suggestion Card (always show with current or default mood)
+            MusicSuggestionCard(
+              musicType: ChatbotService.getMusicSuggestions(
+                _suggestedMood ?? MoodType.normal,
+              ).first,
+              onPlayPressed: () {
+                final currentMood = _suggestedMood ?? MoodType.normal;
+                final suggestedMusic = ChatbotService.getMusicSuggestions(
+                  currentMood,
+                ).first;
+                _updateStatus(
+                  _deviceStatus.copyWith(
+                    isMusicPlaying: true,
+                    currentMusic: suggestedMusic,
+                  ),
+                );
+                // Update suggested mood if it was null
+                if (_suggestedMood == null) {
+                  setState(() {
+                    _suggestedMood = currentMood;
+                  });
+                }
+              },
+            ),
 
             // Smartwatch Data Card
             SmartwatchCardHome(smartwatchData: _smartwatchData),
