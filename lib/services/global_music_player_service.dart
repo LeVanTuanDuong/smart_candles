@@ -99,19 +99,29 @@ class GlobalMusicPlayerService extends ChangeNotifier {
       _currentTrack = track;
       
       // Prioritize local file over URL
-      if (track.audioPath != null && File(track.audioPath!).existsSync()) {
-        // Play from local file (user uploaded tracks)
-        await _audioPlayer!.setFilePath(track.audioPath!);
+      if (track.audioPath != null && track.audioPath!.isNotEmpty) {
+        try {
+          final file = File(track.audioPath!);
+          if (file.existsSync()) {
+            // Play from local file (user uploaded tracks)
+            await _audioPlayer!.setFilePath(track.audioPath!);
+          } else {
+            throw Exception('File nhạc không tồn tại. Vui lòng tải lại file nhạc từ thư viện.');
+          }
+        } catch (e) {
+          if (e.toString().contains('File nhạc không tồn tại')) {
+            rethrow;
+          }
+          // If file access error, try URL fallback
+          if (track.audioUrl != null && track.audioUrl!.isNotEmpty) {
+            await _tryPlayUrl(track.audioUrl!);
+          } else {
+            throw Exception('File nhạc không tồn tại. Vui lòng tải lại file nhạc từ thư viện.');
+          }
+        }
       } else if (track.audioUrl != null && track.audioUrl!.isNotEmpty) {
         // Fallback to URL for default tracks from library
-        // Skip Openwhyd and YouTube URLs as they cannot be played directly
-        String audioUrl = track.audioUrl!;
-        if (audioUrl.startsWith('https://openwhyd.org/') ||
-            audioUrl.contains('youtube.com/watch') ||
-            audioUrl.contains('youtu.be/')) {
-          throw Exception('Track này không thể phát được. Vui lòng chọn track khác.');
-        }
-        await _audioPlayer!.setUrl(audioUrl);
+        await _tryPlayUrl(track.audioUrl!);
       } else {
         // No audio source available
         throw Exception('File nhạc không tồn tại. Vui lòng tải lại file nhạc từ thư viện.');
@@ -140,6 +150,40 @@ class GlobalMusicPlayerService extends ChangeNotifier {
       }
       
       notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Try to play from URL with validation
+  Future<void> _tryPlayUrl(String audioUrl) async {
+    // Skip Openwhyd and YouTube URLs as they cannot be played directly
+    if (audioUrl.startsWith('https://openwhyd.org/') ||
+        audioUrl.contains('youtube.com/watch') ||
+        audioUrl.contains('youtu.be/')) {
+      throw Exception('Track này không thể phát được. Vui lòng chọn track khác hoặc tải nhạc từ thư viện.');
+    }
+    
+    // Validate URL format
+    try {
+      final uri = Uri.parse(audioUrl);
+      if (!uri.hasScheme || (!uri.scheme.startsWith('http'))) {
+        throw Exception('URL nhạc không hợp lệ.');
+      }
+    } catch (e) {
+      throw Exception('URL nhạc không hợp lệ. Vui lòng tải nhạc từ thư viện.');
+    }
+    
+    try {
+      await _audioPlayer!.setUrl(audioUrl);
+    } catch (e) {
+      // Check if it's a network/resource error
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('resource unavailable') ||
+          errorStr.contains('(-1008)') ||
+          errorStr.contains('network') ||
+          errorStr.contains('connection')) {
+        throw Exception('Không thể phát nhạc từ URL này. Vui lòng tải nhạc từ thư viện hoặc kiểm tra kết nối mạng.');
+      }
       rethrow;
     }
   }

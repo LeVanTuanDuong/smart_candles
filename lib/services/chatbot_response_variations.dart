@@ -174,10 +174,34 @@ class ChatbotResponseVariations {
     required String music,
     required String lightMode,
     required double lightBrightness,
+    String? encouragementMessage,
   }) {
     final brightnessPercent = (lightBrightness * 100).toInt();
     
-    String message = '\n\nMình đề xuất:\n';
+    // Get encouragement message based on mood if not provided
+    String encouragement = encouragementMessage ?? '';
+    if (encouragement.isEmpty) {
+      switch (mood) {
+        case MoodType.stressed:
+          encouragement = 'Mình hiểu bạn đang căng thẳng. Hãy để mình giúp bạn thư giãn nhé.';
+          break;
+        case MoodType.sad:
+          encouragement = 'Mình hiểu bạn đang buồn. Hãy để mình giúp bạn cảm thấy tốt hơn nhé.';
+          break;
+        case MoodType.tired:
+          encouragement = 'Bạn trông mệt mỏi rồi. Hãy để mình giúp bạn thư giãn và nghỉ ngơi nhé.';
+          break;
+        case MoodType.insomnia:
+          encouragement = 'Khó ngủ có thể khiến bạn căng thẳng. Hãy để mình giúp bạn thư giãn và chuẩn bị cho giấc ngủ ngon nhé.';
+          break;
+        case MoodType.normal:
+          encouragement = 'Thật tuyệt khi bạn đang cảm thấy tốt! Hãy duy trì cảm xúc tích cực này nhé.';
+          break;
+      }
+    }
+    
+    String message = encouragement;
+    message += '\n\nMình đề xuất:\n';
     message += '• Tinh dầu $essentialOil cho nến\n';
     message += '• Nhạc $music 10 phút\n';
     message += '• Đèn $lightMode $brightnessPercent%\n\n';
@@ -223,17 +247,39 @@ class ChatbotResponseVariations {
     return responses[index];
   }
 
-  // Default response for other moods
+  // Default response for other moods with variations
   static String _getDefaultResponseForMood(MoodType mood, int? intensity) {
     switch (mood) {
       case MoodType.stressed:
-        return 'Mình nghe bạn đang rất căng. Bạn không cần phải gồng một mình.';
+        final responses = [
+          'Mình nghe bạn đang rất căng. Bạn không cần phải gồng một mình.',
+          'Căng thẳng như vậy mệt lắm. Hãy để mình giúp bạn thư giãn nhé.',
+          'Mình thấy bạn đang lo lắng nhiều. Điều này hoàn toàn bình thường.',
+        ];
+        return responses[_random.nextInt(responses.length)];
       case MoodType.tired:
-        return 'Nghe như bạn đang cạn pin. Mình sẽ giúp bạn hồi lại một chút.';
+        final responses = [
+          'Nghe như bạn đang cạn pin. Mình sẽ giúp bạn hồi lại một chút.',
+          'Bạn trông mệt mỏi rồi. Hãy để mình chăm sóc bạn nhé.',
+          'Mệt như vậy cần được nghỉ ngơi. Mình sẽ tạo không gian yên tĩnh cho bạn.',
+        ];
+        return responses[_random.nextInt(responses.length)];
       case MoodType.insomnia:
-        return 'Mình sẽ giúp bạn chuyển sang chế độ ngủ.';
+        final responses = [
+          'Để mình chuẩn bị không gian ngủ cho bạn nhé.',
+          'Mình sẽ điều chỉnh mọi thứ để bạn dễ ngủ hơn.',
+          'Hãy để mình giúp bạn thư giãn và chuẩn bị cho giấc ngủ.',
+          'Mình sẽ tạo môi trường yên tĩnh để bạn nghỉ ngơi.',
+          'Để mình giúp bạn chuyển sang chế độ ngủ một cách nhẹ nhàng.',
+        ];
+        return responses[_random.nextInt(responses.length)];
       default:
-        return 'Mình hiểu bạn. Hãy để mình giúp bạn thư giãn nhé.';
+        final responses = [
+          'Mình hiểu bạn. Hãy để mình giúp bạn thư giãn nhé.',
+          'Mình đang ở đây với bạn. Bạn muốn mình làm gì?',
+          'Cảm ơn bạn đã chia sẻ. Mình sẽ giúp bạn cảm thấy tốt hơn.',
+        ];
+        return responses[_random.nextInt(responses.length)];
     }
   }
 

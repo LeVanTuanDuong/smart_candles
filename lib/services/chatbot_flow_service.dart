@@ -254,37 +254,56 @@ class ChatbotFlowService {
     return message;
   }
 
-  static Map<String, dynamic> getLightSuggestion(MoodType mood, int? intensity) {
+  static Map<String, dynamic> getLightSuggestion(MoodType mood, int? intensity, {int? ess}) {
+    // Use ESS to fine-tune brightness if available
+    double brightnessMultiplier = 1.0;
+    if (ess != null) {
+      if (ess > 80) {
+        // High severity - lower brightness for calming
+        brightnessMultiplier = 0.7;
+      } else if (ess > 60) {
+        brightnessMultiplier = 0.85;
+      } else if (ess < 30) {
+        // Low severity - can be slightly brighter
+        brightnessMultiplier = 1.1;
+      }
+    }
+    
     switch (mood) {
       case MoodType.stressed:
+        final brightness = (0.35 * brightnessMultiplier).clamp(0.2, 0.5);
         return {
           'mode': 'warm',
-          'brightness': 0.35,
-          'message': 'Mình đề xuất bật đèn ở mức 35% – warm để mắt bạn dịu hơn. Bạn muốn bật không?',
+          'brightness': brightness,
+          'message': 'Mình đề xuất bật đèn ở mức ${(brightness * 100).toInt()}% – warm để mắt bạn dịu hơn. Bạn muốn bật không?',
         };
       case MoodType.sad:
+        final brightness = (0.5 * brightnessMultiplier).clamp(0.3, 0.6);
         return {
           'mode': 'warm',
-          'brightness': 0.5,
-          'message': 'Mình đề xuất bật đèn warm 50% để tạo không gian ấm áp. Bạn muốn bật không?',
+          'brightness': brightness,
+          'message': 'Mình đề xuất bật đèn warm ${(brightness * 100).toInt()}% để tạo không gian ấm áp. Bạn muốn bật không?',
         };
       case MoodType.tired:
+        final brightness = (0.6 * brightnessMultiplier).clamp(0.4, 0.7);
         return {
           'mode': 'white',
-          'brightness': 0.6,
-          'message': 'Mình đề xuất bật đèn trắng 60% (không chói) để tỉnh táo hơn. Bạn muốn bật không?',
+          'brightness': brightness,
+          'message': 'Mình đề xuất bật đèn trắng ${(brightness * 100).toInt()}% (không chói) để tỉnh táo hơn. Bạn muốn bật không?',
         };
       case MoodType.insomnia:
+        final brightness = (0.15 * brightnessMultiplier).clamp(0.1, 0.2);
         return {
           'mode': 'amber',
-          'brightness': 0.15,
-          'message': 'Mình đề xuất bật đèn amber 15% để chuẩn bị ngủ. Bạn muốn bật không?',
+          'brightness': brightness,
+          'message': 'Mình đề xuất bật đèn amber ${(brightness * 100).toInt()}% để chuẩn bị ngủ. Bạn muốn bật không?',
         };
       default:
+        final brightness = (0.4 * brightnessMultiplier).clamp(0.3, 0.5);
         return {
           'mode': 'warm',
-          'brightness': 0.4,
-          'message': 'Mình đề xuất bật đèn warm 40% để thư giãn. Bạn muốn bật không?',
+          'brightness': brightness,
+          'message': 'Mình đề xuất bật đèn warm ${(brightness * 100).toInt()}% để thư giãn. Bạn muốn bật không?',
         };
     }
   }
@@ -416,9 +435,21 @@ class ChatbotFlowService {
             'Mình đề xuất: Lemon/Rosemary + Lo-fi nhẹ 10 phút + đèn trắng 60%.\n\n'
             'Bạn muốn ưu tiên "tỉnh táo" hay "nghỉ ngơi"?';
       case MoodType.insomnia:
-        return 'Mình sẽ giúp bạn chuyển sang chế độ ngủ.\n\n'
-            'Mình đề xuất: Chamomile + mưa nhẹ 15 phút + đèn amber 15%.\n\n'
-            'Bạn muốn mình bật timer tắt nhạc sau 15 phút không?';
+        // Use variations to avoid repetition
+        final sleepVariations = [
+          'Để mình chuẩn bị không gian ngủ cho bạn nhé.\n\n'
+              'Mình đề xuất: Chamomile + mưa nhẹ 15 phút + đèn amber 15%.\n\n'
+              'Bạn muốn mình bật timer tắt nhạc sau 15 phút không?',
+          'Mình sẽ điều chỉnh mọi thứ để bạn dễ ngủ hơn.\n\n'
+              'Mình đề xuất: Chamomile + mưa nhẹ 15 phút + đèn amber 15%.\n\n'
+              'Bạn muốn mình bật timer tắt nhạc sau 15 phút không?',
+          'Hãy để mình giúp bạn thư giãn và chuẩn bị cho giấc ngủ.\n\n'
+              'Mình đề xuất: Chamomile + mưa nhẹ 15 phút + đèn amber 15%.\n\n'
+              'Bạn muốn mình bật timer tắt nhạc sau 15 phút không?',
+        ];
+        // Use a simple hash of current time to pick variation
+        final index = DateTime.now().millisecond % sleepVariations.length;
+        return sleepVariations[index];
       default:
         return 'Mình hiểu bạn. Hãy để mình giúp bạn thư giãn nhé.';
     }

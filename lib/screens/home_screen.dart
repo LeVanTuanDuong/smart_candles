@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'chatbot_screen.dart';
 import 'dashboard_home_screen.dart';
 import '../models/device_status.dart';
 import '../models/mood_type.dart';
+import '../models/music_track.dart';
 import '../services/global_music_player_service.dart';
 import '../services/music_service.dart';
 
@@ -122,31 +124,77 @@ class _HomeScreenState extends State<HomeScreen> {
       // Get tracks for this category (static method)
       final tracks = MusicService.getDefaultTracksForCategory(category);
       
-      if (tracks.isNotEmpty) {
-        // Play the first track automatically
-        await globalPlayer.playTrack(tracks.first);
+      // Find a track with valid audio source (local file or valid URL)
+      MusicTrack? playableTrack;
+      for (final track in tracks) {
+        // Check if track has valid audio source
+        bool hasValidSource = false;
         
-        setState(() {
-          _deviceStatus = _deviceStatus.copyWith(
-            isMusicPlaying: true,
-            currentMusic: tracks.first.name,
-          );
-        });
+        // Check local file
+        if (track.audioPath != null && track.audioPath!.isNotEmpty) {
+          try {
+            final file = File(track.audioPath!);
+            if (file.existsSync()) {
+              hasValidSource = true;
+            }
+          } catch (e) {
+            // File doesn't exist or can't be accessed
+          }
+        }
+        
+        // Check URL (but skip Openwhyd/YouTube URLs)
+        if (!hasValidSource && track.audioUrl != null && track.audioUrl!.isNotEmpty) {
+          final url = track.audioUrl!;
+          // Skip URLs that cannot be played directly
+          if (!url.startsWith('https://openwhyd.org/') &&
+              !url.contains('youtube.com/watch') &&
+              !url.contains('youtu.be/')) {
+            hasValidSource = true;
+          }
+        }
+        
+        if (hasValidSource) {
+          playableTrack = track;
+          break;
+        }
+      }
+      
+      if (playableTrack != null) {
+        // Play the track automatically
+        try {
+          await globalPlayer.playTrack(playableTrack);
+          
+          setState(() {
+            _deviceStatus = _deviceStatus.copyWith(
+              isMusicPlaying: true,
+              currentMusic: playableTrack!.name,
+            );
+          });
+          print('✅ Auto-playing music: ${playableTrack.name}');
+        } catch (e) {
+          print('❌ Error auto-playing music: $e');
+          // Don't update status if playback failed
+          // User can manually play from music library
+          // Don't throw - just log the error and continue
+        }
       } else {
-        // Fallback: just update status
+        // No playable tracks found
+        print('⚠️ No playable tracks found for category: $category');
+        print('💡 User should upload music files or check network connection');
+        // Don't update status - let user know they need to upload music
         setState(() {
           _deviceStatus = _deviceStatus.copyWith(
-            isMusicPlaying: true,
-            currentMusic: music,
+            isMusicPlaying: false,
+            currentMusic: music, // Just store the suggestion name
           );
         });
       }
     } catch (e) {
-      print('Error auto-playing music: $e');
-      // Fallback: just update status
+      print('❌ Error in _handleMusicSuggested: $e');
+      // Don't update status on error
       setState(() {
         _deviceStatus = _deviceStatus.copyWith(
-          isMusicPlaying: true,
+          isMusicPlaying: false,
           currentMusic: music,
         );
       });

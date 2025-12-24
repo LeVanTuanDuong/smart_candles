@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:googleapis_auth/auth_io.dart';
 import '../models/mood_type.dart';
 import 'chatbot_flow_service.dart';
+import 'emotion_analysis_service.dart';
 
 class DialogflowService {
   // Dialogflow configuration
@@ -150,10 +151,7 @@ class DialogflowService {
   }
 
   // Send request to Dialogflow
-  static Future<Map<String, dynamic>> _sendRequest(
-    String queryText, {
-    Map<String, dynamic>? context,
-  }) async {
+  static Future<Map<String, dynamic>> _sendRequest(String queryText) async {
     if (!_isConfigured()) {
       throw Exception(
         'Dialogflow is not configured. Please set project ID and access token.',
@@ -167,15 +165,12 @@ class DialogflowService {
         'queryInput': {
           'text': {'text': queryText, 'languageCode': _languageCode},
         },
-        'queryParams': {'timeZone': 'Asia/Ho_Chi_Minh'},
+        'queryParams': {
+          'timeZone': 'Asia/Ho_Chi_Minh',
+          // Note: Removed custom context as it requires full resource path
+          // Dialogflow automatically manages context via session ID
+        },
       };
-
-      if (context != null) {
-        body['queryParams'] = {
-          ...body['queryParams'] as Map,
-          'contexts': [context],
-        };
-      }
 
       final headers = await _getHeaders();
       final response = await http.post(
@@ -329,19 +324,10 @@ class DialogflowService {
         return _getFallbackResponse(userMessage);
       }
 
-      // Add context to help Dialogflow understand this is a psychological chatbot
-      final context = {
-        'name': 'chatbot_context',
-        'lifespanCount': 5,
-        'parameters': {
-          'bot_type': 'psychological_chatbot',
-          'app_name': 'Smart Candles',
-          'purpose': 'help_user_relax_and_improve_mood',
-        },
-      };
-
-      // Dialogflow handles conversation context automatically via session
-      final response = await _sendRequest(userMessage, context: context);
+      // Note: Dialogflow handles conversation context automatically via session
+      // We don't need to send custom context as it causes API errors
+      // Instead, we rely on Dialogflow's built-in context management
+      final response = await _sendRequest(userMessage);
       var text = _extractFulfillmentText(response);
 
       // Filter and improve response
@@ -491,11 +477,29 @@ class DialogflowService {
     return 'Mình hiểu bạn. Hãy cho mình biết thêm về cảm xúc của bạn nhé. Bạn đang cảm thấy thế nào?';
   }
 
-  // Analyze mood from user message
+  // Analyze mood from user message using detailed emotion analysis
   static Future<MoodType?> analyzeMood(String userMessage) async {
     try {
       print('🔵 Dialogflow: Analyzing mood from: "$userMessage"');
 
+      // Use EmotionAnalysisService for detailed analysis
+      final analysis = EmotionAnalysisService.analyze(
+        userMessage: userMessage,
+        selfReport: null, // Will be asked separately
+        timeOfDay: _getTimeOfDay(),
+        recentMoods: [], // Would need to track this
+        isCandleOn: false, // Would need device status
+        isMusicPlaying: false, // Would need device status
+      );
+
+      if (analysis.primaryEmotion != null) {
+        print(
+          '✅ Emotion Analysis: Primary: ${analysis.primaryEmotion!.label}, ESS: ${analysis.ess}, Severity: ${analysis.severityLevel}',
+        );
+        return analysis.primaryEmotion;
+      }
+
+      // Fallback to Dialogflow if EmotionAnalysisService doesn't detect
       if (!_isConfigured()) {
         print('⚠️ Dialogflow not configured, using fallback');
         return _analyzeMoodFallback(userMessage);
@@ -559,6 +563,15 @@ class DialogflowService {
       print('Stack trace: $stackTrace');
       return _analyzeMoodFallback(userMessage);
     }
+  }
+
+  // Get time of day
+  static String _getTimeOfDay() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 17) return 'afternoon';
+    if (hour >= 17 && hour < 22) return 'evening';
+    return 'night';
   }
 
   // Fallback mood analysis using text matching
