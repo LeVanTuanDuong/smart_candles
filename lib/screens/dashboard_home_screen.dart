@@ -93,28 +93,40 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
     // Update temperature from Bluetooth
     final bluetoothTemp = _bluetoothService.currentTemperature;
-    if (bluetoothTemp != _deviceStatus.temperature) {
+    final isConnected = _bluetoothService.isConnected;
+    
+    // Check if temperature or connection status changed
+    final tempChanged = (bluetoothTemp - _deviceStatus.temperature).abs() > 0.1;
+    final connectionChanged = isConnected != _deviceStatus.isBluetoothConnected;
+    
+    if (tempChanged || connectionChanged) {
+      print('🔄 Cập nhật DeviceStatus: Nhiệt độ ${bluetoothTemp.toStringAsFixed(1)}°C, Kết nối: $isConnected');
       final newStatus = _deviceStatus.copyWith(
         temperature: bluetoothTemp,
-        isBluetoothConnected: _bluetoothService.isConnected,
-      );
-      _updateStatus(newStatus);
-    } else if (_bluetoothService.isConnected != _deviceStatus.isBluetoothConnected) {
-      final newStatus = _deviceStatus.copyWith(
-        isBluetoothConnected: _bluetoothService.isConnected,
+        isBluetoothConnected: isConnected,
       );
       _updateStatus(newStatus);
     }
   }
 
   void _startTemperatureReading() {
-    // Request temperature reading every 5 seconds
+    // Cancel existing subscription if any
+    _temperatureSubscription?.cancel();
+    
+    // Request temperature reading every 5 seconds as backup
+    // (Main updates come from notifications, this is just a fallback)
     _temperatureSubscription = Stream.periodic(const Duration(seconds: 5))
         .listen((_) async {
-      if (_bluetoothService.isConnected) {
-        final temp = await _bluetoothService.readTemperature();
-        if (temp != null && mounted) {
-          _onBluetoothTemperatureUpdate();
+      if (_bluetoothService.isConnected && mounted) {
+        try {
+          final temp = await _bluetoothService.readTemperature();
+          if (temp != null) {
+            // Temperature will be updated via notifyListeners in BluetoothService
+            // This just triggers a read, the update happens automatically
+            print('📖 Đọc nhiệt độ thủ công: ${temp.toStringAsFixed(1)}°C');
+          }
+        } catch (e) {
+          print('⚠️ Lỗi khi đọc nhiệt độ thủ công: $e');
         }
       }
     });

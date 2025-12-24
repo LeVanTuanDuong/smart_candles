@@ -35,6 +35,7 @@ class BluetoothService extends ChangeNotifier {
   double _currentTemperature = 25.0;
   StreamSubscription<List<ble.ScanResult>>? _scanSubscription;
   StreamSubscription<ble.BluetoothConnectionState>? _connectionSubscription;
+  StreamSubscription<List<int>>? _temperatureSubscription;
 
   // Getters
   bool get isConnected => _isConnected;
@@ -184,12 +185,23 @@ class BluetoothService extends ChangeNotifier {
       _connectedDevice = device;
 
       // Listen to connection state
-      _connectionSubscription = device.connectionState.listen((state) {
+      _connectionSubscription = device.connectionState.listen((state) async {
         if (state == ble.BluetoothConnectionState.connected) {
           _isConnected = true;
           print('✅ Đã kết nối với ${device.platformName}');
-          _discoverServices();
+          
+          // Discover services and characteristics
+          await _discoverServices();
+          
+          // Notify listeners about connection
           notifyListeners();
+          
+          // Read initial temperature after a short delay to ensure services are discovered
+          await Future.delayed(const Duration(milliseconds: 1000));
+          if (_isConnected && _temperatureChar != null) {
+            await readTemperature();
+            print('🌡️ Đã đọc nhiệt độ ban đầu: ${_currentTemperature.toStringAsFixed(1)}°C');
+          }
         } else if (state == ble.BluetoothConnectionState.disconnected) {
           _isConnected = false;
           print('❌ Đã ngắt kết nối với ${device.platformName}');
@@ -273,40 +285,104 @@ class BluetoothService extends ChangeNotifier {
     if (_temperatureChar == null) return;
 
     try {
+      // Cancel existing subscription if any
+      await _temperatureSubscription?.cancel();
+      _temperatureSubscription = null;
+
       // Enable notifications
       await _temperatureChar!.setNotifyValue(true);
+      print('✅ Đã bật notifications cho Temperature characteristic');
 
       // Listen to temperature updates
-      _temperatureChar!.onValueReceived.listen((value) {
+      _temperatureSubscription = _temperatureChar!.onValueReceived.listen((value) {
         if (value.isNotEmpty) {
-          try {
-            // Parse temperature (assuming it's sent as float bytes or JSON)
-            if (value.length >= 4) {
-              // Try parsing as float (4 bytes)
-              final buffer = Uint8List.fromList(value).buffer.asByteData();
-              final temperature = buffer.getFloat32(0, Endian.little);
-              _currentTemperature = temperature;
-              print('🌡️ Nhiệt độ mới: ${temperature.toStringAsFixed(1)}°C');
-              notifyListeners();
-            } else {
-              // Try parsing as string/JSON
-              final str = utf8.decode(value);
-              final json = jsonDecode(str);
-              if (json['temperature'] != null) {
-                _currentTemperature = (json['temperature'] as num).toDouble();
-                print('🌡️ Nhiệt độ mới: ${_currentTemperature.toStringAsFixed(1)}°C');
-                notifyListeners();
-              }
-            }
-          } catch (e) {
-            print('⚠️ Lỗi khi parse nhiệt độ: $e');
-          }
+          _parseTemperatureValue(value);
         }
+      }, onError: (error) {
+        print('❌ Lỗi khi nhận dữ liệu nhiệt độ: $error');
       });
+
+      // Read initial temperature immediately after subscribing
+      await Future.delayed(const Duration(milliseconds: 500));
+      await readTemperature();
 
       print('✅ Đã đăng ký nhận cập nhật nhiệt độ');
     } catch (e) {
       print('❌ Lỗi khi đăng ký nhiệt độ: $e');
+    }
+  }
+
+  /// Parse temperature value from different formats
+  void _parseTemperatureValue(List<int> value) {
+    try {
+      double? temperature;
+
+      // Try parsing as float (4 bytes) - most common for ESP32
+      if (value.length >= 4) {
+        try {
+          final buffer = Uint8List.fromList(value).buffer.asByteData();
+          temperature = buffer.getFloat32(0, Endian.little);
+          print('🌡️ Nhiệt độ (float): ${temperature.toStringAsFixed(1)}°C');
+        } catch (e) {
+          // Not a float, try other formats
+        }
+      }
+
+      // Try parsing as JSON string
+      if (temperature == null) {
+        try {
+          final str = utf8.decode(value);
+          final json = jsonDecode(str);
+          if (json['temperature'] != null) {
+            temperature = (json['temperature'] as num).toDouble();
+            print('🌡️ Nhiệt độ (JSON): ${temperature.toStringAsFixed(1)}°C');
+          } else if (json['temp'] != null) {
+            temperature = (json['temp'] as num).toDouble();
+            print('🌡️ Nhiệt độ (JSON temp): ${temperature.toStringAsFixed(1)}°C');
+          }
+        } catch (e) {
+          // Not JSON, try plain string
+        }
+      }
+
+      // Try parsing as plain string number
+      if (temperature == null) {
+        try {
+          final str = utf8.decode(value).trim();
+          temperature = double.tryParse(str);
+          if (temperature != null) {
+            print('🌡️ Nhiệt độ (string): ${temperature.toStringAsFixed(1)}°C');
+          }
+        } catch (e) {
+          // Not a parseable string
+        }
+      }
+
+      // Try parsing as 2-byte integer (temperature * 10, e.g., 350 = 35.0°C)
+      if (temperature == null && value.length >= 2) {
+        try {
+          final buffer = Uint8List.fromList(value).buffer.asByteData();
+          final tempInt = buffer.getUint16(0, Endian.little);
+          temperature = tempInt / 10.0;
+          print('🌡️ Nhiệt độ (int*10): ${temperature.toStringAsFixed(1)}°C');
+        } catch (e) {
+          // Not a 2-byte integer
+        }
+      }
+
+      // Update temperature if successfully parsed
+      if (temperature != null && temperature >= -50 && temperature <= 150) {
+        // Validate temperature range (reasonable for candle)
+        if (_currentTemperature != temperature) {
+          _currentTemperature = temperature;
+          print('🌡️ ✅ Cập nhật nhiệt độ: ${temperature.toStringAsFixed(1)}°C');
+          notifyListeners();
+        }
+      } else {
+        print('⚠️ Nhiệt độ không hợp lệ: $temperature');
+      }
+    } catch (e) {
+      print('⚠️ Lỗi khi parse nhiệt độ: $e, Raw data: $value');
     }
   }
 
@@ -390,7 +466,7 @@ class BluetoothService extends ChangeNotifier {
     }
   }
 
-  /// Request temperature reading
+  /// Request temperature reading (manual read)
   Future<double?> readTemperature() async {
     if (_temperatureChar == null || !_isConnected) {
       print('⚠️ Không thể đọc nhiệt độ: chưa kết nối hoặc characteristic không tồn tại');
@@ -398,17 +474,15 @@ class BluetoothService extends ChangeNotifier {
     }
 
     try {
+      print('📖 Đang đọc nhiệt độ từ ESP32...');
       final value = await _temperatureChar!.read();
       if (value.isNotEmpty) {
-        if (value.length >= 4) {
-          final buffer = Uint8List.fromList(value).buffer.asByteData();
-          final temperature = buffer.getFloat32(0, Endian.little);
-          _currentTemperature = temperature;
-          notifyListeners();
-          return temperature;
-        }
+        _parseTemperatureValue(value);
+        return _currentTemperature;
+      } else {
+        print('⚠️ Không nhận được dữ liệu nhiệt độ');
+        return null;
       }
-      return null;
     } catch (e) {
       print('❌ Lỗi khi đọc nhiệt độ: $e');
       return null;
@@ -469,17 +543,26 @@ class BluetoothService extends ChangeNotifier {
 
   /// Clear all characteristics
   void _clearCharacteristics() {
+    // Cancel temperature subscription
+    _temperatureSubscription?.cancel();
+    _temperatureSubscription = null;
+    
     _temperatureChar = null;
     _lightControlChar = null;
     _lightColorChar = null;
     _lightBrightnessChar = null;
     _musicControlChar = null;
+    
+    print('🧹 Đã xóa tất cả characteristics và subscriptions');
   }
 
   /// Dispose resources
+  @override
   void dispose() {
     stopScan();
     disconnect();
+    _temperatureSubscription?.cancel();
+    _temperatureSubscription = null;
     super.dispose();
   }
 }
