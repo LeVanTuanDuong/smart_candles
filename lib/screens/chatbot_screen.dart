@@ -3,19 +3,24 @@ import '../models/message.dart';
 import '../models/mood_type.dart';
 import '../services/chatbot_service.dart';
 import '../services/dialogflow_service.dart';
+import '../services/suggestion_service.dart';
+import '../services/chatbot_response_variations.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/mood_buttons_chat.dart';
+import '../services/chatbot_flow_service.dart';
 
 class ChatbotScreen extends StatefulWidget {
   final Function(MoodType)? onMoodSelected;
   final Function(String)? onMusicSuggested;
   final Function(String)? onLightSuggested;
+  final Function(String)? onEssentialOilSuggested;
 
   const ChatbotScreen({
     super.key,
     this.onMoodSelected,
     this.onMusicSuggested,
     this.onLightSuggested,
+    this.onEssentialOilSuggested,
   });
 
   @override
@@ -29,10 +34,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final List<String> _conversationHistory = [];
   bool _hasSelectedMood = false;
   bool _isLoading = false;
+  MoodType? _currentMood;
+  int? _currentIntensity;
+  String? _currentContext;
 
   @override
   void initState() {
     super.initState();
+    // Reset response variations when starting new conversation
+    ChatbotResponseVariations.resetCounts();
     _loadGreeting();
   }
 
@@ -77,6 +87,114 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     }
   }
 
+  void _handleConfirmation(bool confirmed) {
+    if (confirmed) {
+      // Add user's confirmation to messages
+      setState(() {
+        _messages.add(ChatMessage(
+          text: 'Có',
+          isBot: false,
+          timestamp: DateTime.now(),
+        ));
+      });
+      _conversationHistory.add('Có');
+      
+      // Apply suggestions automatically
+      _applySuggestionsAutomatically();
+    } else {
+      // Add user's decline to messages
+      setState(() {
+        _messages.add(ChatMessage(
+          text: 'Không',
+          isBot: false,
+          timestamp: DateTime.now(),
+        ));
+      });
+      _conversationHistory.add('Không');
+      
+      if (mounted) {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: 'Không sao cả. Mình vẫn ở đây nếu bạn cần nhé.',
+            isBot: true,
+            timestamp: DateTime.now(),
+          ));
+        });
+        _conversationHistory.add('Không sao cả. Mình vẫn ở đây nếu bạn cần nhé.');
+        _scrollToBottom();
+      }
+    }
+  }
+
+  void _applySuggestionsAutomatically() {
+    print('🔵 Applying suggestions automatically...');
+    
+    // Find the last message with suggestion data
+    ChatMessage? suggestionMessage;
+    for (int i = _messages.length - 1; i >= 0; i--) {
+      if (_messages[i].needsConfirmation == true && _messages[i].suggestionData != null) {
+        suggestionMessage = _messages[i];
+        print('✅ Found suggestion message with data: ${suggestionMessage.suggestionData}');
+        break;
+      }
+    }
+    
+    if (suggestionMessage?.suggestionData != null) {
+      final data = suggestionMessage!.suggestionData!;
+      
+      print('🎵 Applying: Oil=${data['essential_oil']}, Music=${data['music']}, Light=${data['light_mode']}');
+      
+      // Apply suggestions automatically
+      widget.onEssentialOilSuggested?.call(data['essential_oil'] as String);
+      widget.onMusicSuggested?.call(data['music'] as String);
+      widget.onLightSuggested?.call(data['light_mode'] as String);
+      
+      if (mounted) {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: 'Đã bật nhạc và đèn theo gợi ý. Bạn cứ thả lỏng nhé 🎵💡\n\n'
+                'Nếu bạn muốn, bạn có thể tiếp tục chia sẻ với mình.',
+            isBot: true,
+            timestamp: DateTime.now(),
+          ));
+        });
+        _conversationHistory.add('Đã bật nhạc và đèn theo gợi ý.');
+        _scrollToBottom();
+      }
+    } else {
+      print('⚠️ No suggestion message found, trying fallback...');
+      // Fallback: try to get suggestions from current mood
+      if (_currentMood != null) {
+        // Get default suggestions
+        final suggestions = ChatbotFlowService.getEssentialOilSuggestions(_currentMood!);
+        final musicSuggestions = ChatbotFlowService.getMusicSuggestions(_currentMood!);
+        final lightSuggestion = ChatbotFlowService.getLightSuggestion(_currentMood!, _currentIntensity);
+        
+        if (suggestions['primary']!.isNotEmpty && musicSuggestions.isNotEmpty) {
+          print('🎵 Fallback: Applying default suggestions for ${_currentMood!.label}');
+          widget.onEssentialOilSuggested?.call(suggestions['primary']!.first);
+          widget.onMusicSuggested?.call(musicSuggestions.first['type']!);
+          widget.onLightSuggested?.call(lightSuggestion['mode'] as String);
+          
+          if (mounted) {
+            setState(() {
+              _messages.add(ChatMessage(
+                text: 'Đã bật nhạc và đèn theo gợi ý. Bạn cứ thả lỏng nhé 🎵💡',
+                isBot: true,
+                timestamp: DateTime.now(),
+              ));
+            });
+            _scrollToBottom();
+          }
+        } else {
+          print('❌ No default suggestions available');
+        }
+      } else {
+        print('❌ No current mood set');
+      }
+    }
+  }
+
   void _sendMessage(String text) {
     if (text.trim().isEmpty) return;
 
@@ -100,9 +218,66 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   Future<void> _handleUserInput(String input) async {
     if (_isLoading) return;
       
-      setState(() {
+    setState(() {
       _isLoading = true;
     });
+
+    // Check if this is a simple confirmation first (before calling Dialogflow)
+    final inputLower = input.toLowerCase().trim();
+    
+    if (_hasSelectedMood) {
+      // Check if there's a pending suggestion
+      bool hasPendingSuggestion = false;
+      for (int i = _messages.length - 1; i >= 0; i--) {
+        if (_messages[i].needsConfirmation == true && _messages[i].suggestionData != null) {
+          hasPendingSuggestion = true;
+          break;
+        }
+      }
+      
+      if (hasPendingSuggestion) {
+        if (inputLower == 'có' || 
+            inputLower == 'ok' || 
+            inputLower == 'yes' ||
+            inputLower.contains('đồng ý') || 
+            inputLower.contains('bật') ||
+            inputLower.contains('phát')) {
+          // User confirmed - apply suggestions immediately
+          print('✅ User confirmed: $input');
+          _conversationHistory.add(input);
+          
+          // Apply suggestions
+          _applySuggestionsAutomatically();
+          
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+            _scrollToBottom();
+          }
+          return; // Don't call Dialogflow
+        } else if (inputLower == 'không' || 
+                   inputLower == 'no' ||
+                   inputLower.contains('thôi') ||
+                   inputLower.contains('không cần')) {
+          // User declined
+          _conversationHistory.add(input);
+          if (mounted) {
+            setState(() {
+              _messages.add(ChatMessage(
+                text: 'Không sao cả. Mình vẫn ở đây nếu bạn cần nhé.',
+                isBot: true,
+                timestamp: DateTime.now(),
+              ));
+              _isLoading = false;
+            });
+            _conversationHistory.add('Không sao cả. Mình vẫn ở đây nếu bạn cần nhé.');
+            _scrollToBottom();
+          }
+          return; // Don't call Dialogflow
+        }
+      }
+    }
 
     // Add user message to conversation history
     _conversationHistory.add(input);
@@ -120,54 +295,69 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         
         if (detectedMood != null) {
           _hasSelectedMood = true;
-      widget.onMoodSelected?.call(detectedMood);
+          _currentMood = detectedMood;
+          widget.onMoodSelected?.call(detectedMood);
 
           // Get suggestions from Dialogflow
           final suggestions = await DialogflowService.getSuggestions(detectedMood);
           
-          // Add bot response
+          // Update suggestion service
+          final suggestionService = SuggestionService();
+          suggestionService.updateSuggestions(
+            mood: detectedMood,
+            essentialOil: suggestions['essential_oil'],
+            music: suggestions['music'],
+            light: suggestions['light'],
+          );
+          
+          // Store context for future use
+          _currentContext = input;
+          
+          // Use varied response instead of Dialogflow response
+          final variedResponse = ChatbotResponseVariations.getResponseForMood(
+            detectedMood,
+            _currentIntensity,
+            _currentContext,
+          );
+          
+          // Get light suggestion details
+          final lightSuggestion = ChatbotFlowService.getLightSuggestion(
+            detectedMood,
+            _currentIntensity,
+          );
+          
+          // Create suggestion message with confirmation
+          final suggestionMessage = ChatbotResponseVariations.getSuggestionMessageWithOptions(
+            mood: detectedMood,
+            essentialOil: suggestions['essential_oil'] ?? detectedMood.essentialOil,
+            music: suggestions['music'] ?? 'Thiền',
+            lightMode: lightSuggestion['mode'] as String,
+            lightBrightness: lightSuggestion['brightness'] as double,
+          );
+          
+          // Add main response
           if (mounted) {
             setState(() {
               _messages.add(ChatMessage(
-                text: response,
+                text: variedResponse,
                 isBot: true,
                 timestamp: DateTime.now(),
+              ));
+              
+              // Add suggestion message with confirmation buttons
+              _messages.add(ChatMessage(
+                text: suggestionMessage,
+                isBot: true,
+                timestamp: DateTime.now(),
+                needsConfirmation: true,
+                suggestionData: {
+                  'essential_oil': suggestions['essential_oil'] ?? detectedMood.essentialOil,
+                  'music': suggestions['music'] ?? 'Thiền',
+                  'light_mode': lightSuggestion['mode'] as String,
+                  'light_brightness': lightSuggestion['brightness'] as double,
+                },
               ));
             });
-          }
-
-          // Add suggestions
-          if (mounted) {
-            setState(() {
-              // Essential oil suggestion
-              _messages.add(ChatMessage(
-                text: 'Mình đề xuất bạn dùng tinh dầu ${suggestions['essential_oil']} để thư giãn. Hãy thắp nến trong 20–30 phút.',
-                isBot: true,
-                timestamp: DateTime.now(),
-                suggestionType: 'essential_oil',
-              ));
-
-              // Music suggestion
-              _messages.add(ChatMessage(
-                text: 'Mình sẽ bật nhạc ${suggestions['music']} nhẹ nhàng giúp bạn bình tĩnh hơn nhé.',
-                isBot: true,
-                timestamp: DateTime.now(),
-                suggestionType: 'music',
-              ));
-
-              // Light suggestion
-              final lightMode = suggestions['light'] ?? 'warm';
-              _messages.add(ChatMessage(
-                text: 'Mình sẽ điều chỉnh ánh sáng ${ChatbotService.getLightLabel(lightMode)} để tạo không gian thư giãn cho bạn.',
-                isBot: true,
-                timestamp: DateTime.now(),
-                suggestionType: 'light',
-              ));
-            });
-
-            // Trigger callbacks for device control
-            widget.onMusicSuggested?.call(suggestions['music'] ?? 'Thiền');
-            widget.onLightSuggested?.call(suggestions['light'] ?? 'warm');
           }
         } else {
           // Just add bot response without suggestions
@@ -182,51 +372,104 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           }
         }
       } else {
-        // Mood already selected, just add response
-        if (mounted) {
-          setState(() {
-            _messages.add(ChatMessage(
-              text: response,
-              isBot: true,
-              timestamp: DateTime.now(),
-            ));
-          });
+        // Mood already selected, check if user is confirming or continuing conversation
+        final inputLower = input.toLowerCase().trim();
+        
+        // Check if there's a pending suggestion that needs confirmation
+        bool hasPendingSuggestion = false;
+        for (int i = _messages.length - 1; i >= 0; i--) {
+          if (_messages[i].needsConfirmation == true && _messages[i].suggestionData != null) {
+            hasPendingSuggestion = true;
+            break;
+          }
+        }
+        
+        if (hasPendingSuggestion && 
+            (inputLower == 'có' || 
+             inputLower == 'ok' || 
+             inputLower == 'yes' ||
+             inputLower.contains('đồng ý') || 
+             inputLower.contains('bật') ||
+             inputLower.contains('phát'))) {
+          // User confirmed, apply suggestions automatically
+          print('✅ User confirmed via text input: $input');
+          _applySuggestionsAutomatically();
+          
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+            _scrollToBottom();
+          }
+          return; // Don't call Dialogflow
+        } else if (hasPendingSuggestion && 
+                   (inputLower == 'không' || 
+                    inputLower == 'no' ||
+                    inputLower.contains('thôi') ||
+                    inputLower.contains('không cần'))) {
+          // User declined
+          _conversationHistory.add(input);
+          if (mounted) {
+            setState(() {
+              _messages.add(ChatMessage(
+                text: 'Không sao cả. Mình vẫn ở đây nếu bạn cần nhé.',
+                isBot: true,
+                timestamp: DateTime.now(),
+              ));
+              _isLoading = false;
+            });
+            _conversationHistory.add('Không sao cả. Mình vẫn ở đây nếu bạn cần nhé.');
+            _scrollToBottom();
+          }
+          return; // Don't call Dialogflow
         }
       }
-
+      
+      // Continue conversation - use varied response if mood is known
+      String finalResponse = response;
+      if (_currentMood != null) {
+        // Try to use varied response for better conversation
+        final variedResponse = ChatbotResponseVariations.getResponseForMood(
+          _currentMood!,
+          _currentIntensity,
+          input,
+        );
+        // Only use varied response if it's different from Dialogflow response
+        if (variedResponse != response && variedResponse.isNotEmpty) {
+          finalResponse = variedResponse;
+        }
+      }
+      
       if (mounted) {
         setState(() {
+          _messages.add(ChatMessage(
+            text: finalResponse,
+            isBot: true,
+            timestamp: DateTime.now(),
+          ));
           _isLoading = false;
         });
-      _scrollToBottom();
+        _conversationHistory.add(finalResponse);
+        _scrollToBottom();
       }
     } catch (e, stackTrace) {
       print('❌ Error handling user input: $e');
       print('Stack trace: $stackTrace');
       
       if (mounted) {
-      setState(() {
+        setState(() {
           _isLoading = false;
           
-          // Provide more specific error message
-          String errorMessage = 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.';
-          final errorStr = e.toString().toLowerCase();
+          // Use fallback response instead of error message
+          final fallbackResponse = DialogflowService.getFallbackResponse(input);
           
-          if (errorStr.contains('api_key') || errorStr.contains('invalid')) {
-            errorMessage = 'Xin lỗi, có lỗi với API key. Vui lòng kiểm tra cấu hình.';
-          } else if (errorStr.contains('quota') || errorStr.contains('limit')) {
-            errorMessage = 'Xin lỗi, API đã đạt giới hạn. Vui lòng thử lại sau.';
-          } else if (errorStr.contains('network') || errorStr.contains('connection')) {
-            errorMessage = 'Xin lỗi, không thể kết nối. Vui lòng kiểm tra internet.';
-          }
-          
-        _messages.add(ChatMessage(
-            text: errorMessage,
-          isBot: true,
-          timestamp: DateTime.now(),
-        ));
-      });
-      _scrollToBottom();
+          _messages.add(ChatMessage(
+            text: fallbackResponse,
+            isBot: true,
+            timestamp: DateTime.now(),
+          ));
+        });
+        _scrollToBottom();
       }
     }
   }
@@ -244,12 +487,22 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     });
 
     _hasSelectedMood = true;
+    _currentMood = mood;
     widget.onMoodSelected?.call(mood);
 
     try {
       // Get response and suggestions from Dialogflow
       final response = await DialogflowService.getResponse('Tôi cảm thấy ${mood.label.toLowerCase()}');
       final suggestions = await DialogflowService.getSuggestions(mood);
+      
+      // Update suggestion service
+      final suggestionService = SuggestionService();
+      suggestionService.updateSuggestions(
+        mood: mood,
+        essentialOil: suggestions['essential_oil'],
+        music: suggestions['music'],
+        light: suggestions['light'],
+      );
 
       if (mounted) {
         setState(() {
@@ -258,37 +511,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             isBot: true,
             timestamp: DateTime.now(),
           ));
-
-          // Essential oil suggestion
-          _messages.add(ChatMessage(
-            text: 'Mình đề xuất bạn dùng tinh dầu ${suggestions['essential_oil']} để thư giãn. Hãy thắp nến trong 20–30 phút.',
-            isBot: true,
-            timestamp: DateTime.now(),
-            suggestionType: 'essential_oil',
-          ));
-
-          // Music suggestion
-          _messages.add(ChatMessage(
-            text: 'Mình sẽ bật nhạc ${suggestions['music']} nhẹ nhàng giúp bạn bình tĩnh hơn nhé.',
-            isBot: true,
-            timestamp: DateTime.now(),
-            suggestionType: 'music',
-          ));
-
-          // Light suggestion
-          final lightMode = suggestions['light'] ?? 'warm';
-          _messages.add(ChatMessage(
-            text: 'Mình sẽ điều chỉnh ánh sáng ${ChatbotService.getLightLabel(lightMode)} để tạo không gian thư giãn cho bạn.',
-            isBot: true,
-            timestamp: DateTime.now(),
-            suggestionType: 'light',
-          ));
-
           _isLoading = false;
         });
 
-        // Trigger callbacks
+        // Automatically apply suggestions without showing messages
+        // These callbacks will trigger device control automatically
         final lightMode = suggestions['light'] ?? 'warm';
+        widget.onEssentialOilSuggested?.call(suggestions['essential_oil'] ?? mood.essentialOil);
         widget.onMusicSuggested?.call(suggestions['music'] ?? 'Thiền');
         widget.onLightSuggested?.call(lightMode);
         _scrollToBottom();
@@ -345,7 +574,18 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                   final isFirstMessage = index == 0 && message.isBot;
                   return Column(
                     children: [
-                      ChatBubble(message: message),
+                      ChatBubble(
+                        message: message,
+                        onConfirmation: message.needsConfirmation == true
+                            ? (confirmed) {
+                                if (confirmed) {
+                                  _handleConfirmation(true);
+                                } else {
+                                  _handleConfirmation(false);
+                                }
+                              }
+                            : null,
+                      ),
                       // Show mood buttons only after the first bot message and if mood not selected
                       if (isFirstMessage && !_hasSelectedMood)
                         MoodButtonsChat(

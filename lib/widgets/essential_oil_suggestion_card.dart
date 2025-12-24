@@ -4,13 +4,37 @@ import '../screens/essential_oil_library_screen.dart';
 
 class EssentialOilSuggestionCard extends StatelessWidget {
   final MoodType mood;
+  final String? customEssentialOil; // Gợi ý tinh dầu cụ thể từ chatbot
 
   const EssentialOilSuggestionCard({
     super.key,
     required this.mood,
+    this.customEssentialOil,
   });
 
-  String _getEffect(MoodType mood) {
+
+  String _getEssentialOilName() {
+    return customEssentialOil ?? mood.essentialOil;
+  }
+
+  String _getEffect() {
+    // Use custom oil effect if provided, otherwise use mood effect
+    final oilName = _getEssentialOilName();
+    switch (oilName) {
+      case 'Lavender':
+        return 'Thư giãn, giảm lo âu.';
+      case 'Sweet Orange':
+        return 'Nâng cao tinh thần.';
+      case 'Peppermint':
+        return 'Tỉnh táo, tập trung.';
+      case 'Chamomile':
+        return 'An thần, hỗ trợ giấc ngủ.';
+      default:
+        return _getEffectFromMood();
+    }
+  }
+
+  String _getEffectFromMood() {
     switch (mood) {
       case MoodType.stressed:
         return 'Thư giãn, giảm lo âu.';
@@ -25,8 +49,9 @@ class EssentialOilSuggestionCard extends StatelessWidget {
     }
   }
 
-  Color _getOilColor(MoodType mood) {
-    switch (mood.essentialOil) {
+  Color _getOilColor() {
+    final oilName = _getEssentialOilName();
+    switch (oilName) {
       case 'Lavender':
         return Colors.purple[300]!;
       case 'Sweet Orange':
@@ -71,7 +96,7 @@ class EssentialOilSuggestionCard extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: _getOilColor(mood),
+              color: _getOilColor(),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Stack(
@@ -105,7 +130,7 @@ class EssentialOilSuggestionCard extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        mood.essentialOil.split(' ').first,
+                        _getEssentialOilName().split(' ').first,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10,
@@ -151,7 +176,7 @@ class EssentialOilSuggestionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  mood.essentialOil,
+                  _getEssentialOilName(),
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -160,7 +185,7 @@ class EssentialOilSuggestionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _getEffect(mood),
+                  _getEffect(),
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[700],

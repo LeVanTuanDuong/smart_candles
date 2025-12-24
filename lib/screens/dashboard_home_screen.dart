@@ -17,6 +17,7 @@ import '../services/chatbot_service.dart' show ChatbotService;
 import '../services/temperature_history_service.dart';
 import '../models/temperature_history_entry.dart';
 import '../services/global_music_player_service.dart';
+import '../services/suggestion_service.dart';
 
 class DashboardHomeScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -43,6 +44,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   );
   MoodType? _suggestedMood;
   final GlobalMusicPlayerService _globalMusicPlayer = GlobalMusicPlayerService();
+  final SuggestionService _suggestionService = SuggestionService();
 
   @override
   void initState() {
@@ -53,6 +55,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     
     // Listen to global music player changes
     _globalMusicPlayer.addListener(_onMusicPlayerChanged);
+    
+    // Listen to suggestion service changes
+    _suggestionService.addListener(_onSuggestionChanged);
 
     // Save initial temperature to history
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -73,7 +78,19 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   @override
   void dispose() {
     _globalMusicPlayer.removeListener(_onMusicPlayerChanged);
+    _suggestionService.removeListener(_onSuggestionChanged);
     super.dispose();
+  }
+
+  void _onSuggestionChanged() {
+    if (mounted) {
+      setState(() {
+        // Update suggested mood if detected
+        if (_suggestionService.detectedMood != null) {
+          _suggestedMood = _suggestionService.detectedMood;
+        }
+      });
+    }
   }
 
   void _onMusicPlayerChanged() {
@@ -132,7 +149,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       _suggestedMood = mood;
 
       final lightMode = ChatbotService.getLightSuggestion(mood);
-      final suggestedMusic = ChatbotService.getMusicSuggestions(mood).first;
+      final suggestedMusic = _suggestionService.musicSuggestion ?? ChatbotService.getMusicSuggestions(mood).first;
       _deviceStatus = _deviceStatus.copyWith(
         isLightOn: true,
         lightMode: lightMode,
@@ -142,6 +159,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     });
     _updateStatus(_deviceStatus);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -294,11 +312,14 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
             ),
 
             // Essential Oil Suggestion Card (always show with current or default mood)
-            EssentialOilSuggestionCard(mood: _suggestedMood ?? MoodType.normal),
+            EssentialOilSuggestionCard(
+              mood: _suggestedMood ?? MoodType.normal,
+              customEssentialOil: _suggestionService.essentialOilSuggestion,
+            ),
 
             // Music Suggestion Card (always show with current or default mood)
             MusicSuggestionCard(
-              musicType: ChatbotService.getMusicSuggestions(
+              musicType: _suggestionService.musicSuggestion ?? ChatbotService.getMusicSuggestions(
                 _suggestedMood ?? MoodType.normal,
               ).first,
               onPlayPressed: () {

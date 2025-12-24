@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:googleapis_auth/auth_io.dart';
 import '../models/mood_type.dart';
+import 'chatbot_flow_service.dart';
 
 class DialogflowService {
   // Dialogflow configuration
@@ -266,13 +267,18 @@ class DialogflowService {
   }
 
   // Get greeting message from Dialogflow
-  static Future<String> getGreetingMessage() async {
+  static Future<String> getGreetingMessage({bool isFirstTime = false}) async {
     try {
       print('🔵 Dialogflow: Getting greeting message...');
 
+      // Use ChatbotFlowService for structured greetings
+      if (isFirstTime) {
+        return ChatbotFlowService.getOnboardingGreeting();
+      }
+
       if (!_isConfigured()) {
         print('⚠️ Dialogflow not configured, using fallback');
-        return 'Xin chào! Hôm nay bạn cảm thấy thế nào? Bạn đang mệt, buồn hay căng thẳng?';
+        return ChatbotFlowService.getCheckInGreeting();
       }
 
       final response = await _sendRequest('Xin chào');
@@ -283,7 +289,7 @@ class DialogflowService {
         return text;
       } else {
         print('⚠️ Dialogflow: Empty response, using fallback');
-        return 'Xin chào! Hôm nay bạn cảm thấy thế nào? Bạn đang mệt, buồn hay căng thẳng?';
+        return ChatbotFlowService.getCheckInGreeting();
       }
     } catch (e, stackTrace) {
       // Check if it's a network error
@@ -320,13 +326,26 @@ class DialogflowService {
 
       if (!_isConfigured()) {
         print('⚠️ Dialogflow not configured, using fallback');
-        return 'Xin lỗi, Dialogflow chưa được cấu hình. Vui lòng kiểm tra cấu hình.';
+        return _getFallbackResponse(userMessage);
       }
 
+      // Add context to help Dialogflow understand this is a psychological chatbot
+      final context = {
+        'name': 'chatbot_context',
+        'lifespanCount': 5,
+        'parameters': {
+          'bot_type': 'psychological_chatbot',
+          'app_name': 'Smart Candles',
+          'purpose': 'help_user_relax_and_improve_mood',
+        },
+      };
+
       // Dialogflow handles conversation context automatically via session
-      // You can add context if needed
-      final response = await _sendRequest(userMessage);
-      final text = _extractFulfillmentText(response);
+      final response = await _sendRequest(userMessage, context: context);
+      var text = _extractFulfillmentText(response);
+
+      // Filter and improve response
+      text = _filterAndImproveResponse(text, userMessage);
 
       if (text.isNotEmpty) {
         print(
@@ -335,7 +354,7 @@ class DialogflowService {
         return text;
       } else {
         print('⚠️ Dialogflow: Empty response');
-        return 'Xin lỗi, mình không hiểu. Bạn có thể nói rõ hơn không?';
+        return _getFallbackResponse(userMessage);
       }
     } catch (e, stackTrace) {
       // Check if it's a network error
@@ -349,27 +368,127 @@ class DialogflowService {
 
       if (isNetworkError) {
         if (!_isOffline) {
-          print('⚠️ Network error - device is offline');
+          print('⚠️ Network error - device is offline, using fallback');
           _isOffline = true;
         }
-        return 'Xin lỗi, không thể kết nối đến server. Vui lòng kiểm tra kết nối internet.';
+        // Use fallback response instead of error message
+        return _getFallbackResponse(userMessage);
       }
 
       // Log non-network errors
       print('❌ Error getting response from Dialogflow: $e');
       print('Stack trace: $stackTrace');
 
-      if (errorStr.contains('not configured') || errorStr.contains('project')) {
-        return 'Xin lỗi, Dialogflow chưa được cấu hình. Vui lòng kiểm tra cấu hình.';
-      }
-      if (errorStr.contains('auth') ||
-          errorStr.contains('token') ||
-          errorStr.contains('unauthorized')) {
-        return 'Xin lỗi, có lỗi xác thực. Vui lòng kiểm tra access token.';
-      }
-
-      return 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.';
+      // Always use fallback response instead of showing technical errors to users
+      return _getFallbackResponse(userMessage);
     }
+  }
+
+  // Filter and improve response to be more appropriate
+  static String _filterAndImproveResponse(String response, String userMessage) {
+    if (response.isEmpty) return response;
+
+    var improvedResponse = response;
+
+    // Remove inappropriate phrases for text chatbot
+    final inappropriatePhrases = [
+      'Tôi chưa nghe rõ',
+      'chưa nghe rõ',
+      'không nghe rõ',
+      'bạn có thể nhắc lại',
+      'bạn có thể nói lại',
+      'tôi không nghe được',
+    ];
+
+    for (var phrase in inappropriatePhrases) {
+      if (improvedResponse.toLowerCase().contains(phrase.toLowerCase())) {
+        // Replace with more appropriate response
+        improvedResponse =
+            'Mình hiểu bạn đang muốn chia sẻ. Bạn có thể nói rõ hơn về cảm xúc của mình không?';
+        break;
+      }
+    }
+
+    // Ensure response is appropriate for psychological chatbot
+    if (improvedResponse.length < 10) {
+      // If response is too short, provide a more helpful response
+      final userLower = userMessage.toLowerCase();
+      if (userLower.contains('buồn') || userLower.contains('sad')) {
+        improvedResponse =
+            'Mình hiểu bạn đang cảm thấy buồn. Hãy để mình giúp bạn cảm thấy tốt hơn nhé.';
+      } else if (userLower.contains('mệt') || userLower.contains('tired')) {
+        improvedResponse =
+            'Bạn trông mệt mỏi rồi. Hãy thư giãn và để cơ thể được nghỉ ngơi nhé.';
+      } else if (userLower.contains('căng thẳng') ||
+          userLower.contains('stressed')) {
+        improvedResponse =
+            'Mình thấy bạn đang khá căng thẳng. Điều này hoàn toàn bình thường. Hãy hít thở sâu cùng mình nhé.';
+      } else if (userLower.contains('khó ngủ') ||
+          userLower.contains('mất ngủ') ||
+          userLower.contains('insomnia')) {
+        improvedResponse =
+            'Khó ngủ có thể khiến bạn căng thẳng. Hãy để mình giúp bạn thư giãn và chuẩn bị cho giấc ngủ ngon.';
+      } else {
+        improvedResponse =
+            'Mình hiểu bạn. Hãy cho mình biết thêm về cảm xúc của bạn nhé.';
+      }
+    }
+
+    return improvedResponse;
+  }
+
+  // Get fallback response based on user message (public for use in error handling)
+  static String getFallbackResponse(String userMessage) {
+    return _getFallbackResponse(userMessage);
+  }
+
+  // Get fallback response based on user message
+  static String _getFallbackResponse(String userMessage) {
+    final userLower = userMessage.toLowerCase();
+
+    // Use ChatbotFlowService for mood detection and responses
+    MoodType? detectedMood;
+
+    // Check for stress/anxiety (including variations with /)
+    if (userLower.contains('căng thẳng') ||
+        userLower.contains('stressed') ||
+        userLower.contains('lo âu') ||
+        userLower.contains('lo lắng') ||
+        userLower.contains('anxiety') ||
+        userLower.contains('bực bội') ||
+        userLower.contains('cáu')) {
+      detectedMood = MoodType.stressed;
+    } else if (userLower.contains('buồn') ||
+        userLower.contains('sad') ||
+        userLower.contains('trầm') ||
+        userLower.contains('chán nản') ||
+        userLower.contains('trống rỗng')) {
+      detectedMood = MoodType.sad;
+    } else if (userLower.contains('mệt') ||
+        userLower.contains('tired') ||
+        userLower.contains('mệt mỏi') ||
+        userLower.contains('kiệt sức')) {
+      detectedMood = MoodType.tired;
+    } else if (userLower.contains('khó ngủ') ||
+        userLower.contains('mất ngủ') ||
+        userLower.contains('insomnia') ||
+        userLower.contains('không ngủ được')) {
+      detectedMood = MoodType.insomnia;
+    } else if (userLower.contains('tốt') ||
+        userLower.contains('bình thường') ||
+        userLower.contains('ok') ||
+        userLower.contains('good') ||
+        userLower.contains('vui') ||
+        userLower.contains('ổn')) {
+      detectedMood = MoodType.normal;
+    }
+
+    if (detectedMood != null) {
+      // Use ChatbotFlowService for mood-specific responses
+      return ChatbotFlowService.getMoodResponse(detectedMood, null);
+    }
+
+    return 'Mình hiểu bạn. Hãy cho mình biết thêm về cảm xúc của bạn nhé. Bạn đang cảm thấy thế nào?';
   }
 
   // Analyze mood from user message
@@ -526,10 +645,18 @@ class DialogflowService {
       String? music = parameters['music'] as String?;
       String? light = parameters['light'] as String?;
 
-      // If not in parameters, use defaults
+      // If not in parameters, try to parse from fulfillment text
+      if (essentialOil == null || music == null) {
+        final parsed = _parseSuggestionsFromText(fulfillmentText, mood);
+        essentialOil ??= parsed['essential_oil'];
+        music ??= parsed['music'];
+        light ??= parsed['light'];
+      }
+
+      // If still not found, use defaults based on mood
       essentialOil ??= mood.essentialOil;
-      music ??= 'Thiền';
-      light ??= 'warm';
+      music ??= _getDefaultMusicForMood(mood);
+      light ??= _getDefaultLightForMood(mood);
 
       print(
         '✅ Dialogflow: Parsed suggestions - Oil: $essentialOil, Music: $music, Light: $light',
@@ -549,38 +676,95 @@ class DialogflowService {
     }
   }
 
-  // Fallback suggestions
-  static Map<String, String> _getFallbackSuggestions(MoodType mood) {
-    String music = 'Thiền';
-    String light = 'warm';
+  // Parse suggestions from fulfillment text
+  static Map<String, String> _parseSuggestionsFromText(
+    String text,
+    MoodType mood,
+  ) {
+    final textLower = text.toLowerCase();
+    final result = <String, String>{};
 
-    switch (mood) {
-      case MoodType.stressed:
-        music = 'Thiền';
-        light = 'warm';
+    // Parse essential oil
+    final oilKeywords = {
+      'lavender': 'Lavender',
+      'sweet orange': 'Sweet Orange',
+      'peppermint': 'Peppermint',
+      'chamomile': 'Chamomile',
+    };
+    for (var entry in oilKeywords.entries) {
+      if (textLower.contains(entry.key)) {
+        result['essential_oil'] = entry.value;
         break;
-      case MoodType.sad:
-        music = 'Piano chậm';
-        light = 'amber';
-        break;
-      case MoodType.tired:
-        music = 'Thiên nhiên';
-        light = 'amber';
-        break;
-      case MoodType.insomnia:
-        music = 'Thiền';
-        light = 'blue';
-        break;
-      case MoodType.normal:
-        music = 'Ambient';
-        light = 'warm';
-        break;
+      }
     }
 
+    // Parse music type
+    final musicKeywords = {
+      'thiền': 'Thiền',
+      'meditation': 'Thiền',
+      'piano': 'Nhạc Piano',
+      'piano chậm': 'Nhạc Piano',
+      'thiên nhiên': 'Thiên nhiên',
+      'nature': 'Thiên nhiên',
+      'ambient': 'Ambient',
+    };
+    for (var entry in musicKeywords.entries) {
+      if (textLower.contains(entry.key)) {
+        result['music'] = entry.value;
+        break;
+      }
+    }
+
+    // Parse light mode
+    if (textLower.contains('warm') || textLower.contains('ấm')) {
+      result['light'] = 'warm';
+    } else if (textLower.contains('amber') || textLower.contains('vàng')) {
+      result['light'] = 'amber';
+    } else if (textLower.contains('blue') || textLower.contains('xanh')) {
+      result['light'] = 'blue';
+    }
+
+    return result;
+  }
+
+  // Get default music for mood
+  static String _getDefaultMusicForMood(MoodType mood) {
+    switch (mood) {
+      case MoodType.stressed:
+        return 'Thiền';
+      case MoodType.sad:
+        return 'Nhạc Piano';
+      case MoodType.tired:
+        return 'Thiên nhiên';
+      case MoodType.insomnia:
+        return 'Thiền';
+      case MoodType.normal:
+        return 'Ambient';
+    }
+  }
+
+  // Get default light for mood
+  static String _getDefaultLightForMood(MoodType mood) {
+    switch (mood) {
+      case MoodType.stressed:
+        return 'warm';
+      case MoodType.sad:
+        return 'amber';
+      case MoodType.tired:
+        return 'amber';
+      case MoodType.insomnia:
+        return 'blue';
+      case MoodType.normal:
+        return 'warm';
+    }
+  }
+
+  // Fallback suggestions
+  static Map<String, String> _getFallbackSuggestions(MoodType mood) {
     return {
       'essential_oil': mood.essentialOil,
-      'music': music,
-      'light': light,
+      'music': _getDefaultMusicForMood(mood),
+      'light': _getDefaultLightForMood(mood),
       'reason': '',
     };
   }

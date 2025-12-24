@@ -4,10 +4,12 @@ import 'chatbot_avatar.dart';
 
 class ChatBubble extends StatelessWidget {
   final ChatMessage message;
+  final Function(bool)? onConfirmation; // true = yes, false = no
 
   const ChatBubble({
     super.key,
     required this.message,
+    this.onConfirmation,
   });
 
   @override
@@ -27,12 +29,50 @@ class ChatBubble extends StatelessWidget {
                   color: Colors.lightBlue[100],
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(
-                  message.text,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 15,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      message.text,
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontSize: 15,
+                      ),
+                    ),
+                    if (message.needsConfirmation == true) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () => onConfirmation?.call(true),
+                            icon: const Icon(Icons.check, size: 18),
+                            label: const Text('Có'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green[400],
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: () => onConfirmation?.call(false),
+                            icon: const Icon(Icons.close, size: 18),
+                            label: const Text('Không'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
