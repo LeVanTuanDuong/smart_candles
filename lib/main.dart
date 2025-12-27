@@ -1,11 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart';
 import 'screens/home_screen.dart';
+import 'screens/login_screen.dart';
 import 'services/dialogflow_service.dart';
+import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize Auth Service
+  await AuthService().initialize();
+
   // Load Dialogflow service account
   await DialogflowService.loadServiceAccount();
+
   runApp(const MyApp());
 }
 
@@ -41,7 +54,23 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const HomeScreen(),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          // Show loading indicator while checking auth state
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          // Show login screen if not authenticated
+          if (!snapshot.hasData || snapshot.data == null) {
+            return const LoginScreen();
+          }
+          // Show home screen if authenticated
+          return const HomeScreen();
+        },
+      ),
     );
   }
 }

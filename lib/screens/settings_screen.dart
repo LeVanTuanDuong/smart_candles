@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/device_status.dart';
 import '../services/settings_service.dart';
 import '../services/bluetooth_service.dart';
+import '../services/auth_service.dart';
+import 'login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -518,6 +520,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   title: const Text('Chính sách bảo mật'),
                   onTap: () {},
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.red),
+                  title: const Text(
+                    'Đăng xuất',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () async {
+                    final authService = AuthService();
+                    try {
+                      await authService.signOut();
+                      if (mounted) {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Lỗi đăng xuất: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
                 ),
               ],
             ),
