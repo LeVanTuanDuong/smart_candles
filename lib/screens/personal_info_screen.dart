@@ -128,7 +128,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
 
       // Prepare data to save
       final displayName = _nameController.text.trim();
-      
+
       // Update display name in Firebase Auth
       if (displayName.isNotEmpty) {
         await user.updateDisplayName(displayName);
@@ -143,7 +143,8 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           final storageRef = FirebaseStorage.instance
               .ref()
               .child('user_profiles')
-              .child('${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+              .child(
+                  '${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg');
 
           // Upload the file
           await storageRef.putFile(File(_selectedImage!.path));
@@ -182,12 +183,11 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       }
 
       // Check if document exists, if not create it
-      final userRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid);
-      
+      final userRef =
+          FirebaseFirestore.instance.collection('users').doc(user.uid);
+
       final docSnapshot = await userRef.get();
-      
+
       if (docSnapshot.exists) {
         // Update existing document
         await userRef.update(updateData);
@@ -206,10 +206,10 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
             duration: Duration(seconds: 2),
           ),
         );
-        
+
         // Wait a bit before navigating to ensure data is saved
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         if (mounted) {
           // Return true to indicate successful save, so ProfileScreen can reload
           Navigator.of(context).pop(true);
@@ -239,18 +239,21 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     final user = _authService.currentUser;
     final photoURL = user?.photoURL;
 
+    // Determine the background image
+    ImageProvider? backgroundImage;
+    if (_selectedImage != null) {
+      backgroundImage = FileImage(File(_selectedImage!.path));
+    } else if (photoURL != null && photoURL.isNotEmpty) {
+      backgroundImage = NetworkImage(photoURL);
+    }
+
     return Stack(
       children: [
         CircleAvatar(
           radius: 60,
           backgroundColor: Colors.purple[100],
-          backgroundImage: _selectedImage != null
-              ? FileImage(File(_selectedImage!.path))
-              : (photoURL != null && photoURL.isNotEmpty
-                  ? NetworkImage(photoURL)
-                  : null),
-          child: _selectedImage == null &&
-                  (photoURL == null || photoURL.isEmpty)
+          backgroundImage: backgroundImage,
+          child: backgroundImage == null
               ? Text(
                   _getInitials(),
                   style: TextStyle(
@@ -445,7 +448,8 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       : const Text(
@@ -465,4 +469,3 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     );
   }
 }
-
