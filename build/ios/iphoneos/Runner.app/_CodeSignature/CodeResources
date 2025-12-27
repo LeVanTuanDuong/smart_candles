@@ -46,7 +46,7 @@
 		</data>
 		<key>Frameworks/App.framework/App</key>
 		<data>
-		L4xnvIgZwutSKY8czuBzlwKrAnU=
+		Y6rM7vnp9DNGGLMP9fsfvJE4pHk=
 		</data>
 		<key>Frameworks/App.framework/Info.plist</key>
 		<data>
@@ -54,11 +54,11 @@
 		</data>
 		<key>Frameworks/App.framework/_CodeSignature/CodeResources</key>
 		<data>
-		8otvkYL1VOLqcekbEUlVg/RKB3I=
+		/fjfVNOm54nj7vsZsTNEzj7FNXE=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.bin</key>
 		<data>
-		f+WkNEUa3VrDrnRwWJ7sunoE0y8=
+		DqR32RINEQBcux2/E+3aK33O47A=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/FontManifest.json</key>
 		<data>
@@ -76,6 +76,158 @@
 		<data>
 		R87/fEo8XUmLlQYstNK7J4AbJxk=
 		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/African%20Bush.jpg</key>
+		<data>
+		pIhXJXSThwm7BI88LxRmLOj7Kz4=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/African%20Forest.jpg</key>
+		<data>
+		dnKdUEkclOPsXQD6iZg6bVwzaCI=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/African%20River%20Night.jpg</key>
+		<data>
+		yEzR93Uu5833sfv8aXPaAJ54ap8=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Alaskan%20Dawn.jpg</key>
+		<data>
+		e9bMAJlQHKOgr9NNv0P9rm2zRpg=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Alaskan%20Forest.jpg</key>
+		<data>
+		/3T6cGQrix6O3UP5EsIURlFpQVs=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Alaskan%20Lake.jpg</key>
+		<data>
+		NrALt5w0gB6GZwihjX07yJRDh78=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Alpine%20Cow%20Bells.jpg</key>
+		<data>
+		gEFJqmU4/QKeVGfM5/2UDADTXAs=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Amazon%20Rainforest.jpg</key>
+		<data>
+		fnMtPG9URqaVtLJ0hUEO5X2S54k=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Ambient%20India.jpg</key>
+		<data>
+		KkmdLmwtHV+To8ADI7EFFfLOC2Q=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Autumn%20Fairy%20Forest.jpg</key>
+		<data>
+		+HaxA/kuV260eg/nK79KBdM+o/M=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Autumn%20Forest.jpg</key>
+		<data>
+		rNYG7y/AttObb1Kq6KroXa+Ve6I=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Badlands%20Park.jpg</key>
+		<data>
+		r15Ysy0wn1MjKX7pZw7QoeTEH5M=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Cloudforest%20Africa.jpg</key>
+		<data>
+		jF7IvAM6uHZ8CgHwPFaFaN/GhMQ=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Colorado%20River.jpg</key>
+		<data>
+		J3oRPVkGPynFJ0qJ/8lkfh05ITw=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Desert%20Evening.jpg</key>
+		<data>
+		Fheyz3V6QlIH2/84MbjSOe8hvjQ=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Earthquake%20Rumble.jpg</key>
+		<data>
+		dIukMveyID4viY2wxdyHNRN3EFs=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Evening%20Marsh.jpg</key>
+		<data>
+		16s0PzQXIel5ttF9+JLdFrZcGKc=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/bac%20ha.png</key>
+		<data>
+		Dp5b9OET2dzpZZxUzXCOO1bpbUY=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/buoi.png</key>
+		<data>
+		Se3ux9+vbd+E9OUhBCRcFAou6w8=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/cam%20ngot.png</key>
+		<data>
+		AGK4d1lwuQkaSrZL0B0ER0h25+Q=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/chanh.png</key>
+		<data>
+		7rrukHM7wguMLomc3hPeGQhdytE=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/gung.png</key>
+		<data>
+		azaY9OGe1Zp0HUXJ269jSdvl6Ck=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/hoa%20nhai.png</key>
+		<data>
+		Y9yt3EQRLjlyGpvvMMMPRcXNpRw=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/huong%20tram.png</key>
+		<data>
+		9Lf1wPL4rXA7PdjsTyvRbTXzWTY=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/khuynh%20diep.png</key>
+		<data>
+		Wq/qKbruTrg9oBJ4PZqzThtzwzU=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/lavender.png</key>
+		<data>
+		XXnDSFXT/27V4lRsPsHO9kCPZcs=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/ngoc%20lan%20tay.png</key>
+		<data>
+		wkgJoiGJmeuVCl1GjlojBpqKMss=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/sa%20chanh.png</key>
+		<data>
+		LoJLTQe2A6Qq2jNF8YBT1qGMZNY=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/tram%20tra.png</key>
+		<data>
+		4sR7o0hhyo/7kdTYVJ6OINAZfcM=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Ambient%20-%20Calm.mp3</key>
+		<data>
+		rUej5880WPNOW8vaCY+iU+UhzSQ=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Ambient%20-%20Space.mp3</key>
+		<data>
+		MjmjHplRCLbLeEnXra/7crvxt/8=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Meditation%20Music.mp3</key>
+		<data>
+		LBXlUkUi9PAgYvQySbX0SLL0jVw=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Nh%E1%BA%A1c%20Piano%20-%20Peaceful.mp3</key>
+		<data>
+		XIHE/Je+2psBG6sBVclHuti/S18=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Nh%E1%BA%A1c%20Piano%20-%20Relaxing.mp3</key>
+		<data>
+		dfKbkojM3uNnZ0IogQROeJLcRK4=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Nh%E1%BA%A1c%20Thi%E1%BB%81n%20V%C3%B4%20%C6%AFu.mp3</key>
+		<data>
+		gXQ4Wqsl9uaImnHnor2772dfGlU=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Nh%E1%BA%A1c%20thi%E1%BB%81n%20t%E1%BB%8Bnh%20t%C3%A2m.mp3</key>
+		<data>
+		3LXY1rYTTaDTz+W+ONxUzrCH/gs=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Thi%C3%AAn%20nhi%C3%AAn%20-%20Ocean%20Waves.mp3</key>
+		<data>
+		LwdrNdilAdkVehKh9McnfOWOKmI=
+		</data>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Thi%C3%AAn%20nhi%C3%AAn%20-%20Ti%E1%BA%BFng%20m%C6%B0a%20trong%20r%E1%BB%ABng.mp3</key>
+		<data>
+		qhXT5RqOBt52ypX+w9/0wwgRv6o=
+		</data>
 		<key>Frameworks/App.framework/flutter_assets/fonts/MaterialIcons-Regular.otf</key>
 		<data>
 		/CUoTuPQqqdexfyOT9lpJhV+2MQ=
@@ -86,7 +238,7 @@
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/kernel_blob.bin</key>
 		<data>
-		8tyNrMg7L/XuzZup/Dj/CuLejE8=
+		Ne5OHBTu2jKyx9xlDaimJhGGKLc=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
 		<data>
@@ -106,7 +258,7 @@
 		</data>
 		<key>Frameworks/DKImagePickerController.framework/DKImagePickerController</key>
 		<data>
-		X/MPlYrF7AAXf3/PODqIcGrFr8c=
+		NFEHM2Xx3sBxeJgFtRw++d122as=
 		</data>
 		<key>Frameworks/DKImagePickerController.framework/DKImagePickerController.bundle/Assets.car</key>
 		<data>
@@ -310,7 +462,7 @@
 		</data>
 		<key>Frameworks/DKPhotoGallery.framework/DKPhotoGallery</key>
 		<data>
-		d614kn+OZ3HKXDDvXW2zxULotnM=
+		chQhSPizGcU2lKNGO1DfJSWghpo=
 		</data>
 		<key>Frameworks/DKPhotoGallery.framework/DKPhotoGallery.bundle/Assets.car</key>
 		<data>
@@ -361,7 +513,7 @@
 		</data>
 		<key>Frameworks/Flutter.framework/Flutter</key>
 		<data>
-		22Nmg+iwkZwEWiGA5DfQj7RpNGk=
+		KLL09o6A9c7o4prlXPaulVaGCSE=
 		</data>
 		<key>Frameworks/Flutter.framework/Headers/Flutter.h</key>
 		<data>
@@ -465,7 +617,7 @@
 		</data>
 		<key>Frameworks/SDWebImage.framework/SDWebImage</key>
 		<data>
-		nCEZADawIBiS03U9qVUF4aB/qdA=
+		JTnQCgE73HUuczciv7azigabdJY=
 		</data>
 		<key>Frameworks/SDWebImage.framework/SDWebImage.bundle/Info.plist</key>
 		<data>
@@ -485,7 +637,7 @@
 		</data>
 		<key>Frameworks/SwiftyGif.framework/SwiftyGif</key>
 		<data>
-		VSBhBbs1M0G/pNQf/Z4tMuxs0Ig=
+		FRtCAPXVdC5ajw7jZJ+yey5ILso=
 		</data>
 		<key>Frameworks/SwiftyGif.framework/SwiftyGif.bundle/Info.plist</key>
 		<data>
@@ -509,19 +661,7 @@
 		</data>
 		<key>Frameworks/audio_session.framework/audio_session</key>
 		<data>
-		EOpbMlry8k5nP01kGAwkiRWtBMY=
-		</data>
-		<key>Frameworks/audioplayers_darwin.framework/Info.plist</key>
-		<data>
-		nnIXJaCr6u4mTumvv3GLXx2NGxE=
-		</data>
-		<key>Frameworks/audioplayers_darwin.framework/_CodeSignature/CodeResources</key>
-		<data>
-		+POFTKPv6cXhNIfULukMk8fPtmo=
-		</data>
-		<key>Frameworks/audioplayers_darwin.framework/audioplayers_darwin</key>
-		<data>
-		grmzzlaszRuwMoetZxqERfRCo74=
+		GiZc+x3b6B32F/DBut2Y8hcXoY4=
 		</data>
 		<key>Frameworks/file_picker.framework/Info.plist</key>
 		<data>
@@ -533,7 +673,7 @@
 		</data>
 		<key>Frameworks/file_picker.framework/file_picker</key>
 		<data>
-		fcU6aM4RFtKzCJQsboypC7Uh88M=
+		u90SWSgbH6GWbILXEwJzKPlxbmI=
 		</data>
 		<key>Frameworks/file_picker.framework/file_picker_ios_privacy.bundle/Info.plist</key>
 		<data>
@@ -553,7 +693,7 @@
 		</data>
 		<key>Frameworks/flutter_blue_plus_darwin.framework/flutter_blue_plus_darwin</key>
 		<data>
-		Nvty4RFkSV1Yz4TMjSijidXwkPE=
+		o0Xw5v2fJGpUcdDxkJkW1KgclGg=
 		</data>
 		<key>Frameworks/image_picker_ios.framework/Info.plist</key>
 		<data>
@@ -565,7 +705,7 @@
 		</data>
 		<key>Frameworks/image_picker_ios.framework/image_picker_ios</key>
 		<data>
-		lp2+7IYAfO4DYyerdcXtZsdiNXs=
+		SaT2L1Ex0egAU5yiZneFgHuw2Bw=
 		</data>
 		<key>Frameworks/image_picker_ios.framework/image_picker_ios_privacy.bundle/Info.plist</key>
 		<data>
@@ -585,7 +725,7 @@
 		</data>
 		<key>Frameworks/just_audio.framework/just_audio</key>
 		<data>
-		q2u2UAiafJq2emAZOfdQmTg2FBg=
+		xn6J67klNpZIULKJ+w4hIlXCst4=
 		</data>
 		<key>Frameworks/path_provider_foundation.framework/Info.plist</key>
 		<data>
@@ -597,7 +737,7 @@
 		</data>
 		<key>Frameworks/path_provider_foundation.framework/path_provider_foundation</key>
 		<data>
-		3ufte1WflvICIhAMxlVn+YWKGHQ=
+		AMb9LWGjgbTt/2CW2X8wphY6hwU=
 		</data>
 		<key>Frameworks/path_provider_foundation.framework/path_provider_foundation_privacy.bundle/Info.plist</key>
 		<data>
@@ -617,7 +757,7 @@
 		</data>
 		<key>Frameworks/shared_preferences_foundation.framework/shared_preferences_foundation</key>
 		<data>
-		1mGS/p3ysL2Vua1IUzEwblrkN7Q=
+		WaNrYQmvMp5BNOG2B5GwetIx+1c=
 		</data>
 		<key>Frameworks/shared_preferences_foundation.framework/shared_preferences_foundation_privacy.bundle/Info.plist</key>
 		<data>
@@ -629,7 +769,7 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		MzfBTi2/qSFcS7HuajO5O/OZf+w=
+		oUPP/StRrpCO8c7h7TVnmlKw0EA=
 		</data>
 		<key>PkgInfo</key>
 		<data>
@@ -637,11 +777,11 @@
 		</data>
 		<key>Runner.debug.dylib</key>
 		<data>
-		JqWjfRXiYf6tGwXo6rR230neYyQ=
+		54l3R0h5NsXB+/TyqdUOvrGL+Zk=
 		</data>
 		<key>__preview.dylib</key>
 		<data>
-		zVwepmA5eQTMXG6e3znnaxluUjg=
+		0IjzCoGngquzHmB08PnkhsztJ6E=
 		</data>
 		<key>embedded.mobileprovision</key>
 		<data>
@@ -724,7 +864,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Zqp7PDItBRzVFtfajjmC+X3GGywRCcV258FHmYy5VOY=
+			m4ktsKwOh5vfExuRAHTC8lPOSvS2j7svy4p74skP+eI=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/Info.plist</key>
@@ -738,14 +878,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			TBxc++KnWaQ9IURoSoSfVmFHFbQJeJz19bJfQachWIU=
+			X2QIczJMOzlzoTTmHc66xC76b7daPQ+qOMvZsGp5b6w=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.bin</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			8PN/Ab/SH/2/GqERiMixJMh5ApWikT/PS6eOldy8SRg=
+			cnyOgI6HdlvIWTbEbPmMYcpLWXEefdGX0iEpSATiBew=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/FontManifest.json</key>
@@ -776,6 +916,272 @@
 			v2AiD+CmiubR9MmC3gLbJg9aoCGXE9PTlMg9zbU91i8=
 			</data>
 		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/African%20Bush.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			EewhOspkEGuBLqAaEfC1SqpcPC3ySVA+oGWeqIVjWBA=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/African%20Forest.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			7Vs/fAWLPF9F2eUj/+5gN1d9bkGwcbLTEFy3Su1xQ7c=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/African%20River%20Night.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			6Ie9RxrDiMlIsPPlZE06q8oN9YvUgcIM13x7XzdMSdg=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Alaskan%20Dawn.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			NrevBrmu0cmoRx8FFxaGh1wNulGA6kuSpnD2VZrpv/8=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Alaskan%20Forest.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			A3XYiputzZkC+/gDpRWw/KhDvqPOH+zudtEbhVmFE8A=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Alaskan%20Lake.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			05N6cz3ZHc1N5E0GPjoiXr833o09aQMsDnPG7z0snmE=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Alpine%20Cow%20Bells.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			SFflN2qvegcEB0OIV+8UzDiVod2+4nMxMlCjN2/vQ7o=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Amazon%20Rainforest.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			qxPIRimVAKkCpzP5c40qGvaz1M5dz7FI7mx8vJKiERc=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Ambient%20India.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			3rMe1C9RuM77l0qXF7s5qPPkDyTW7NIPrkQ+WSDW+fc=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Autumn%20Fairy%20Forest.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			SMnm2ldyJk1P7j9u4slnCmQYTVZ1vI6cVCEUY0ngZzQ=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Autumn%20Forest.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			SpLVyc+EXK1HB4wdQovLYN7Y4dyrpuP70bRMBkE4EZE=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Badlands%20Park.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			Jr0GSEdmKL8y2TOdCIWU1s2vAXMAxVvBsQZehTI+1gQ=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Cloudforest%20Africa.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			B1Gvzd5xRnMF0SRq0fz/D4NNCXiyt3N2BL4jlaeRkY0=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Colorado%20River.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			4Is70sO9uk9N1Xc+guKUaVZTrKzErOFpEJjD8/LT3HU=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Desert%20Evening.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			JexZiBq+MyGdfiFBjUAprnChc8P3zWJ6NYTiB3jBp4U=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Earthquake%20Rumble.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			tj1/fIywXj/Ggxh81Yck8GCkofwqGqr+8WmGNsJWLmk=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/Evening%20Marsh.jpg</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			h5UhFRLzSLjuwvLRqniWKUXGDnd+VtzDmUf4JH8xRHk=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/bac%20ha.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			vTiidhsASjSEDcYP0NoawLjxuCgrhTzXM5l0lr3kfv0=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/buoi.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			gvhQ1qdFNUqVVRPJ1Xxhv5y5sF2KAWUbMQOrqq8N1pY=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/cam%20ngot.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			GPOAhC+nl8zRPR010cmri2qC0fGkFR0nbJxARu3froI=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/chanh.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			NtxvPLfEgRyunaoasW5d0uoCoZ0YSSAETz4Ion2aflE=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/gung.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			hwvTgMjLEWBFNYQFJG4RxE5Ej5zFo4gs+Q2EVPvtycM=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/hoa%20nhai.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			nH6ltN6Ha9qywpy3/XH2613H9ouVvfN5KbLRybD5miU=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/huong%20tram.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			hahd/iw71ZJOPzRtq9mf6jnHm6G9AY//LD3jgKEPsPk=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/khuynh%20diep.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			yDapi8oOfRKUHxdyr+ehfB611YdHIv4EZd48oOc7uXc=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/lavender.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			hcfedT4m26rLZtc3KV7t81pKAKOsih3VblbifwCJNFs=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/ngoc%20lan%20tay.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			k6FN4UF6iivOLHieIJfo9uP31f4lLP7ppVZQLo+xvEM=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/sa%20chanh.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			x6utoEFgL+nhpyHLGysHLb0ngTUjlKO8tdhEdTtx268=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/images/tinh%20dau/tram%20tra.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			B35nI+ohK2afxvgVXfbVMr3L1nXx7TGmAh1ADmI511o=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Ambient%20-%20Calm.mp3</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			1l84s0oUhBeApGjoJoehpQi/4ETma8TPcsjmnGaDMJk=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Ambient%20-%20Space.mp3</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			QWYVQdRNkJAib9Q8zrL8jNQ16Igsp+IDNc4iUxnOXEA=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Meditation%20Music.mp3</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			GqqmTbqOZm7P3yK4ydI99+GDW82T/2FtoKSy83T0Wx4=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Nh%E1%BA%A1c%20Piano%20-%20Peaceful.mp3</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			hCaptLCuIZMVTivbV9D5bE+SS4XEKg09rEgzu/XC+KA=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Nh%E1%BA%A1c%20Piano%20-%20Relaxing.mp3</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			wIBeLqW+YPGf1pXD+dXqrDwSG+wN2Um8Yn9ntHbRkbY=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Nh%E1%BA%A1c%20Thi%E1%BB%81n%20V%C3%B4%20%C6%AFu.mp3</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			0h6VmoU1+fFf9R9qr0soqIDXQbK6iZBmrz1flQmdeZE=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Nh%E1%BA%A1c%20thi%E1%BB%81n%20t%E1%BB%8Bnh%20t%C3%A2m.mp3</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			+1/oRiSZYzM8Wg3nvkR8FwV5odydEW8YMdnVXBwmDqI=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Thi%C3%AAn%20nhi%C3%AAn%20-%20Ocean%20Waves.mp3</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			eSWOlV6rRVSC0g3FzW9rBJJyQ188I4juvICuxootNtw=
+			</data>
+		</dict>
+		<key>Frameworks/App.framework/flutter_assets/assets/sounds/Thi%C3%AAn%20nhi%C3%AAn%20-%20Ti%E1%BA%BFng%20m%C6%B0a%20trong%20r%E1%BB%ABng.mp3</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			CA+fccoISFLUgPIvoKZ8/dsjdRrKGojUoCIUlTPxPD0=
+			</data>
+		</dict>
 		<key>Frameworks/App.framework/flutter_assets/fonts/MaterialIcons-Regular.otf</key>
 		<dict>
 			<key>hash2</key>
@@ -794,7 +1200,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			caB0jI9xK8vLOJBJWCTYua1hA1KyO/dbn+WyPlwW73M=
+			qGiIdSLRh7p2GEg8QTAbFbmER2dTcBI7IByr4XByGTU=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
@@ -829,7 +1235,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			x86nQQMNnyqJ62zMpGi+lHeQZzBe8pGEHlD8ldu8HGU=
+			Q4tVGOyHIvg7A9pQhHXIjeJICqSDyGv7ndqXmqd2oa0=
 			</data>
 		</dict>
 		<key>Frameworks/DKImagePickerController.framework/DKImagePickerController.bundle/Assets.car</key>
@@ -1051,7 +1457,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			qjFQew68DsJw10nPN5NotI74gzMqeWq62S3wJLC4cz8=
+			efpzX9hlOLkMzs7o4mKV3GR55OdVCs/r0CAe03aPXp4=
 			</data>
 		</dict>
 		<key>Frameworks/DKPhotoGallery.framework/DKPhotoGallery.bundle/Assets.car</key>
@@ -1120,7 +1526,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Vp8dUDZ7wmA8VX/ifTKFz3O9zN42yqf0isARyDAdlVY=
+			zkS35t5IQmc/xumgx7KJLYevJm4nBu/jd0w4fuf4B2Y=
 			</data>
 		</dict>
 		<key>Frameworks/Flutter.framework/Headers/Flutter.h</key>
@@ -1302,7 +1708,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Kdqjq3S7/DzylYH6iCmYUbV1dK59ntMxdm6PEBSbT7I=
+			j+wyDwo+oOgKUmBDxGTCRgxiST/4O2MKcFVh5+od1fU=
 			</data>
 		</dict>
 		<key>Frameworks/SDWebImage.framework/SDWebImage.bundle/Info.plist</key>
@@ -1337,7 +1743,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			EFbJmYqNrel3Wx73OAxG5sFmdl9vw1P/RGSioHlpd98=
+			1MQsve52r+/BVaS6+/7GNHQEsIwgjlsNPTs3gZ3STRg=
 			</data>
 		</dict>
 		<key>Frameworks/SwiftyGif.framework/SwiftyGif.bundle/Info.plist</key>
@@ -1379,28 +1785,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			4Jc/n0FgWhRnV+wQVPhDArvzKIaqBDgm+tefeWpYHfs=
-			</data>
-		</dict>
-		<key>Frameworks/audioplayers_darwin.framework/Info.plist</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			DIvWQgr/fnXNvYilSoeD2SvKSBrefuGBTsYjpJRNfio=
-			</data>
-		</dict>
-		<key>Frameworks/audioplayers_darwin.framework/_CodeSignature/CodeResources</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			55kzrZ6mTB0BHPkKkJxEED+/AlF/09DB458ktvvFgGw=
-			</data>
-		</dict>
-		<key>Frameworks/audioplayers_darwin.framework/audioplayers_darwin</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			WWFvJ/fEw3nvGX9HTrk4jMAfgcbs3hpDW8hd3BEjGMk=
+			YY6BGQUbAtmXsps/JfPVaolZrqc3PwOvatYzW3w5H0A=
 			</data>
 		</dict>
 		<key>Frameworks/file_picker.framework/Info.plist</key>
@@ -1421,7 +1806,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			cYGuWdVHN6D0KDmAl3/1LsTNdyZjAz5s+a1pwZo6mWc=
+			KJUupllCinUsnQb11tlb3C1ZOcY2PdOqfLXR9vHFyYs=
 			</data>
 		</dict>
 		<key>Frameworks/file_picker.framework/file_picker_ios_privacy.bundle/Info.plist</key>
@@ -1456,7 +1841,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			dx0ruP3jzb0gCO5mJNGJs/NbGAayMODMcO7JB3SOleE=
+			wd6dcleZKaEwKlVE8z44OlhqBNor38ePH4F+8t+7o4g=
 			</data>
 		</dict>
 		<key>Frameworks/image_picker_ios.framework/Info.plist</key>
@@ -1477,7 +1862,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			rWRdN9oIRrTpr/u/9tvYs42l41oHMkzL3jkVqcHtNMo=
+			tc1TrFKzftl0cC/HmewqF+BiiOYXCZdEmWPaLufMgO8=
 			</data>
 		</dict>
 		<key>Frameworks/image_picker_ios.framework/image_picker_ios_privacy.bundle/Info.plist</key>
@@ -1512,7 +1897,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			pvKxkaGXlrXBTYBbsPGo0n+RzIeKplEQAW/uN0TrWWw=
+			P/IG/GMuWPsreCZ1WXIVMwI069y1dssLDzHnuyfd3AI=
 			</data>
 		</dict>
 		<key>Frameworks/path_provider_foundation.framework/Info.plist</key>
@@ -1533,7 +1918,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			c+ts/TB/Mu2ypIOrAzHuuX0mORH3tgQ3w1kl5R1qxdM=
+			Ybv6lWJXWKu6E0+VZ49PLvG0GAgTWkX0dBW5ixuF9H0=
 			</data>
 		</dict>
 		<key>Frameworks/path_provider_foundation.framework/path_provider_foundation_privacy.bundle/Info.plist</key>
@@ -1568,7 +1953,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			FS1dRQKM043G9BzBlLb9kw9n0dHDlPqycvSiDj+c0z8=
+			Pk+AINjWYuy8zYxI2Xpa0JE87B0EaYG9RoeVT3YqK18=
 			</data>
 		</dict>
 		<key>Frameworks/shared_preferences_foundation.framework/shared_preferences_foundation_privacy.bundle/Info.plist</key>
@@ -1589,14 +1974,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			+qCv8DnzmQpXqo+w1OjFSE+w/UbjhQ8izFtBM00LsaI=
+			7KFY5Zu+NeG1FOwRIZCwahQctuXmYsZ7/Lh1sfnTNY4=
 			</data>
 		</dict>
 		<key>__preview.dylib</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			65ZGWwvXeTDIVdm1XtnOXAL1IokQzG/pnVSy10s8Mtk=
+			55ZdZRtM4BwSHvJTEcbUpOI+wfZp/oe+aYUUOeLLvgo=
 			</data>
 		</dict>
 		<key>embedded.mobileprovision</key>

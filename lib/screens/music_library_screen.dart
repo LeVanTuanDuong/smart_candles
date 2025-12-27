@@ -1189,10 +1189,26 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
   }
 
   Widget _buildTrackImage(MusicTrack track) {
-    // Check if imagePath is a URL or local file
+    // Check if imagePath exists
     if (track.imagePath != null && track.imagePath!.isNotEmpty) {
+      // Check if it's an asset path (starts with "assets/")
+      if (track.imagePath!.startsWith('assets/')) {
+        return ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(12),
+            bottomLeft: Radius.circular(12),
+          ),
+          child: Image.asset(
+            track.imagePath!,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildDefaultImage(track.category);
+            },
+          ),
+        );
+      }
       // Check if it's a URL
-      if (track.imagePath!.startsWith('http://') ||
+      else if (track.imagePath!.startsWith('http://') ||
           track.imagePath!.startsWith('https://')) {
         return ClipRRect(
           borderRadius: const BorderRadius.only(
@@ -1221,8 +1237,9 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
             },
           ),
         );
-      } else {
-        // Local file
+      }
+      // Local file (user uploaded)
+      else {
         if (File(track.imagePath!).existsSync()) {
           return ClipRRect(
             borderRadius: const BorderRadius.only(

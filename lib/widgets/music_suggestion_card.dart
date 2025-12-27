@@ -1,13 +1,17 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../screens/music_library_screen.dart';
+import '../models/music_track.dart';
 
 class MusicSuggestionCard extends StatelessWidget {
-  final String musicType;
+  final String? musicType; // Fallback if no track
+  final MusicTrack? suggestedTrack; // Actual track from library
   final VoidCallback? onPlayPressed;
 
   const MusicSuggestionCard({
     super.key,
-    required this.musicType,
+    this.musicType,
+    this.suggestedTrack,
     this.onPlayPressed,
   });
 
@@ -37,76 +41,16 @@ class MusicSuggestionCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Nature image placeholder
+          // Track image or default icon
           Container(
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.green[400]!,
-                  Colors.green[600]!,
-                ],
-              ),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Stack(
-              children: [
-                // Tree trunk
-                Positioned(
-                  bottom: 10,
-                  left: 30,
-                  child: Container(
-                    width: 20,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: Colors.brown[700],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
-                // Tree leaves
-                Positioned(
-                  top: 15,
-                  left: 25,
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: Colors.green[800],
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-                // Sun rays
-                Positioned(
-                  top: 5,
-                  right: 5,
-                  child: Icon(
-                    Icons.wb_sunny,
-                    color: Colors.yellow[300],
-                    size: 20,
-                  ),
-                ),
-                // Ground/moss
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    height: 15,
-                    decoration: BoxDecoration(
-                      color: Colors.green[700],
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(12),
-                        bottomRight: Radius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: _buildTrackImage(),
             ),
           ),
           const SizedBox(width: 16),
@@ -125,13 +69,27 @@ class MusicSuggestionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  musicType,
+                  suggestedTrack?.name ?? musicType ?? 'Nhạc thư giãn',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                if (suggestedTrack?.description != null && suggestedTrack!.description.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    suggestedTrack!.description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
@@ -162,6 +120,137 @@ class MusicSuggestionCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildTrackImage() {
+    // If we have a track with imagePath, use it
+    if (suggestedTrack != null && suggestedTrack!.imagePath != null && suggestedTrack!.imagePath!.isNotEmpty) {
+      final imagePath = suggestedTrack!.imagePath!;
+      
+      // Check if it's an asset path (starts with "assets/")
+      if (imagePath.startsWith('assets/')) {
+        return Image.asset(
+          imagePath,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildDefaultImage(suggestedTrack!.category);
+          },
+        );
+      } 
+      // Check if it's a URL
+      else if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        return Image.network(
+          imagePath,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildDefaultImage(suggestedTrack!.category);
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              color: Colors.grey[200],
+              child: Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                      : null,
+                ),
+              ),
+            );
+          },
+        );
+      } 
+      // Local file (user uploaded)
+      else {
+        if (File(imagePath).existsSync()) {
+          return Image.file(
+            File(imagePath),
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildDefaultImage(suggestedTrack!.category);
+            },
+          );
+        }
+      }
+    }
+    
+    // Default image based on category from track or musicType
+    String category = 'Thiền'; // default
+    if (suggestedTrack != null) {
+      category = suggestedTrack!.category;
+    } else if (musicType != null) {
+      final lowerType = musicType!.toLowerCase();
+      if (lowerType.contains('thiên nhiên') || lowerType.contains('nature')) {
+        category = 'Thiên nhiên';
+      } else if (lowerType.contains('piano')) {
+        category = 'Nhạc Piano';
+      } else if (lowerType.contains('ambient')) {
+        category = 'Ambient';
+      }
+    }
+    
+    return _buildDefaultImage(category);
+  }
+
+  Widget _buildDefaultImage(String category) {
+    switch (category) {
+      case 'Thiên nhiên':
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.green[400]!, Colors.green[600]!],
+            ),
+          ),
+          child: const Icon(Icons.nature, color: Colors.white, size: 40),
+        );
+      case 'Nhạc Piano':
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.brown[400]!, Colors.brown[600]!],
+            ),
+          ),
+          child: const Icon(Icons.piano, color: Colors.white, size: 40),
+        );
+      case 'Thiền':
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.orange[300]!, Colors.pink[300]!],
+            ),
+          ),
+          child: const Icon(
+            Icons.self_improvement,
+            color: Colors.white,
+            size: 40,
+          ),
+        );
+      case 'Ambient':
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.purple[300]!, Colors.blue[300]!],
+            ),
+          ),
+          child: const Icon(Icons.music_note, color: Colors.white, size: 40),
+        );
+      default:
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[800],
+          ),
+          child: const Icon(Icons.music_note, color: Colors.white, size: 40),
+        );
+    }
   }
 }
 

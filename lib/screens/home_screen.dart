@@ -147,38 +147,26 @@ class _HomeScreenState extends State<HomeScreen> {
       // Get tracks for this category (static method)
       final tracks = MusicService.getDefaultTracksForCategory(category);
       
-      // Find a track with valid audio source (local file or valid URL)
+      // Find a track with valid audio source (assets or local file)
       MusicTrack? playableTrack;
       for (final track in tracks) {
-        // Check if track has valid audio source
-        bool hasValidSource = false;
-        
-        // Check local file
+        // Check if track has valid audio source (assets or local file)
         if (track.audioPath != null && track.audioPath!.isNotEmpty) {
+          // Assets path (starts with "assets/") are always valid
+          if (track.audioPath!.startsWith('assets/')) {
+            playableTrack = track;
+            break;
+          }
+          // Check local file
           try {
             final file = File(track.audioPath!);
             if (file.existsSync()) {
-              hasValidSource = true;
+              playableTrack = track;
+              break;
             }
           } catch (e) {
-            // File doesn't exist or can't be accessed
+            // File doesn't exist or can't be accessed, continue to next track
           }
-        }
-        
-        // Check URL (but skip Openwhyd/YouTube URLs)
-        if (!hasValidSource && track.audioUrl != null && track.audioUrl!.isNotEmpty) {
-          final url = track.audioUrl!;
-          // Skip URLs that cannot be played directly
-          if (!url.startsWith('https://openwhyd.org/') &&
-              !url.contains('youtube.com/watch') &&
-              !url.contains('youtu.be/')) {
-            hasValidSource = true;
-          }
-        }
-        
-        if (hasValidSource) {
-          playableTrack = track;
-          break;
         }
       }
       

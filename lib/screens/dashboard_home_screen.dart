@@ -23,6 +23,7 @@ import '../services/suggestion_service.dart';
 import '../services/music_service.dart';
 import '../services/settings_service.dart';
 import '../services/bluetooth_service.dart';
+import '../models/music_track.dart';
 
 class DashboardHomeScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -52,6 +53,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   final SuggestionService _suggestionService = SuggestionService();
   final BluetoothService _bluetoothService = BluetoothService();
   StreamSubscription? _temperatureSubscription;
+  MusicTrack? _suggestedMusicTrack; // Track from library to display
 
   @override
   void initState() {
@@ -65,6 +67,11 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     
     // Listen to suggestion service changes
     _suggestionService.addListener(_onSuggestionChanged);
+
+    // Initialize suggested music track
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateSuggestedMusicTrack();
+    });
 
     // Listen to Bluetooth service for temperature updates
     _bluetoothService.addListener(_onBluetoothTemperatureUpdate);
@@ -140,15 +147,75 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   }
 
   void _onSuggestionChanged() {
-    if (mounted) {
+    if (!mounted) return;
+    
+    // Update suggested mood if detected
+    if (_suggestionService.detectedMood != null) {
       setState(() {
-        // Update suggested mood if detected
-        if (_suggestionService.detectedMood != null) {
-          _suggestedMood = _suggestionService.detectedMood;
-        }
-        // Suggestions (essential oil, music, light) are automatically updated
-        // via _suggestionService.essentialOilSuggestion and _suggestionService.musicSuggestion
+        _suggestedMood = _suggestionService.detectedMood;
       });
+    }
+    
+    // Update suggested music track from library (async, don't need setState)
+    _updateSuggestedMusicTrack();
+  }
+
+  Future<void> _updateSuggestedMusicTrack() async {
+    try {
+      // Use the current detected mood from SuggestionService (most up-to-date)
+      final currentMood = _suggestionService.detectedMood ?? _suggestedMood ?? MoodType.normal;
+      
+      // Get the suggested music type from chatbot (prioritize from SuggestionService)
+      final musicType = _suggestionService.musicSuggestion ?? 
+          ChatbotService.getMusicSuggestions(currentMood).first;
+      
+      print('🎵 Updating suggested music track - musicType: $musicType, mood: ${currentMood.label}');
+      
+      // Map music type to category (handle both Vietnamese and English, and exact matches)
+      String category = 'Thiền'; // default
+      final musicLower = musicType.toLowerCase().trim();
+      
+      // Exact matches first (more precise)
+      if (musicLower == 'nhạc piano' || musicLower == 'piano chậm' || musicLower == 'piano ấm' || 
+          musicLower.contains('piano') && !musicLower.contains('ambient')) {
+        category = 'Nhạc Piano';
+      } else if (musicLower == 'ambient' || musicLower == 'ambient nhẹ' || musicLower == 'ambient tối' ||
+                 (musicLower.contains('ambient') && !musicLower.contains('piano'))) {
+        category = 'Ambient';
+      } else if (musicLower == 'thiên nhiên' || musicLower == 'nature sound' || musicLower == 'mưa nhẹ' ||
+                 musicLower.contains('nature') || musicLower.contains('mưa') || 
+                 musicLower.contains('rain') || musicLower.contains('ocean')) {
+        category = 'Thiên nhiên';
+      } else if (musicLower == 'thiền' || musicLower == 'meditation music' || musicLower == 'meditation' ||
+                 musicLower.contains('thiền') || musicLower.contains('zen')) {
+        category = 'Thiền';
+      }
+      
+      print('🎵 Mapped music type "$musicType" to category: $category');
+      
+      // Get tracks for this category from library
+      final allTracksByCategory = await MusicService.getAllTracksByCategory();
+      final allTracks = allTracksByCategory[category] ?? [];
+      
+      print('🎵 Found ${allTracks.length} tracks in category $category');
+      
+      // Find first track with audio source
+      MusicTrack? track;
+      for (final t in allTracks) {
+        if (t.audioPath != null && t.audioPath!.isNotEmpty) {
+          track = t;
+          print('✅ Selected track: ${track.name} (${track.audioPath})');
+          break;
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _suggestedMusicTrack = track;
+        });
+      }
+    } catch (e) {
+      print('❌ Error updating suggested music track: $e');
     }
   }
 
@@ -242,6 +309,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       );
     });
     _updateStatus(_deviceStatus);
+    // Update suggested music track based on new mood
+    _updateSuggestedMusicTrack();
   }
 
 
@@ -329,6 +398,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
             // Music Control Widget (always show with suggested or current music)
             MusicControlHome(
+              currentTrack: _globalMusicPlayer.currentTrack, // Pass the track for image
               musicTitle:
                   _globalMusicPlayer.currentTrack?.name ??
                   _deviceStatus.currentMusic ??
@@ -403,47 +473,84 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
             // Music Suggestion Card (always show with current or default mood)
             MusicSuggestionCard(
+              suggestedTrack: _suggestedMusicTrack,
               musicType: _suggestionService.musicSuggestion ?? ChatbotService.getMusicSuggestions(
-                _suggestedMood ?? MoodType.normal,
+                _suggestionService.detectedMood ?? _suggestedMood ?? MoodType.normal,
               ).first,
               onPlayPressed: () async {
-                // Get the suggested music type
-                final musicType = _suggestionService.musicSuggestion ?? 
-                    ChatbotService.getMusicSuggestions(
-                      _suggestedMood ?? MoodType.normal,
-                    ).first;
-                
-                print('🎵 Playing suggested music: $musicType');
-                
-                // Map music type to category
-                String category = 'Thiền'; // default
-                if (musicType.toLowerCase().contains('piano')) {
-                  category = 'Nhạc Piano';
-                } else if (musicType.toLowerCase().contains('ambient')) {
-                  category = 'Ambient';
-                } else if (musicType.toLowerCase().contains('nature') || 
-                          musicType.toLowerCase().contains('mưa') || 
-                          musicType.toLowerCase().contains('thiên nhiên')) {
-                  category = 'Thiên nhiên';
-                } else if (musicType.toLowerCase().contains('thiền') || 
-                          musicType.toLowerCase().contains('meditation')) {
-                  category = 'Thiền';
-                }
-                
-                // Get tracks for this category
-                final tracks = MusicService.getDefaultTracksForCategory(category);
-                
-                if (tracks.isNotEmpty) {
-                  final track = tracks.first;
+                // Use the suggested track if available
+                if (_suggestedMusicTrack != null) {
+                  try {
+                    await _globalMusicPlayer.playTrack(_suggestedMusicTrack!);
+                    
+                    // Update device status (only if still mounted)
+                    if (mounted) {
+                      _updateStatus(
+                        _deviceStatus.copyWith(
+                          isMusicPlaying: true,
+                          currentMusic: _suggestedMusicTrack!.name,
+                        ),
+                      );
+                    }
+                    
+                    print('✅ Successfully playing: ${_suggestedMusicTrack!.name}');
+                  } catch (e) {
+                    print('❌ Error playing track: $e');
+                    // Show error message to user
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Không thể phát nhạc. Vui lòng tải lên file nhạc từ thư viện.',
+                          ),
+                          duration: const Duration(seconds: 3),
+                        ),
+                      );
+                    }
+                  }
+                } else {
+                  // Try to get a track from library
+                  final musicType = _suggestionService.musicSuggestion ?? 
+                      ChatbotService.getMusicSuggestions(
+                        _suggestedMood ?? MoodType.normal,
+                      ).first;
                   
-                  // Check if track has valid audio source
-                  if (track.audioUrl != null && track.audioUrl!.isNotEmpty) {
-                    // Play the track using GlobalMusicPlayerService
+                  // Map music type to category
+                  String category = 'Thiền'; // default
+                  if (musicType.toLowerCase().contains('piano')) {
+                    category = 'Nhạc Piano';
+                  } else if (musicType.toLowerCase().contains('ambient')) {
+                    category = 'Ambient';
+                  } else if (musicType.toLowerCase().contains('nature') || 
+                            musicType.toLowerCase().contains('mưa') || 
+                            musicType.toLowerCase().contains('thiên nhiên')) {
+                    category = 'Thiên nhiên';
+                  } else if (musicType.toLowerCase().contains('thiền') || 
+                            musicType.toLowerCase().contains('meditation')) {
+                    category = 'Thiền';
+                  }
+                  
+                  // Get tracks for this category
+                  final allTracksByCategory = await MusicService.getAllTracksByCategory();
+                  final allTracks = allTracksByCategory[category] ?? [];
+                  
+                  // Find first track with audio source
+                  MusicTrack? track;
+                  for (final t in allTracks) {
+                    if (t.audioPath != null && t.audioPath!.isNotEmpty) {
+                      track = t;
+                      break;
+                    }
+                  }
+                  
+                  if (track != null) {
                     try {
                       await _globalMusicPlayer.playTrack(track);
                       
-                      // Update device status (only if still mounted)
                       if (mounted) {
+                        setState(() {
+                          _suggestedMusicTrack = track;
+                        });
                         _updateStatus(
                           _deviceStatus.copyWith(
                             isMusicPlaying: true,
@@ -455,7 +562,6 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                       print('✅ Successfully playing: ${track.name}');
                     } catch (e) {
                       print('❌ Error playing track: $e');
-                      // Show error message to user
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -468,12 +574,12 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                       }
                     }
                   } else {
-                    // Track doesn't have audio source - prompt user to upload
+                    // No tracks available - prompt user to upload
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            'Vui lòng tải lên file nhạc từ thư viện để phát "$musicType".',
+                            'Chưa có nhạc cho "$musicType". Vui lòng tải lên từ thư viện.',
                           ),
                           duration: const Duration(seconds: 3),
                           action: SnackBarAction(
@@ -490,31 +596,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                       );
                     }
                   }
-                } else {
-                  // No tracks available - prompt user to upload
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Chưa có nhạc cho "$musicType". Vui lòng tải lên từ thư viện.',
-                        ),
-                        duration: const Duration(seconds: 3),
-                        action: SnackBarAction(
-                          label: 'Mở thư viện',
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => const MusicLibraryScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    );
-                  }
                 }
               },
-            ),
+              ),
 
             // Smartwatch Data Card
             SmartwatchCardHome(smartwatchData: _smartwatchData),

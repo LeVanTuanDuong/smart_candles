@@ -1,1 +1,0 @@
- /Users/faa/Documents/GitHub/smart_candles/.dart_tool/flutter_build/a6bfe82738619de171beb8b60ae8de22/native_assets.json: 
