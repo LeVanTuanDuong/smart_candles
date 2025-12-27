@@ -987,36 +987,11 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                 ),
               ],
             ),
-            // Edit button for library items (overlay on top right)
+            // Delete button for library items (top left)
             if (isInLibrary)
               Positioned(
                 top: 8,
-                right: 8,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => _showEditOilDialog(oil),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.edit,
-                        color: Colors.blue,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            // Delete button for library items (bottom right)
-            if (isInLibrary)
-              Positioned(
-                bottom: 8,
-                right: 8,
+                left: 8,
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -1057,6 +1032,31 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                       child: const Icon(
                         Icons.delete_outline,
                         color: Colors.red,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            // Edit button for library items (top right)
+            if (isInLibrary)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _showEditOilDialog(oil),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.edit,
+                        color: Colors.blue,
                         size: 20,
                       ),
                     ),

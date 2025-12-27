@@ -23,7 +23,9 @@ import '../services/suggestion_service.dart';
 import '../services/music_service.dart';
 import '../services/settings_service.dart';
 import '../services/bluetooth_service.dart';
+import '../services/essential_oil_service.dart';
 import '../models/music_track.dart';
+import '../models/essential_oil.dart';
 
 class DashboardHomeScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -54,6 +56,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   final BluetoothService _bluetoothService = BluetoothService();
   StreamSubscription? _temperatureSubscription;
   MusicTrack? _suggestedMusicTrack; // Track from library to display
+  EssentialOil? _suggestedEssentialOil; // EssentialOil from library to display
 
   @override
   void initState() {
@@ -68,9 +71,10 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     // Listen to suggestion service changes
     _suggestionService.addListener(_onSuggestionChanged);
 
-    // Initialize suggested music track
+    // Initialize suggested music track and essential oil
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateSuggestedMusicTrack();
+      _updateSuggestedEssentialOil();
     });
 
     // Listen to Bluetooth service for temperature updates
@@ -158,6 +162,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     
     // Update suggested music track from library (async, don't need setState)
     _updateSuggestedMusicTrack();
+    
+    // Update suggested essential oil from library (async, don't need setState)
+    _updateSuggestedEssentialOil();
   }
 
   Future<void> _updateSuggestedMusicTrack() async {
@@ -216,6 +223,135 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       }
     } catch (e) {
       print('❌ Error updating suggested music track: $e');
+    }
+  }
+
+  Future<void> _updateSuggestedEssentialOil() async {
+    try {
+      // Use the current detected mood from SuggestionService (most up-to-date)
+      final currentMood = _suggestionService.detectedMood ?? _suggestedMood ?? MoodType.normal;
+      
+      // Get the suggested essential oil name from chatbot
+      final suggestedOilName = _suggestionService.essentialOilSuggestion;
+      
+      print('🛢️ Updating suggested essential oil - name: $suggestedOilName, mood: ${currentMood.label}');
+      
+      // Get all oils from library and suggestions
+      final allOils = await EssentialOilService.getAllOils();
+      
+      // Try to find matching oil by name
+      EssentialOil? matchedOil;
+      
+      if (suggestedOilName != null && suggestedOilName.isNotEmpty) {
+        // Try exact match first
+        try {
+          matchedOil = allOils.firstWhere(
+            (oil) => oil.name.toLowerCase() == suggestedOilName.toLowerCase(),
+          );
+        } catch (e) {
+          // Try partial match
+          try {
+            matchedOil = allOils.firstWhere(
+              (oil) => oil.name.toLowerCase().contains(suggestedOilName.toLowerCase()) ||
+                       suggestedOilName.toLowerCase().contains(oil.name.toLowerCase()),
+            );
+          } catch (e) {
+            // Try normalized match
+            matchedOil = _findOilByName(suggestedOilName, allOils);
+          }
+        }
+      }
+      
+      // If no match found, use default for mood
+      matchedOil ??= _findOilByName(_getDefaultOilNameForMood(currentMood), allOils);
+      
+      print('✅ Selected essential oil: ${matchedOil?.name ?? "none"}');
+      
+      if (mounted) {
+        setState(() {
+          _suggestedEssentialOil = matchedOil;
+        });
+      }
+    } catch (e) {
+      print('❌ Error updating suggested essential oil: $e');
+    }
+  }
+
+  EssentialOil? _findOilByName(String name, List<EssentialOil> oils) {
+    final normalizedName = _normalizeOilName(name);
+    
+    // Try exact match
+    try {
+      return oils.firstWhere(
+        (oil) => _normalizeOilName(oil.name) == normalizedName,
+      );
+    } catch (e) {
+      // Try partial match
+      try {
+        return oils.firstWhere(
+          (oil) => _normalizeOilName(oil.name).contains(normalizedName) ||
+                   normalizedName.contains(_normalizeOilName(oil.name)),
+        );
+      } catch (e) {
+        // Try English name mapping
+        return _findOilByEnglishName(name, oils);
+      }
+    }
+  }
+
+  EssentialOil? _findOilByEnglishName(String englishName, List<EssentialOil> oils) {
+    final nameLower = englishName.toLowerCase();
+    
+    // Map English names to Vietnamese names
+    final nameMap = {
+      'lavender': ['oải hương', 'lavender'],
+      'sweet orange': ['hương cam', 'cam ngot'],
+      'peppermint': ['bạc hà', 'bac ha'],
+      'chamomile': ['chamomile'],
+      'frankincense': ['hương trầm', 'huong tram'],
+      'eucalyptus': ['khuynh diệp', 'khuynh diep'],
+      'tea tree': ['tràm trà', 'tram tra'],
+      'grapefruit': ['bưởi', 'buoi'],
+      'lemongrass': ['sả chanh', 'sa chanh'],
+      'ginger': ['gừng', 'gung'],
+      'ylang-ylang': ['ngọc lan tây', 'ngoc lan tay'],
+      'jasmine': ['hoa nhài', 'hoa nhai'],
+      'lemon': ['chanh'],
+    };
+    
+    for (final entry in nameMap.entries) {
+      if (nameLower.contains(entry.key)) {
+        for (final vnName in entry.value) {
+          try {
+            return oils.firstWhere(
+              (oil) => _normalizeOilName(oil.name).contains(vnName),
+            );
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+    }
+    
+    return oils.isNotEmpty ? oils.first : null;
+  }
+
+  String _normalizeOilName(String name) {
+    return name.toLowerCase().replaceAll('tinh dầu', '').replaceAll('tinhdầu', '').trim();
+  }
+
+  String _getDefaultOilNameForMood(MoodType mood) {
+    switch (mood) {
+      case MoodType.stressed:
+        return 'Tinh dầu Oải Hương';
+      case MoodType.sad:
+        return 'Tinh dầu Hương Cam';
+      case MoodType.tired:
+        return 'Tinh dầu Bạc Hà';
+      case MoodType.insomnia:
+        return 'Tinh dầu Oải Hương';
+      case MoodType.normal:
+        return 'Tinh dầu Oải Hương';
     }
   }
 
@@ -309,8 +445,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       );
     });
     _updateStatus(_deviceStatus);
-    // Update suggested music track based on new mood
+    // Update suggested music track and essential oil based on new mood
     _updateSuggestedMusicTrack();
+    _updateSuggestedEssentialOil();
   }
 
 
@@ -469,6 +606,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
             EssentialOilSuggestionCard(
               mood: _suggestedMood ?? MoodType.normal,
               customEssentialOil: _suggestionService.essentialOilSuggestion,
+              suggestedOil: _suggestedEssentialOil,
             ),
 
             // Music Suggestion Card (always show with current or default mood)
