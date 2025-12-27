@@ -7,12 +7,14 @@
       "name": "smart_candles",
       "version": "1.0.0+1",
       "dependencies": [
+        "cloud_firestore",
         "cupertino_icons",
         "file_picker",
         "firebase_auth",
         "firebase_core",
         "flutter",
         "flutter_blue_plus",
+        "google_sign_in",
         "googleapis_auth",
         "http",
         "image_picker",
@@ -50,6 +52,30 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "google_sign_in",
+      "version": "6.3.0",
+      "dependencies": [
+        "flutter",
+        "google_sign_in_android",
+        "google_sign_in_ios",
+        "google_sign_in_platform_interface",
+        "google_sign_in_web"
+      ]
+    },
+    {
+      "name": "cloud_firestore",
+      "version": "5.6.12",
+      "dependencies": [
+        "cloud_firestore_platform_interface",
+        "cloud_firestore_web",
+        "collection",
+        "firebase_core",
+        "firebase_core_platform_interface",
+        "flutter",
+        "meta"
       ]
     },
     {
@@ -294,12 +320,73 @@
       ]
     },
     {
+      "name": "google_sign_in_web",
+      "version": "0.12.4+4",
+      "dependencies": [
+        "flutter",
+        "flutter_web_plugins",
+        "google_identity_services_web",
+        "google_sign_in_platform_interface",
+        "http",
+        "web"
+      ]
+    },
+    {
+      "name": "google_sign_in_platform_interface",
+      "version": "2.5.0",
+      "dependencies": [
+        "flutter",
+        "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "google_sign_in_ios",
+      "version": "5.9.0",
+      "dependencies": [
+        "flutter",
+        "google_sign_in_platform_interface"
+      ]
+    },
+    {
+      "name": "google_sign_in_android",
+      "version": "6.2.1",
+      "dependencies": [
+        "flutter",
+        "google_sign_in_platform_interface"
+      ]
+    },
+    {
       "name": "firebase_core_platform_interface",
       "version": "6.0.2",
       "dependencies": [
         "collection",
         "flutter",
         "flutter_test",
+        "meta",
+        "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "cloud_firestore_web",
+      "version": "4.4.12",
+      "dependencies": [
+        "_flutterfire_internals",
+        "cloud_firestore_platform_interface",
+        "collection",
+        "firebase_core",
+        "firebase_core_web",
+        "flutter",
+        "flutter_web_plugins"
+      ]
+    },
+    {
+      "name": "cloud_firestore_platform_interface",
+      "version": "6.6.12",
+      "dependencies": [
+        "_flutterfire_internals",
+        "collection",
+        "firebase_core",
+        "flutter",
         "meta",
         "plugin_platform_interface"
       ]

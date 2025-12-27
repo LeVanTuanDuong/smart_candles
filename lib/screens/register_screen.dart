@@ -31,6 +31,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final userCredential = await _authService.signInWithGoogle();
+
+      if (userCredential != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đăng ký thành công!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      } else if (mounted) {
+        // User cancelled sign-in
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -50,14 +92,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Đăng ký thành công!'),
+            content: Text('Đăng ký thành công! Vui lòng đăng nhập.'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
         );
 
+        // Sign out sau khi đăng ký để user phải đăng nhập
+        await _authService.signOut();
+
+        // Chuyển về trang đăng nhập
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
         );
       }
     } catch (e) {
@@ -337,6 +383,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     Expanded(child: Divider(color: Colors.grey[300])),
                   ],
+                ),
+                const SizedBox(height: 24),
+
+                // Google Sign In button
+                SizedBox(
+                  height: 56,
+                  child: OutlinedButton.icon(
+                    onPressed: _isLoading ? null : _handleGoogleSignIn,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.grey[300]!),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      backgroundColor: Colors.white,
+                    ),
+                    icon: Image.asset(
+                      'assets/images/google_logo.png',
+                      height: 24,
+                      width: 24,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.login,
+                          size: 24,
+                          color: Colors.blue,
+                        );
+                      },
+                    ),
+                    label: const Text(
+                      'Đăng ký bằng Google',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 24),
 
