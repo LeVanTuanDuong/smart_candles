@@ -10,7 +10,7 @@
 		</data>
 		<key>flutter_assets/AssetManifest.bin</key>
 		<data>
-		DqR32RINEQBcux2/E+3aK33O47A=
+		bTHDI3X1ddpOWqAgajI91u6Gtqw=
 		</data>
 		<key>flutter_assets/FontManifest.json</key>
 		<data>
@@ -95,6 +95,10 @@
 		<key>flutter_assets/assets/images/Evening%20Marsh.jpg</key>
 		<data>
 		16s0PzQXIel5ttF9+JLdFrZcGKc=
+		</data>
+		<key>flutter_assets/assets/images/logo.png</key>
+		<data>
+		vsUHNrspRaFYAsYmVhc4IZJ3Yxg=
 		</data>
 		<key>flutter_assets/assets/images/tinh%20dau/bac%20ha.png</key>
 		<data>
@@ -190,7 +194,7 @@
 		</data>
 		<key>flutter_assets/kernel_blob.bin</key>
 		<data>
-		06RA5MRElzR/b8E3VbaQK+zmpQE=
+		GO3VhWB9kxuYDV9ceR6PpHWP7KU=
 		</data>
 		<key>flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
 		<data>
@@ -215,7 +219,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			cnyOgI6HdlvIWTbEbPmMYcpLWXEefdGX0iEpSATiBew=
+			965DunsnqMD6VKw5Uc1LZajHkZqhaaiTkWkdByAEcHw=
 			</data>
 		</dict>
 		<key>flutter_assets/FontManifest.json</key>
@@ -363,6 +367,13 @@
 			<key>hash2</key>
 			<data>
 			h5UhFRLzSLjuwvLRqniWKUXGDnd+VtzDmUf4JH8xRHk=
+			</data>
+		</dict>
+		<key>flutter_assets/assets/images/logo.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			GnF1I2AwqFAwq45jyxvxwn8jYzvRjuUeiB+8YqUQsUk=
 			</data>
 		</dict>
 		<key>flutter_assets/assets/images/tinh%20dau/bac%20ha.png</key>
@@ -530,7 +541,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			higzENM8KcCVzks54nLtB4P+h5idH/zIXmhULDBy0Fc=
+			zxWYRB66nu3WPQ7hZb3bcnNgz+n3MBVasBAmXCUGSxc=
 			</data>
 		</dict>
 		<key>flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
