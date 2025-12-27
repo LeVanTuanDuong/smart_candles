@@ -1,1 +1,0 @@
- /Users/faa/Documents/GitHub/smart_candles/.dart_tool/flutter_build/5c37cf91d7703880272b919f47b3fbbc/dart_build_result.json: 

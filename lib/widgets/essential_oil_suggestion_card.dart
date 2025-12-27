@@ -189,12 +189,12 @@ class EssentialOilSuggestionCard extends StatelessWidget {
     
     // Fallback to colored container with bottle icon
     return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
         color: _getOilColor(),
-        borderRadius: BorderRadius.circular(12),
-      ),
+              borderRadius: BorderRadius.circular(12),
+            ),
       child: _buildBottleIcon(),
     );
   }
@@ -202,64 +202,64 @@ class EssentialOilSuggestionCard extends StatelessWidget {
   Widget _buildBottleIcon() {
     return Stack(
       alignment: Alignment.center,
-      children: [
-        // Bottle body
-        Positioned(
-          bottom: 10,
-          left: 20,
-          child: Container(
-            width: 40,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.brown[700],
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(8),
-                bottomRight: Radius.circular(8),
-              ),
-            ),
-          ),
-        ),
-        // Label
-        Positioned(
-          bottom: 25,
-          left: 22,
-          child: Container(
-            width: 36,
-            height: 20,
-            decoration: BoxDecoration(
-              color: Colors.purple[400],
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Center(
-              child: Text(
+              children: [
+                // Bottle body
+                Positioned(
+                  bottom: 10,
+                  left: 20,
+                  child: Container(
+                    width: 40,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.brown[700],
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(8),
+                        bottomRight: Radius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                // Label
+                Positioned(
+                  bottom: 25,
+                  left: 22,
+                  child: Container(
+                    width: 36,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: Colors.purple[400],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Center(
+                      child: Text(
                 _getEssentialOilName().split(' ').last.length > 4 
                     ? _getEssentialOilName().split(' ').last.substring(0, 4)
                     : _getEssentialOilName().split(' ').last,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ),
-        // Dropper cap
-        Positioned(
-          top: 10,
-          left: 28,
-          child: Container(
-            width: 24,
-            height: 15,
-            decoration: BoxDecoration(
-              color: Colors.brown[800],
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(2),
-                topRight: Radius.circular(2),
-              ),
-            ),
-          ),
+                // Dropper cap
+                Positioned(
+                  top: 10,
+                  left: 28,
+                  child: Container(
+                    width: 24,
+                    height: 15,
+                    decoration: BoxDecoration(
+                      color: Colors.brown[800],
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(2),
+                        topRight: Radius.circular(2),
+                      ),
+                    ),
+                  ),
         ),
       ],
     );
@@ -286,9 +286,9 @@ class EssentialOilSuggestionCard extends StatelessWidget {
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+                ),
+              ],
+            ),
       child: Row(
         children: [
           // Essential oil image or icon

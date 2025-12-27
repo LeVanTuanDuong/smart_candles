@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/device_status.dart';
 import '../services/settings_service.dart';
 import '../services/bluetooth_service.dart';
+import '../services/auth_service.dart';
+import 'login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -30,9 +32,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _deviceStatus = widget.deviceStatus;
+    // Validate and fix lightMode if invalid
+    final validLightMode = _getValidLightMode(_deviceStatus.lightMode);
+    if (_deviceStatus.lightMode != validLightMode) {
+      _deviceStatus = _deviceStatus.copyWith(lightMode: validLightMode);
+    }
     _loadSettings();
     _initializeBluetooth();
-    
+
     // Listen to Bluetooth connection changes
     _bluetoothService.addListener(_onBluetoothStateChanged);
   }
@@ -80,7 +87,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('⚠️ Vui lòng bật Bluetooth trong Cài đặt và thử lại'),
+              content: Text(
+                '⚠️ Vui lòng bật Bluetooth trong Cài đặt và thử lại',
+              ),
               duration: Duration(seconds: 4),
               backgroundColor: Colors.orange,
             ),
@@ -106,9 +115,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await Future.delayed(const Duration(seconds: 12));
 
       if (_bluetoothService.isConnected && mounted) {
-        _updateStatus(_deviceStatus.copyWith(
-          isBluetoothConnected: true,
-        ));
+        _updateStatus(_deviceStatus.copyWith(isBluetoothConnected: true));
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Đã kết nối với Smart Candle'),
@@ -119,7 +126,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('❌ Không tìm thấy thiết bị. Vui lòng đảm bảo nến đã bật và ở gần.'),
+            content: Text(
+              '❌ Không tìm thấy thiết bị. Vui lòng đảm bảo nến đã bật và ở gần.',
+            ),
             duration: Duration(seconds: 3),
           ),
         );
@@ -127,18 +136,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         String errorMessage = 'Lỗi kết nối: $e';
-        
+
         // Provide user-friendly error messages
         final errorStr = e.toString().toLowerCase();
         if (errorStr.contains('bluetooth must be turned on') ||
             errorStr.contains('cbmanagerstate') ||
             errorStr.contains('unsupported') ||
             errorStr.contains('bluetooth chưa được bật')) {
-          errorMessage = 'Vui lòng bật Bluetooth trong Cài đặt của thiết bị và thử lại';
-        } else if (errorStr.contains('permission') || errorStr.contains('quyền')) {
-          errorMessage = 'Vui lòng cấp quyền Bluetooth cho ứng dụng trong Cài đặt';
+          errorMessage =
+              'Vui lòng bật Bluetooth trong Cài đặt của thiết bị và thử lại';
+        } else if (errorStr.contains('permission') ||
+            errorStr.contains('quyền')) {
+          errorMessage =
+              'Vui lòng cấp quyền Bluetooth cho ứng dụng trong Cài đặt';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -195,6 +207,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // Get valid light mode, fallback to 'warm' if invalid
+  String _getValidLightMode(String? mode) {
+    const validModes = ['warm', 'amber', 'blue'];
+    if (mode != null && validModes.contains(mode)) {
+      return mode;
+    }
+    return 'warm'; // Default fallback
+  }
+
   String _getLightLabel(String mode) {
     switch (mode) {
       case 'warm':
@@ -215,10 +236,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         title: const Text(
           'Cài đặt',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -260,9 +278,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             } else {
                               // Disconnect
                               await _bluetoothService.disconnect();
-                              _updateStatus(_deviceStatus.copyWith(
-                                isBluetoothConnected: false,
-                              ));
+                              _updateStatus(
+                                _deviceStatus.copyWith(
+                                  isBluetoothConnected: false,
+                                ),
+                              );
                             }
                           },
                           activeColor: Colors.blue[600],
@@ -293,7 +313,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       value: _deviceStatus.lightBrightness,
                       onChanged: (value) {
                         _updateStatus(
-                            _deviceStatus.copyWith(lightBrightness: value));
+                          _deviceStatus.copyWith(lightBrightness: value),
+                        );
                       },
                       activeColor: _getLightColor(_deviceStatus.lightMode),
                     ),
@@ -303,7 +324,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Icon(Icons.palette, color: Colors.grey[700]),
                     title: const Text('Màu sáng'),
                     subtitle: DropdownButton<String>(
-                      value: _deviceStatus.lightMode,
+                      value: _getValidLightMode(_deviceStatus.lightMode),
                       isExpanded: true,
                       items: ['warm', 'amber', 'blue'].map((mode) {
                         return DropdownMenuItem(
@@ -314,7 +335,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onChanged: (value) {
                         if (value != null) {
                           _updateStatus(
-                              _deviceStatus.copyWith(lightMode: value));
+                            _deviceStatus.copyWith(lightMode: value),
+                          );
                         }
                       },
                     ),
@@ -333,7 +355,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   value: _deviceStatus.isMusicPlaying,
                   onChanged: (value) {
                     _updateStatus(
-                        _deviceStatus.copyWith(isMusicPlaying: value));
+                      _deviceStatus.copyWith(isMusicPlaying: value),
+                    );
                   },
                   activeColor: Colors.purple[600],
                 ),
@@ -346,7 +369,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       value: _deviceStatus.musicVolume,
                       onChanged: (value) {
                         _updateStatus(
-                            _deviceStatus.copyWith(musicVolume: value));
+                          _deviceStatus.copyWith(musicVolume: value),
+                        );
                       },
                       activeColor: Colors.purple[600],
                     ),
@@ -362,7 +386,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ListTile(
                   leading: Icon(Icons.warning, color: Colors.orange[700]),
                   title: const Text('Ngưỡng cảnh báo nhiệt độ'),
-                  subtitle: Text('${_temperatureThreshold.toStringAsFixed(1)}°C'),
+                  subtitle: Text(
+                    '${_temperatureThreshold.toStringAsFixed(1)}°C',
+                  ),
                   trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
                   onTap: () {
                     showDialog(
@@ -372,13 +398,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         content: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('${_temperatureThreshold.toStringAsFixed(1)}°C'),
+                            Text(
+                              '${_temperatureThreshold.toStringAsFixed(1)}°C',
+                            ),
                             Slider(
                               value: _temperatureThreshold,
                               min: 40,
                               max: 60,
                               divisions: 20,
-                              label: '${_temperatureThreshold.toStringAsFixed(1)}°C',
+                              label:
+                                  '${_temperatureThreshold.toStringAsFixed(1)}°C',
                               onChanged: (value) {
                                 setState(() {
                                   _temperatureThreshold = value;
@@ -485,10 +514,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.privacy_tip_outlined,
-                      color: Colors.grey),
+                  leading: const Icon(
+                    Icons.privacy_tip_outlined,
+                    color: Colors.grey,
+                  ),
                   title: const Text('Chính sách bảo mật'),
                   onTap: () {},
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.red),
+                  title: const Text(
+                    'Đăng xuất',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () async {
+                    final authService = AuthService();
+                    try {
+                      await authService.signOut();
+                      if (mounted) {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Lỗi đăng xuất: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
                 ),
               ],
             ),
@@ -524,10 +586,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
             child: Text(
               title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
           ...children,
@@ -536,4 +595,3 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
-

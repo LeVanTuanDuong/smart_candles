@@ -5,11 +5,9 @@
 *.swp
 .DS_Store
 .atom/
-.build/
 .buildlog/
 .history
 .svn/
-.swiftpm/
 migrate_working_dir/
 
 # IntelliJ related
@@ -33,6 +31,8 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+build/
+**/build/
 
 # Symbolication related
 app.*.symbols
@@ -44,6 +44,22 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android related
+**/android/**/gradle-wrapper.jar
+**/android/.gradle/
+**/android/app/build/
+**/android/build/
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/key.properties
+*.jks
+*.keystore
+**/android/.idea/
+**/android/*.iml
 
 # iOS/XCode related
 **/ios/**/*.mode1v3
@@ -66,7 +82,7 @@ app.*.map.json
 **/ios/Flutter/Flutter.framework
 **/ios/Flutter/Flutter.podspec
 **/ios/Flutter/Generated.xcconfig
-**/ios/Flutter/ephemeral
+**/ios/Flutter/ephemeral/
 **/ios/Flutter/app.flx
 **/ios/Flutter/app.zip
 **/ios/Flutter/flutter_assets/
@@ -76,7 +92,8 @@ app.*.map.json
 
 # macOS related
 **/macos/Flutter/GeneratedPluginRegistrant.swift
-**/macos/Flutter/ephemeral
+**/macos/Flutter/ephemeral/
+**/macos/Pods/
 
 # Windows related
 **/windows/flutter/generated_plugin_registrant.cc
@@ -87,29 +104,29 @@ app.*.map.json
 **/linux/flutter/generated_plugin_registrant.cc
 **/linux/flutter/generated_plugin_registrant.h
 **/linux/flutter/generated_plugins.cmake
+**/linux/flutter/ephemeral/
 
 # Web related
 **/web/.dart_tool/
+lib/generated_plugin_registrant.dart
 
 # Exceptions to above rules.
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
-!/dev/ci/**/Gemfile.lock
+!**/ios/**/default.mode1v3
+!**/ios/**/default.mode2v3
+!**/ios/**/default.pbxuser
+!**/ios/**/default.perspectivev3
 
-# Service Account & API Keys (IMPORTANT: Keep these private!)
-# Ignore service account JSON files containing private keys
+# Firebase & Service Account files
 **/assets/*service*.json
 **/assets/*-*.json
 **/assets/*_*.json
-# Specific service account file
 **/assets/arched-forest-*.json
-# Allow other JSON files if needed (uncomment if you have other JSON assets)
-# !**/assets/*.json
-*.json
-!pubspec.json
-!package.json
-!analysis_options.json
-!**/ios/Runner/Info.plist
-!**/android/app/src/main/AndroidManifest.xml
+firebase_options.dart
+
+# Generated files
+*.g.dart
+*.freezed.dart
 
 # Environment files
 .env
@@ -117,33 +134,85 @@ app.*.map.json
 .env.*.local
 *.env
 
-# Test coverage
-coverage/
-*.lcov
+# Build outputs
+*.apk
+*.aab
+*.ipa
+*.app
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux temporary files
+*~
 
 # Temporary files
 *.tmp
 *.temp
 *.bak
 *.swp
-*~
 
 # Logs
 logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Firebase
-**/ios/Runner/GoogleService-Info.plist
-**/android/app/google-services.json
-firebase_options.dart
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# Local configuration files
+local.properties
+local_config.dart
+
+# Test coverage
+coverage/
+*.lcov
+test/.test_coverage.dart
+
+# FVM Version Management
+.fvm/
 
 # Fastlane
-**/ios/fastlane/report.xml
-**/ios/fastlane/Preview.html
-**/ios/fastlane/screenshots/**/*.png
-**/ios/fastlane/test_output
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots
+**/fastlane/test_output
 
-# App-specific
-# Uncomment and add your app-specific files here
-# **/config/local_config.dart
-
+# Keep important files (explicitly allow these)
+!pubspec.yaml
+!pubspec.lock
+!analysis_options.yaml
+!README.md
+!.gitignore
+!.gitattributes

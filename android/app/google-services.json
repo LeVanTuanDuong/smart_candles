@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "427990378688",
+    "project_id": "pnfood-merchant",
+    "storage_bucket": "pnfood-merchant.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:427990378688:android:14f1a23198acd10d432525",
+        "android_client_info": {
+          "package_name": "com.phinam.smart_candles"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "427990378688-fpveekbp183s1ssodg5u2slrutjttnoi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.phinam.smart_candles",
+            "certificate_hash": "046b2bd15dd4f0f25f95ce35cdc9e50a16b1996b"
+          }
+        },
+        {
+          "client_id": "427990378688-6l7kdagg582118kdg10c9j2uigk1vfl9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNAsPOuHgk2K2EZxjUPmUe8Tny1Z6SDAg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "427990378688-6l7kdagg582118kdg10c9j2uigk1vfl9.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "427990378688-vfcuavqgqe094tkba97ie0fpvqr6nm6d.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.phinam.smart"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

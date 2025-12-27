@@ -33,11 +33,11 @@ class ChatBubble extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      message.text,
-                      style: const TextStyle(
-                        color: Colors.black87,
-                        fontSize: 15,
-                      ),
+                  message.text,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 15,
+                  ),
                     ),
                     if (message.needsConfirmation == true) ...[
                       const SizedBox(height: 12),

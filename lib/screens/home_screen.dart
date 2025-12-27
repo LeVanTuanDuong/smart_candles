@@ -98,8 +98,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!autoLightEnabled) {
       print('⚠️ Auto light is disabled in settings');
       return;
-    }
-    
+  }
+
     // Control light via Bluetooth if connected
     if (_bluetoothService.isConnected) {
       await _bluetoothService.setLightOn(true);
