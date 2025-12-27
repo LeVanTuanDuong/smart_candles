@@ -51,7 +51,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     isConnected: true,
   );
   MoodType? _suggestedMood;
-  final GlobalMusicPlayerService _globalMusicPlayer = GlobalMusicPlayerService();
+  final GlobalMusicPlayerService _globalMusicPlayer =
+      GlobalMusicPlayerService();
   final SuggestionService _suggestionService = SuggestionService();
   final BluetoothService _bluetoothService = BluetoothService();
   StreamSubscription? _temperatureSubscription;
@@ -64,10 +65,10 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     _deviceStatus = widget.deviceStatus;
     // Initialize with default mood to show suggestions from the start
     _suggestedMood = MoodType.normal;
-    
+
     // Listen to global music player changes
     _globalMusicPlayer.addListener(_onMusicPlayerChanged);
-    
+
     // Listen to suggestion service changes
     _suggestionService.addListener(_onSuggestionChanged);
 
@@ -105,13 +106,15 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     // Update temperature from Bluetooth
     final bluetoothTemp = _bluetoothService.currentTemperature;
     final isConnected = _bluetoothService.isConnected;
-    
+
     // Check if temperature or connection status changed
     final tempChanged = (bluetoothTemp - _deviceStatus.temperature).abs() > 0.1;
     final connectionChanged = isConnected != _deviceStatus.isBluetoothConnected;
-    
+
     if (tempChanged || connectionChanged) {
-      print('🔄 Cập nhật DeviceStatus: Nhiệt độ ${bluetoothTemp.toStringAsFixed(1)}°C, Kết nối: $isConnected');
+      print(
+        '🔄 Cập nhật DeviceStatus: Nhiệt độ ${bluetoothTemp.toStringAsFixed(1)}°C, Kết nối: $isConnected',
+      );
       final newStatus = _deviceStatus.copyWith(
         temperature: bluetoothTemp,
         isBluetoothConnected: isConnected,
@@ -123,11 +126,12 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   void _startTemperatureReading() {
     // Cancel existing subscription if any
     _temperatureSubscription?.cancel();
-    
+
     // Request temperature reading every 5 seconds as backup
     // (Main updates come from notifications, this is just a fallback)
-    _temperatureSubscription = Stream.periodic(const Duration(seconds: 5))
-        .listen((_) async {
+    _temperatureSubscription = Stream.periodic(const Duration(seconds: 5)).listen((
+      _,
+    ) async {
       if (_bluetoothService.isConnected && mounted) {
         try {
           final temp = await _bluetoothService.readTemperature();
@@ -152,17 +156,17 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
   void _onSuggestionChanged() {
     if (!mounted) return;
-    
+
     // Update suggested mood if detected
     if (_suggestionService.detectedMood != null) {
       setState(() {
         _suggestedMood = _suggestionService.detectedMood;
       });
     }
-    
+
     // Update suggested music track from library (async, don't need setState)
     _updateSuggestedMusicTrack();
-    
+
     // Update suggested essential oil from library (async, don't need setState)
     _updateSuggestedEssentialOil();
   }
@@ -170,42 +174,57 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   Future<void> _updateSuggestedMusicTrack() async {
     try {
       // Use the current detected mood from SuggestionService (most up-to-date)
-      final currentMood = _suggestionService.detectedMood ?? _suggestedMood ?? MoodType.normal;
-      
+      final currentMood =
+          _suggestionService.detectedMood ?? _suggestedMood ?? MoodType.normal;
+
       // Get the suggested music type from chatbot (prioritize from SuggestionService)
-      final musicType = _suggestionService.musicSuggestion ?? 
+      final musicType =
+          _suggestionService.musicSuggestion ??
           ChatbotService.getMusicSuggestions(currentMood).first;
-      
-      print('🎵 Updating suggested music track - musicType: $musicType, mood: ${currentMood.label}');
-      
+
+      print(
+        '🎵 Updating suggested music track - musicType: $musicType, mood: ${currentMood.label}',
+      );
+
       // Map music type to category (handle both Vietnamese and English, and exact matches)
       String category = 'Thiền'; // default
       final musicLower = musicType.toLowerCase().trim();
-      
+
       // Exact matches first (more precise)
-      if (musicLower == 'nhạc piano' || musicLower == 'piano chậm' || musicLower == 'piano ấm' || 
+      if (musicLower == 'nhạc piano' ||
+          musicLower == 'piano chậm' ||
+          musicLower == 'piano ấm' ||
           musicLower.contains('piano') && !musicLower.contains('ambient')) {
         category = 'Nhạc Piano';
-      } else if (musicLower == 'ambient' || musicLower == 'ambient nhẹ' || musicLower == 'ambient tối' ||
-                 (musicLower.contains('ambient') && !musicLower.contains('piano'))) {
+      } else if (musicLower == 'ambient' ||
+          musicLower == 'ambient nhẹ' ||
+          musicLower == 'ambient tối' ||
+          (musicLower.contains('ambient') && !musicLower.contains('piano'))) {
         category = 'Ambient';
-      } else if (musicLower == 'thiên nhiên' || musicLower == 'nature sound' || musicLower == 'mưa nhẹ' ||
-                 musicLower.contains('nature') || musicLower.contains('mưa') || 
-                 musicLower.contains('rain') || musicLower.contains('ocean')) {
+      } else if (musicLower == 'thiên nhiên' ||
+          musicLower == 'nature sound' ||
+          musicLower == 'mưa nhẹ' ||
+          musicLower.contains('nature') ||
+          musicLower.contains('mưa') ||
+          musicLower.contains('rain') ||
+          musicLower.contains('ocean')) {
         category = 'Thiên nhiên';
-      } else if (musicLower == 'thiền' || musicLower == 'meditation music' || musicLower == 'meditation' ||
-                 musicLower.contains('thiền') || musicLower.contains('zen')) {
+      } else if (musicLower == 'thiền' ||
+          musicLower == 'meditation music' ||
+          musicLower == 'meditation' ||
+          musicLower.contains('thiền') ||
+          musicLower.contains('zen')) {
         category = 'Thiền';
       }
-      
+
       print('🎵 Mapped music type "$musicType" to category: $category');
-      
+
       // Get tracks for this category from library
       final allTracksByCategory = await MusicService.getAllTracksByCategory();
       final allTracks = allTracksByCategory[category] ?? [];
-      
+
       print('🎵 Found ${allTracks.length} tracks in category $category');
-      
+
       // Find first track with audio source
       MusicTrack? track;
       for (final t in allTracks) {
@@ -215,7 +234,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
           break;
         }
       }
-      
+
       if (mounted) {
         setState(() {
           _suggestedMusicTrack = track;
@@ -229,19 +248,22 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   Future<void> _updateSuggestedEssentialOil() async {
     try {
       // Use the current detected mood from SuggestionService (most up-to-date)
-      final currentMood = _suggestionService.detectedMood ?? _suggestedMood ?? MoodType.normal;
-      
+      final currentMood =
+          _suggestionService.detectedMood ?? _suggestedMood ?? MoodType.normal;
+
       // Get the suggested essential oil name from chatbot
       final suggestedOilName = _suggestionService.essentialOilSuggestion;
-      
-      print('🛢️ Updating suggested essential oil - name: $suggestedOilName, mood: ${currentMood.label}');
-      
+
+      print(
+        '🛢️ Updating suggested essential oil - name: $suggestedOilName, mood: ${currentMood.label}',
+      );
+
       // Get all oils from library and suggestions
       final allOils = await EssentialOilService.getAllOils();
-      
+
       // Try to find matching oil by name
       EssentialOil? matchedOil;
-      
+
       if (suggestedOilName != null && suggestedOilName.isNotEmpty) {
         // Try exact match first
         try {
@@ -252,8 +274,13 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
           // Try partial match
           try {
             matchedOil = allOils.firstWhere(
-              (oil) => oil.name.toLowerCase().contains(suggestedOilName.toLowerCase()) ||
-                       suggestedOilName.toLowerCase().contains(oil.name.toLowerCase()),
+              (oil) =>
+                  oil.name.toLowerCase().contains(
+                    suggestedOilName.toLowerCase(),
+                  ) ||
+                  suggestedOilName.toLowerCase().contains(
+                    oil.name.toLowerCase(),
+                  ),
             );
           } catch (e) {
             // Try normalized match
@@ -261,12 +288,15 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
           }
         }
       }
-      
+
       // If no match found, use default for mood
-      matchedOil ??= _findOilByName(_getDefaultOilNameForMood(currentMood), allOils);
-      
+      matchedOil ??= _findOilByName(
+        _getDefaultOilNameForMood(currentMood),
+        allOils,
+      );
+
       print('✅ Selected essential oil: ${matchedOil?.name ?? "none"}');
-      
+
       if (mounted) {
         setState(() {
           _suggestedEssentialOil = matchedOil;
@@ -279,7 +309,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
   EssentialOil? _findOilByName(String name, List<EssentialOil> oils) {
     final normalizedName = _normalizeOilName(name);
-    
+
     // Try exact match
     try {
       return oils.firstWhere(
@@ -289,8 +319,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       // Try partial match
       try {
         return oils.firstWhere(
-          (oil) => _normalizeOilName(oil.name).contains(normalizedName) ||
-                   normalizedName.contains(_normalizeOilName(oil.name)),
+          (oil) =>
+              _normalizeOilName(oil.name).contains(normalizedName) ||
+              normalizedName.contains(_normalizeOilName(oil.name)),
         );
       } catch (e) {
         // Try English name mapping
@@ -299,9 +330,12 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     }
   }
 
-  EssentialOil? _findOilByEnglishName(String englishName, List<EssentialOil> oils) {
+  EssentialOil? _findOilByEnglishName(
+    String englishName,
+    List<EssentialOil> oils,
+  ) {
     final nameLower = englishName.toLowerCase();
-    
+
     // Map English names to Vietnamese names
     final nameMap = {
       'lavender': ['oải hương', 'lavender'],
@@ -318,7 +352,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       'jasmine': ['hoa nhài', 'hoa nhai'],
       'lemon': ['chanh'],
     };
-    
+
     for (final entry in nameMap.entries) {
       if (nameLower.contains(entry.key)) {
         for (final vnName in entry.value) {
@@ -332,12 +366,16 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
         }
       }
     }
-    
+
     return oils.isNotEmpty ? oils.first : null;
   }
 
   String _normalizeOilName(String name) {
-    return name.toLowerCase().replaceAll('tinh dầu', '').replaceAll('tinhdầu', '').trim();
+    return name
+        .toLowerCase()
+        .replaceAll('tinh dầu', '')
+        .replaceAll('tinhdầu', '')
+        .trim();
   }
 
   String _getDefaultOilNameForMood(MoodType mood) {
@@ -380,7 +418,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
   void _updateStatus(DeviceStatus newStatus) {
     if (!mounted) return; // Don't update if widget is disposed
-    
+
     setState(() {
       // Save temperature history if temperature changed
       if (_deviceStatus.temperature != newStatus.temperature) {
@@ -401,12 +439,13 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
   Future<void> _checkTemperatureThreshold(double temperature) async {
     if (!mounted) return;
-    
+
     try {
       // Get temperature threshold from settings
       final threshold = await SettingsService.getTemperatureThreshold();
-      final notificationsEnabled = await SettingsService.getNotificationsEnabled();
-      
+      final notificationsEnabled =
+          await SettingsService.getNotificationsEnabled();
+
       // Check if temperature exceeds threshold
       if (temperature > threshold && notificationsEnabled && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -430,13 +469,15 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
   void _handleMoodSelected(MoodType mood) {
     if (!mounted) return; // Don't update if widget is disposed
-    
+
     setState(() {
       _selectedMood = mood;
       _suggestedMood = mood;
 
       final lightMode = ChatbotService.getLightSuggestion(mood);
-      final suggestedMusic = _suggestionService.musicSuggestion ?? ChatbotService.getMusicSuggestions(mood).first;
+      final suggestedMusic =
+          _suggestionService.musicSuggestion ??
+          ChatbotService.getMusicSuggestions(mood).first;
       _deviceStatus = _deviceStatus.copyWith(
         isLightOn: true,
         lightMode: lightMode,
@@ -449,7 +490,6 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     _updateSuggestedMusicTrack();
     _updateSuggestedEssentialOil();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -472,7 +512,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
           },
         ),
         title: const Text(
-          'Zenora Smart Comfort',
+          'Nến Thông Minh',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
         backgroundColor: Colors.transparent,
@@ -535,7 +575,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
             // Music Control Widget (always show with suggested or current music)
             MusicControlHome(
-              currentTrack: _globalMusicPlayer.currentTrack, // Pass the track for image
+              currentTrack:
+                  _globalMusicPlayer.currentTrack, // Pass the track for image
               musicTitle:
                   _globalMusicPlayer.currentTrack?.name ??
                   _deviceStatus.currentMusic ??
@@ -545,9 +586,10 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
               musicSubtitle:
                   _globalMusicPlayer.currentTrack?.category ??
                   (_deviceStatus.currentMusic != null && _suggestedMood != null
-                  ? '(Gợi ý)'
-                  : ''),
-              isPlaying: _globalMusicPlayer.isPlaying || _deviceStatus.isMusicPlaying,
+                      ? '(Gợi ý)'
+                      : ''),
+              isPlaying:
+                  _globalMusicPlayer.isPlaying || _deviceStatus.isMusicPlaying,
               volume: _globalMusicPlayer.volume,
               onTap: () {
                 Navigator.of(context).push(
@@ -559,7 +601,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                           ChatbotService.getMusicSuggestions(
                             _suggestedMood ?? MoodType.normal,
                           ).first,
-                      isPlaying: _globalMusicPlayer.isPlaying || _deviceStatus.isMusicPlaying,
+                      isPlaying:
+                          _globalMusicPlayer.isPlaying ||
+                          _deviceStatus.isMusicPlaying,
                     ),
                   ),
                 );
@@ -585,9 +629,10 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                     } else {
                       // No suggested track, try to find and play a default track based on mood
                       final currentMood = _suggestedMood ?? MoodType.normal;
-                      final musicType = _suggestionService.musicSuggestion ?? 
+                      final musicType =
+                          _suggestionService.musicSuggestion ??
                           ChatbotService.getMusicSuggestions(currentMood).first;
-                      
+
                       // Map music type to category and get a track
                       String category = 'Thiền';
                       final musicLower = musicType.toLowerCase().trim();
@@ -595,22 +640,26 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                         category = 'Nhạc Piano';
                       } else if (musicLower.contains('ambient')) {
                         category = 'Ambient';
-                      } else if (musicLower.contains('nature') || musicLower.contains('thiên nhiên') || musicLower.contains('mưa')) {
+                      } else if (musicLower.contains('nature') ||
+                          musicLower.contains('thiên nhiên') ||
+                          musicLower.contains('mưa')) {
                         category = 'Thiên nhiên';
                       }
-                      
-                      final allTracksByCategory = await MusicService.getAllTracksByCategory();
+
+                      final allTracksByCategory =
+                          await MusicService.getAllTracksByCategory();
                       final tracks = allTracksByCategory[category] ?? [];
-                      
+
                       // Find first playable track
                       MusicTrack? trackToPlay;
                       for (final track in tracks) {
-                        if (track.audioPath != null && track.audioPath!.isNotEmpty) {
+                        if (track.audioPath != null &&
+                            track.audioPath!.isNotEmpty) {
                           trackToPlay = track;
                           break;
                         }
                       }
-                      
+
                       if (trackToPlay != null) {
                         await _globalMusicPlayer.playTrack(trackToPlay);
                         if (mounted) {
@@ -661,15 +710,19 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
             // Music Suggestion Card (always show with current or default mood)
             MusicSuggestionCard(
               suggestedTrack: _suggestedMusicTrack,
-              musicType: _suggestionService.musicSuggestion ?? ChatbotService.getMusicSuggestions(
-                _suggestionService.detectedMood ?? _suggestedMood ?? MoodType.normal,
-              ).first,
+              musicType:
+                  _suggestionService.musicSuggestion ??
+                  ChatbotService.getMusicSuggestions(
+                    _suggestionService.detectedMood ??
+                        _suggestedMood ??
+                        MoodType.normal,
+                  ).first,
               onPlayPressed: () async {
                 // Use the suggested track if available
                 if (_suggestedMusicTrack != null) {
                   try {
                     await _globalMusicPlayer.playTrack(_suggestedMusicTrack!);
-                    
+
                     // Update device status (only if still mounted)
                     if (mounted) {
                       _updateStatus(
@@ -679,8 +732,10 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                         ),
                       );
                     }
-                    
-                    print('✅ Successfully playing: ${_suggestedMusicTrack!.name}');
+
+                    print(
+                      '✅ Successfully playing: ${_suggestedMusicTrack!.name}',
+                    );
                   } catch (e) {
                     print('❌ Error playing track: $e');
                     // Show error message to user
@@ -697,30 +752,32 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                   }
                 } else {
                   // Try to get a track from library
-                  final musicType = _suggestionService.musicSuggestion ?? 
+                  final musicType =
+                      _suggestionService.musicSuggestion ??
                       ChatbotService.getMusicSuggestions(
                         _suggestedMood ?? MoodType.normal,
                       ).first;
-                  
+
                   // Map music type to category
                   String category = 'Thiền'; // default
                   if (musicType.toLowerCase().contains('piano')) {
                     category = 'Nhạc Piano';
                   } else if (musicType.toLowerCase().contains('ambient')) {
                     category = 'Ambient';
-                  } else if (musicType.toLowerCase().contains('nature') || 
-                            musicType.toLowerCase().contains('mưa') || 
-                            musicType.toLowerCase().contains('thiên nhiên')) {
+                  } else if (musicType.toLowerCase().contains('nature') ||
+                      musicType.toLowerCase().contains('mưa') ||
+                      musicType.toLowerCase().contains('thiên nhiên')) {
                     category = 'Thiên nhiên';
-                  } else if (musicType.toLowerCase().contains('thiền') || 
-                            musicType.toLowerCase().contains('meditation')) {
+                  } else if (musicType.toLowerCase().contains('thiền') ||
+                      musicType.toLowerCase().contains('meditation')) {
                     category = 'Thiền';
                   }
-                  
+
                   // Get tracks for this category
-                  final allTracksByCategory = await MusicService.getAllTracksByCategory();
+                  final allTracksByCategory =
+                      await MusicService.getAllTracksByCategory();
                   final allTracks = allTracksByCategory[category] ?? [];
-                  
+
                   // Find first track with audio source
                   MusicTrack? track;
                   for (final t in allTracks) {
@@ -729,11 +786,11 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                       break;
                     }
                   }
-                  
+
                   if (track != null) {
                     try {
                       await _globalMusicPlayer.playTrack(track);
-                      
+
                       if (mounted) {
                         setState(() {
                           _suggestedMusicTrack = track;
@@ -745,7 +802,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                           ),
                         );
                       }
-                      
+
                       print('✅ Successfully playing: ${track.name}');
                     } catch (e) {
                       print('❌ Error playing track: $e');
@@ -774,7 +831,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                             onPressed: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (context) => const MusicLibraryScreen(),
+                                  builder: (context) =>
+                                      const MusicLibraryScreen(),
                                 ),
                               );
                             },
@@ -785,7 +843,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                   }
                 }
               },
-              ),
+            ),
 
             // Smartwatch Data Card
             SmartwatchCardHome(smartwatchData: _smartwatchData),
