@@ -10,7 +10,7 @@ import '../widgets/music_suggestion_card.dart';
 import '../widgets/music_control_home.dart';
 import '../widgets/smartwatch_card_home.dart';
 import '../widgets/danger_alert_dialog.dart';
-import '../screens/settings_screen.dart';
+import '../screens/profile_screen.dart';
 import '../screens/mood_journal_screen.dart';
 import '../screens/safety_history_screen.dart';
 import '../screens/meditation_guide_screen.dart';
@@ -497,11 +497,11 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.settings, color: Colors.grey[800]),
+          icon: Icon(Icons.person, color: Colors.grey[800]),
           onPressed: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => SettingsScreen(
+                builder: (context) => ProfileScreen(
                   deviceStatus: _deviceStatus,
                   onStatusChanged: (newStatus) {
                     _updateStatus(newStatus);
