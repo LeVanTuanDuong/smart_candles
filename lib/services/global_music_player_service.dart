@@ -158,14 +158,23 @@ class GlobalMusicPlayerService extends ChangeNotifier {
     if (_audioPlayer == null) return;
     
     try {
+      // Update state immediately for instant UI feedback (optimistic update)
+      _isPlaying = !_isPlaying;
+      notifyListeners();
+      
+      // Then perform the actual play/pause operation based on the NEW state
       if (_isPlaying) {
-        await _audioPlayer!.pause();
-      } else {
         await _audioPlayer!.play();
+      } else {
+        await _audioPlayer!.pause();
       }
-      // State will be updated by listener
+      // Note: Listener will confirm the actual state from audio player,
+      // but UI has already been updated optimistically for better UX
     } catch (e) {
       print('Error toggling play/pause: $e');
+      // Revert state on error
+      _isPlaying = !_isPlaying;
+      notifyListeners();
     }
   }
 

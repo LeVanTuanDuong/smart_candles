@@ -565,23 +565,72 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                 );
               },
               onPlayPause: () async {
-                // Use global music player if there's a current track
-                if (_globalMusicPlayer.currentTrack != null) {
-                  await _globalMusicPlayer.togglePlayPause();
-                } else {
-                  // If no current music, set it from suggestion
-                  if (_deviceStatus.currentMusic == null) {
-                    final currentMood = _suggestedMood ?? MoodType.normal;
-                    final suggestedMusic = ChatbotService.getMusicSuggestions(
-                      currentMood,
-                    ).first;
-                    _updateStatus(
-                      _deviceStatus.copyWith(
-                        isMusicPlaying: true,
-                        currentMusic: suggestedMusic,
-                      ),
-                    );
+                try {
+                  // If there's a current track in the global player, toggle play/pause
+                  if (_globalMusicPlayer.currentTrack != null) {
+                    await _globalMusicPlayer.togglePlayPause();
                   } else {
+                    // No track is currently loaded, need to play a track first
+                    // Try to use suggested track if available
+                    if (_suggestedMusicTrack != null) {
+                      await _globalMusicPlayer.playTrack(_suggestedMusicTrack!);
+                      if (mounted) {
+                        _updateStatus(
+                          _deviceStatus.copyWith(
+                            isMusicPlaying: true,
+                            currentMusic: _suggestedMusicTrack!.name,
+                          ),
+                        );
+                      }
+                    } else {
+                      // No suggested track, try to find and play a default track based on mood
+                      final currentMood = _suggestedMood ?? MoodType.normal;
+                      final musicType = _suggestionService.musicSuggestion ?? 
+                          ChatbotService.getMusicSuggestions(currentMood).first;
+                      
+                      // Map music type to category and get a track
+                      String category = 'Thiền';
+                      final musicLower = musicType.toLowerCase().trim();
+                      if (musicLower.contains('piano')) {
+                        category = 'Nhạc Piano';
+                      } else if (musicLower.contains('ambient')) {
+                        category = 'Ambient';
+                      } else if (musicLower.contains('nature') || musicLower.contains('thiên nhiên') || musicLower.contains('mưa')) {
+                        category = 'Thiên nhiên';
+                      }
+                      
+                      final allTracksByCategory = await MusicService.getAllTracksByCategory();
+                      final tracks = allTracksByCategory[category] ?? [];
+                      
+                      // Find first playable track
+                      MusicTrack? trackToPlay;
+                      for (final track in tracks) {
+                        if (track.audioPath != null && track.audioPath!.isNotEmpty) {
+                          trackToPlay = track;
+                          break;
+                        }
+                      }
+                      
+                      if (trackToPlay != null) {
+                        await _globalMusicPlayer.playTrack(trackToPlay);
+                        if (mounted) {
+                          setState(() {
+                            _suggestedMusicTrack = trackToPlay;
+                          });
+                          _updateStatus(
+                            _deviceStatus.copyWith(
+                              isMusicPlaying: true,
+                              currentMusic: trackToPlay.name,
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  }
+                } catch (e) {
+                  print('Error in onPlayPause: $e');
+                  // If play failed, at least toggle the UI state
+                  if (mounted) {
                     _updateStatus(
                       _deviceStatus.copyWith(
                         isMusicPlaying: !_deviceStatus.isMusicPlaying,
