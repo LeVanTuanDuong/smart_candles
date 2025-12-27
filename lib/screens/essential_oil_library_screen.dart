@@ -5,12 +5,15 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../models/essential_oil.dart';
 import '../services/essential_oil_service.dart';
+import 'essential_oil_detail_screen.dart';
+import 'essential_oil_guide_screen.dart';
 
 class EssentialOilLibraryScreen extends StatefulWidget {
   const EssentialOilLibraryScreen({super.key});
 
   @override
-  State<EssentialOilLibraryScreen> createState() => _EssentialOilLibraryScreenState();
+  State<EssentialOilLibraryScreen> createState() =>
+      _EssentialOilLibraryScreenState();
 }
 
 class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
@@ -51,7 +54,7 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
   Future<void> _addToLibrary(EssentialOil oil) async {
     await EssentialOilService.addToLibrary(oil);
     await _loadOils();
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -65,7 +68,7 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
   Future<void> _removeFromLibrary(String oilId) async {
     await EssentialOilService.removeFromLibrary(oilId);
     await _loadOils();
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -113,10 +116,7 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                 // Image selection section
                 const Text(
                   'Chọn hình ảnh:',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -163,7 +163,9 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                   ],
                 ),
                 // Show current or selected image preview
-                if (currentImagePath != null && File(currentImagePath!).existsSync() && selectedImage == null) ...[
+                if (currentImagePath != null &&
+                    File(currentImagePath!).existsSync() &&
+                    selectedImage == null) ...[
                   const SizedBox(height: 12),
                   Container(
                     height: 150,
@@ -235,28 +237,135 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                 Wrap(
                   spacing: 8,
                   children: [
-                    _buildImageTypeOption('lavender', 'Lavender', selectedImageType, (type) {
+                    _buildImageTypeOption(
+                      'lavender',
+                      'Oải Hương',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                          currentImagePath = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption(
+                      'huong tram',
+                      'Hương Trầm',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                          currentImagePath = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption(
+                      'bac ha',
+                      'Bạc Hà',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                          currentImagePath = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption(
+                      'khuynh diep',
+                      'Khuynh Diệp',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                          currentImagePath = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption(
+                      'tram tra',
+                      'Tràm Trà',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                          currentImagePath = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption('buoi', 'Bưởi', selectedImageType, (
+                      type,
+                    ) {
                       setDialogState(() {
                         selectedImageType = type;
                         selectedImage = null;
                         currentImagePath = null;
                       });
                     }),
-                    _buildImageTypeOption('orange', 'Orange', selectedImageType, (type) {
+                    _buildImageTypeOption(
+                      'cam ngot',
+                      'Hương Cam',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                          currentImagePath = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption(
+                      'sa chanh',
+                      'Sả Chanh',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                          currentImagePath = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption('gung', 'Gừng', selectedImageType, (
+                      type,
+                    ) {
                       setDialogState(() {
                         selectedImageType = type;
                         selectedImage = null;
                         currentImagePath = null;
                       });
                     }),
-                    _buildImageTypeOption('chamomile', 'Chamomile', selectedImageType, (type) {
-                      setDialogState(() {
-                        selectedImageType = type;
-                        selectedImage = null;
-                        currentImagePath = null;
-                      });
-                    }),
-                    _buildImageTypeOption('peppermint', 'Peppermint', selectedImageType, (type) {
+                    _buildImageTypeOption(
+                      'ngoc lan tay',
+                      'Ngọc Lan Tây',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                          currentImagePath = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption(
+                      'hoa nhai',
+                      'Hoa Nhài',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                          currentImagePath = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption('chanh', 'Chanh', selectedImageType, (
+                      type,
+                    ) {
                       setDialogState(() {
                         selectedImageType = type;
                         selectedImage = null;
@@ -277,31 +386,35 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
               onPressed: () async {
                 if (nameController.text.trim().isNotEmpty) {
                   String? imagePath = currentImagePath;
-                  
+
                   // Save new image if selected
                   if (selectedImage != null) {
                     try {
                       // Delete old image if exists
-                      if (oil.imagePath != null && File(oil.imagePath!).existsSync()) {
+                      if (oil.imagePath != null &&
+                          File(oil.imagePath!).existsSync()) {
                         try {
                           await File(oil.imagePath!).delete();
                         } catch (e) {
                           print('Error deleting old image: $e');
                         }
                       }
-                      
+
                       // Save new image
                       final appDir = await getApplicationDocumentsDirectory();
-                      final fileName = 'oil_${DateTime.now().millisecondsSinceEpoch}${path.extension(selectedImage!.path)}';
+                      final fileName =
+                          'oil_${DateTime.now().millisecondsSinceEpoch}${path.extension(selectedImage!.path)}';
                       final savedImage = File(path.join(appDir.path, fileName));
                       await File(selectedImage!.path).copy(savedImage.path);
                       imagePath = savedImage.path;
                     } catch (e) {
                       print('Error saving image: $e');
                     }
-                  } else if (selectedImageType != 'custom' && currentImagePath == null) {
+                  } else if (selectedImageType != 'custom' &&
+                      currentImagePath == null) {
                     // If switching to default image type, delete custom image
-                    if (oil.imagePath != null && File(oil.imagePath!).existsSync()) {
+                    if (oil.imagePath != null &&
+                        File(oil.imagePath!).existsSync()) {
                       try {
                         await File(oil.imagePath!).delete();
                       } catch (e) {
@@ -310,16 +423,16 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                     }
                     imagePath = null;
                   }
-                  
+
                   final updatedOil = oil.copyWith(
                     name: nameController.text.trim(),
                     description: descriptionController.text.trim(),
                     imageType: selectedImageType,
                     imagePath: imagePath,
                   );
-                  
+
                   await EssentialOilService.updateOil(updatedOil);
-                  
+
                   if (mounted) {
                     Navigator.of(context).pop();
                     _loadOils();
@@ -376,10 +489,7 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                 // Image selection section
                 const Text(
                   'Chọn hình ảnh:',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -458,25 +568,124 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                 Wrap(
                   spacing: 8,
                   children: [
-                    _buildImageTypeOption('lavender', 'Lavender', selectedImageType, (type) {
+                    _buildImageTypeOption(
+                      'lavender',
+                      'Oải Hương',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption(
+                      'huong tram',
+                      'Hương Trầm',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption(
+                      'bac ha',
+                      'Bạc Hà',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption(
+                      'khuynh diep',
+                      'Khuynh Diệp',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption(
+                      'tram tra',
+                      'Tràm Trà',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption('buoi', 'Bưởi', selectedImageType, (
+                      type,
+                    ) {
                       setDialogState(() {
                         selectedImageType = type;
                         selectedImage = null;
                       });
                     }),
-                    _buildImageTypeOption('orange', 'Orange', selectedImageType, (type) {
+                    _buildImageTypeOption(
+                      'cam ngot',
+                      'Hương Cam',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption(
+                      'sa chanh',
+                      'Sả Chanh',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption('gung', 'Gừng', selectedImageType, (
+                      type,
+                    ) {
                       setDialogState(() {
                         selectedImageType = type;
                         selectedImage = null;
                       });
                     }),
-                    _buildImageTypeOption('chamomile', 'Chamomile', selectedImageType, (type) {
-                      setDialogState(() {
-                        selectedImageType = type;
-                        selectedImage = null;
-                      });
-                    }),
-                    _buildImageTypeOption('peppermint', 'Peppermint', selectedImageType, (type) {
+                    _buildImageTypeOption(
+                      'ngoc lan tay',
+                      'Ngọc Lan Tây',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption(
+                      'hoa nhai',
+                      'Hoa Nhài',
+                      selectedImageType,
+                      (type) {
+                        setDialogState(() {
+                          selectedImageType = type;
+                          selectedImage = null;
+                        });
+                      },
+                    ),
+                    _buildImageTypeOption('chanh', 'Chanh', selectedImageType, (
+                      type,
+                    ) {
                       setDialogState(() {
                         selectedImageType = type;
                         selectedImage = null;
@@ -496,12 +705,13 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
               onPressed: () async {
                 if (nameController.text.trim().isNotEmpty) {
                   String? imagePath;
-                  
+
                   // Save image if selected
                   if (selectedImage != null) {
                     try {
                       final appDir = await getApplicationDocumentsDirectory();
-                      final fileName = 'oil_${DateTime.now().millisecondsSinceEpoch}${path.extension(selectedImage!.path)}';
+                      final fileName =
+                          'oil_${DateTime.now().millisecondsSinceEpoch}${path.extension(selectedImage!.path)}';
                       final savedImage = File(path.join(appDir.path, fileName));
                       await File(selectedImage!.path).copy(savedImage.path);
                       imagePath = savedImage.path;
@@ -509,7 +719,7 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                       print('Error saving image: $e');
                     }
                   }
-                  
+
                   final oil = EssentialOil(
                     id: DateTime.now().millisecondsSinceEpoch.toString(),
                     name: nameController.text.trim(),
@@ -520,7 +730,7 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                     addedDate: DateTime.now(),
                   );
                   await EssentialOilService.addToLibrary(oil);
-                  
+
                   if (mounted) {
                     Navigator.of(context).pop();
                     _loadOils();
@@ -570,13 +780,23 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
         ),
         title: const Text(
           'Thư viện Tinh dầu',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.blue[600],
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline, color: Colors.white),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const EssentialOilGuideScreen(),
+                ),
+              );
+            },
+            tooltip: 'Hướng dẫn sử dụng',
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
@@ -665,129 +885,182 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
   Widget _buildOilCard(EssentialOil oil, {required bool isInLibrary}) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: isInLibrary ? () => _showEditOilDialog(oil) : null,
+        onTap: () {
+          // Navigate to detail screen
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => EssentialOilDetailScreen(oil: oil),
+            ),
+          );
+        },
         borderRadius: BorderRadius.circular(12),
         child: Stack(
           children: [
             Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Image
-              Expanded(
-                flex: 3,
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(12),
-                      topRight: Radius.circular(12),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Image
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Show custom image if available, otherwise show default image type
+                        oil.imagePath != null &&
+                                File(oil.imagePath!).existsSync()
+                            ? Image.file(
+                                File(oil.imagePath!),
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                              )
+                            : _buildOilImage(oil.imageType),
+                      ],
                     ),
                   ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Show custom image if available, otherwise show default image type
-                      oil.imagePath != null && File(oil.imagePath!).existsSync()
-                          ? Image.file(
-                              File(oil.imagePath!),
-                              width: double.infinity,
-                              height: double.infinity,
-                              fit: BoxFit.cover,
-                            )
-                          : _buildOilImage(oil.imageType),
-                      // Bottle - only show if no custom image
-                      if (oil.imagePath == null || !File(oil.imagePath!).existsSync())
-                        Positioned(
-                          bottom: 20,
-                          child: _buildBottleIcon(),
-                        ),
-                    ],
-                  ),
                 ),
-              ),
-              // Content
-              Expanded(
-                flex: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        oil.name,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Expanded(
-                        child: Text(
-                          oil.description,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
+                // Content
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          oil.name,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
-                          maxLines: 3,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      if (!isInLibrary)
-                        ElevatedButton(
-                          onPressed: () => _addToLibrary(oil),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue[600],
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(double.infinity, 32),
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                          child: const Text(
-                            'Thêm vào thư viện',
-                            style: TextStyle(fontSize: 12),
+                        const SizedBox(height: 4),
+                        Flexible(
+                          child: Text(
+                            oil.description,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                    ],
+                        if (!isInLibrary) ...[
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 32,
+                            child: ElevatedButton(
+                              onPressed: () => _addToLibrary(oil),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue[600],
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                              ),
+                              child: const Text(
+                                'Thêm vào thư viện',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // Delete button for library items (top left)
+            if (isInLibrary)
+              Positioned(
+                top: 8,
+                left: 8,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Xóa tinh dầu'),
+                          content: Text(
+                            'Bạn có chắc muốn xóa ${oil.name} khỏi thư viện?',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('Hủy'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                _removeFromLibrary(oil.id);
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text(
+                                'Xóa',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.red,
+                        size: 20,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ],
-            ),
-            // Delete button for library items
+            // Edit button for library items (top right)
             if (isInLibrary)
               Positioned(
                 top: 8,
                 right: 8,
-                child: IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Xóa tinh dầu'),
-                        content: Text('Bạn có chắc muốn xóa ${oil.name} khỏi thư viện?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Hủy'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              _removeFromLibrary(oil.id);
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text('Xóa', style: TextStyle(color: Colors.red)),
-                          ),
-                        ],
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _showEditOilDialog(oil),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        shape: BoxShape.circle,
                       ),
-                    );
-                  },
+                      child: const Icon(
+                        Icons.edit,
+                        color: Colors.blue,
+                        size: 20,
+                      ),
+                    ),
+                  ),
                 ),
               ),
           ],
@@ -797,7 +1070,85 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
   }
 
   Widget _buildOilImage(String imageType) {
-    switch (imageType) {
+    // Map imageType to asset path
+    String? assetPath = _getAssetPathForImageType(imageType);
+
+    if (assetPath != null) {
+      // Use image from assets
+      return Image.asset(
+        assetPath,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          // Fallback to gradient if image not found
+          return _buildGradientFallback(imageType);
+        },
+      );
+    } else {
+      // Fallback to gradient for old image types
+      return _buildGradientFallback(imageType);
+    }
+  }
+
+  String? _getAssetPathForImageType(String imageType) {
+    // Map imageType to asset path in assets/images/tinh dau/
+    final imageTypeLower = imageType.toLowerCase().trim();
+
+    switch (imageTypeLower) {
+      case 'lavender':
+        return 'assets/images/tinh dau/lavender.png';
+      case 'huong tram':
+      case 'huongtram':
+      case 'frankincense':
+        return 'assets/images/tinh dau/huong tram.png';
+      case 'bac ha':
+      case 'bacha':
+      case 'peppermint':
+        return 'assets/images/tinh dau/bac ha.png';
+      case 'khuynh diep':
+      case 'khuynhdiep':
+      case 'eucalyptus':
+        return 'assets/images/tinh dau/khuynh diep.png';
+      case 'tram tra':
+      case 'tramtra':
+      case 'tea tree':
+        return 'assets/images/tinh dau/tram tra.png';
+      case 'buoi':
+      case 'grapefruit':
+        return 'assets/images/tinh dau/buoi.png';
+      case 'cam ngot':
+      case 'camngot':
+      case 'orange':
+      case 'sweet orange':
+        return 'assets/images/tinh dau/cam ngot.png';
+      case 'sa chanh':
+      case 'sachanh':
+      case 'lemongrass':
+        return 'assets/images/tinh dau/sa chanh.png';
+      case 'gung':
+      case 'ginger':
+        return 'assets/images/tinh dau/gung.png';
+      case 'ngoc lan tay':
+      case 'ngoclantay':
+      case 'ylang-ylang':
+      case 'ylang ylang':
+        return 'assets/images/tinh dau/ngoc lan tay.png';
+      case 'hoa nhai':
+      case 'hoanhai':
+      case 'jasmine':
+        return 'assets/images/tinh dau/hoa nhai.png';
+      case 'chanh':
+      case 'lemon':
+        return 'assets/images/tinh dau/chanh.png';
+      default:
+        return null;
+    }
+  }
+
+  Widget _buildGradientFallback(String imageType) {
+    // Legacy gradient fallback for old image types
+    switch (imageType.toLowerCase()) {
       case 'lavender':
         return Container(
           decoration: BoxDecoration(
@@ -809,16 +1160,23 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
           ),
           child: Stack(
             children: [
-              // Lavender flowers
               Positioned(
                 top: 10,
                 left: 20,
-                child: Icon(Icons.local_florist, size: 30, color: Colors.purple[700]),
+                child: Icon(
+                  Icons.local_florist,
+                  size: 30,
+                  color: Colors.purple[700],
+                ),
               ),
               Positioned(
                 top: 15,
                 right: 15,
-                child: Icon(Icons.local_florist, size: 25, color: Colors.purple[600]),
+                child: Icon(
+                  Icons.local_florist,
+                  size: 25,
+                  color: Colors.purple[600],
+                ),
               ),
             ],
           ),
@@ -834,7 +1192,6 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
           ),
           child: Stack(
             children: [
-              // Orange
               Positioned(
                 top: 10,
                 left: 20,
@@ -859,16 +1216,23 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
           ),
           child: Stack(
             children: [
-              // Chamomile flowers
               Positioned(
                 top: 10,
                 left: 20,
-                child: Icon(Icons.wb_sunny, size: 30, color: Colors.yellow[700]),
+                child: Icon(
+                  Icons.wb_sunny,
+                  size: 30,
+                  color: Colors.yellow[700],
+                ),
               ),
               Positioned(
                 top: 15,
                 right: 15,
-                child: Icon(Icons.wb_sunny, size: 25, color: Colors.yellow[600]),
+                child: Icon(
+                  Icons.wb_sunny,
+                  size: 25,
+                  color: Colors.yellow[600],
+                ),
               ),
             ],
           ),
@@ -884,7 +1248,6 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
           ),
           child: Stack(
             children: [
-              // Peppermint leaves
               Positioned(
                 top: 10,
                 left: 20,
@@ -902,37 +1265,4 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
         return Container(color: Colors.grey[300]);
     }
   }
-
-  Widget _buildBottleIcon() {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        // Bottle body
-        Container(
-          width: 30,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.brown[700],
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(4),
-              bottomRight: Radius.circular(4),
-            ),
-          ),
-        ),
-        // Cap
-        Positioned(
-          top: -8,
-          child: Container(
-            width: 20,
-            height: 10,
-            decoration: BoxDecoration(
-              color: Colors.brown[800],
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
-

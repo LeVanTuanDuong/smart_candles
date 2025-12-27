@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/device_status.dart';
 import '../models/mood_type.dart';
@@ -13,9 +14,18 @@ import '../screens/settings_screen.dart';
 import '../screens/mood_journal_screen.dart';
 import '../screens/safety_history_screen.dart';
 import '../screens/meditation_guide_screen.dart';
+import '../screens/music_library_screen.dart';
 import '../services/chatbot_service.dart' show ChatbotService;
 import '../services/temperature_history_service.dart';
 import '../models/temperature_history_entry.dart';
+import '../services/global_music_player_service.dart';
+import '../services/suggestion_service.dart';
+import '../services/music_service.dart';
+import '../services/settings_service.dart';
+import '../services/bluetooth_service.dart';
+import '../services/essential_oil_service.dart';
+import '../models/music_track.dart';
+import '../models/essential_oil.dart';
 
 class DashboardHomeScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -41,6 +51,12 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     isConnected: true,
   );
   MoodType? _suggestedMood;
+  final GlobalMusicPlayerService _globalMusicPlayer = GlobalMusicPlayerService();
+  final SuggestionService _suggestionService = SuggestionService();
+  final BluetoothService _bluetoothService = BluetoothService();
+  StreamSubscription? _temperatureSubscription;
+  MusicTrack? _suggestedMusicTrack; // Track from library to display
+  EssentialOil? _suggestedEssentialOil; // EssentialOil from library to display
 
   @override
   void initState() {
@@ -48,6 +64,26 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     _deviceStatus = widget.deviceStatus;
     // Initialize with default mood to show suggestions from the start
     _suggestedMood = MoodType.normal;
+    
+    // Listen to global music player changes
+    _globalMusicPlayer.addListener(_onMusicPlayerChanged);
+    
+    // Listen to suggestion service changes
+    _suggestionService.addListener(_onSuggestionChanged);
+
+    // Initialize suggested music track and essential oil
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateSuggestedMusicTrack();
+      _updateSuggestedEssentialOil();
+    });
+
+    // Listen to Bluetooth service for temperature updates
+    _bluetoothService.addListener(_onBluetoothTemperatureUpdate);
+
+    // Start reading temperature from Bluetooth if connected
+    if (_bluetoothService.isConnected) {
+      _startTemperatureReading();
+    }
 
     // Save initial temperature to history
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -58,11 +94,278 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       );
       TemperatureHistoryService.saveEntry(historyEntry);
 
-      // Check for danger temperature
-      if (_deviceStatus.temperature > 50.0) {
-        DangerAlertDialog.show(context, _deviceStatus.temperature);
+      // Check for danger temperature using settings threshold
+      _checkTemperatureThreshold(_deviceStatus.temperature);
+    });
+  }
+
+  void _onBluetoothTemperatureUpdate() {
+    if (!mounted) return;
+
+    // Update temperature from Bluetooth
+    final bluetoothTemp = _bluetoothService.currentTemperature;
+    final isConnected = _bluetoothService.isConnected;
+    
+    // Check if temperature or connection status changed
+    final tempChanged = (bluetoothTemp - _deviceStatus.temperature).abs() > 0.1;
+    final connectionChanged = isConnected != _deviceStatus.isBluetoothConnected;
+    
+    if (tempChanged || connectionChanged) {
+      print('🔄 Cập nhật DeviceStatus: Nhiệt độ ${bluetoothTemp.toStringAsFixed(1)}°C, Kết nối: $isConnected');
+      final newStatus = _deviceStatus.copyWith(
+        temperature: bluetoothTemp,
+        isBluetoothConnected: isConnected,
+      );
+      _updateStatus(newStatus);
+    }
+  }
+
+  void _startTemperatureReading() {
+    // Cancel existing subscription if any
+    _temperatureSubscription?.cancel();
+    
+    // Request temperature reading every 5 seconds as backup
+    // (Main updates come from notifications, this is just a fallback)
+    _temperatureSubscription = Stream.periodic(const Duration(seconds: 5))
+        .listen((_) async {
+      if (_bluetoothService.isConnected && mounted) {
+        try {
+          final temp = await _bluetoothService.readTemperature();
+          if (temp != null) {
+            // Temperature will be updated via notifyListeners in BluetoothService
+            // This just triggers a read, the update happens automatically
+            print('📖 Đọc nhiệt độ thủ công: ${temp.toStringAsFixed(1)}°C');
+          }
+        } catch (e) {
+          print('⚠️ Lỗi khi đọc nhiệt độ thủ công: $e');
+        }
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _globalMusicPlayer.removeListener(_onMusicPlayerChanged);
+    _suggestionService.removeListener(_onSuggestionChanged);
+    super.dispose();
+  }
+
+  void _onSuggestionChanged() {
+    if (!mounted) return;
+    
+    // Update suggested mood if detected
+    if (_suggestionService.detectedMood != null) {
+      setState(() {
+        _suggestedMood = _suggestionService.detectedMood;
+      });
+    }
+    
+    // Update suggested music track from library (async, don't need setState)
+    _updateSuggestedMusicTrack();
+    
+    // Update suggested essential oil from library (async, don't need setState)
+    _updateSuggestedEssentialOil();
+  }
+
+  Future<void> _updateSuggestedMusicTrack() async {
+    try {
+      // Use the current detected mood from SuggestionService (most up-to-date)
+      final currentMood = _suggestionService.detectedMood ?? _suggestedMood ?? MoodType.normal;
+      
+      // Get the suggested music type from chatbot (prioritize from SuggestionService)
+      final musicType = _suggestionService.musicSuggestion ?? 
+          ChatbotService.getMusicSuggestions(currentMood).first;
+      
+      print('🎵 Updating suggested music track - musicType: $musicType, mood: ${currentMood.label}');
+      
+      // Map music type to category (handle both Vietnamese and English, and exact matches)
+      String category = 'Thiền'; // default
+      final musicLower = musicType.toLowerCase().trim();
+      
+      // Exact matches first (more precise)
+      if (musicLower == 'nhạc piano' || musicLower == 'piano chậm' || musicLower == 'piano ấm' || 
+          musicLower.contains('piano') && !musicLower.contains('ambient')) {
+        category = 'Nhạc Piano';
+      } else if (musicLower == 'ambient' || musicLower == 'ambient nhẹ' || musicLower == 'ambient tối' ||
+                 (musicLower.contains('ambient') && !musicLower.contains('piano'))) {
+        category = 'Ambient';
+      } else if (musicLower == 'thiên nhiên' || musicLower == 'nature sound' || musicLower == 'mưa nhẹ' ||
+                 musicLower.contains('nature') || musicLower.contains('mưa') || 
+                 musicLower.contains('rain') || musicLower.contains('ocean')) {
+        category = 'Thiên nhiên';
+      } else if (musicLower == 'thiền' || musicLower == 'meditation music' || musicLower == 'meditation' ||
+                 musicLower.contains('thiền') || musicLower.contains('zen')) {
+        category = 'Thiền';
+      }
+      
+      print('🎵 Mapped music type "$musicType" to category: $category');
+      
+      // Get tracks for this category from library
+      final allTracksByCategory = await MusicService.getAllTracksByCategory();
+      final allTracks = allTracksByCategory[category] ?? [];
+      
+      print('🎵 Found ${allTracks.length} tracks in category $category');
+      
+      // Find first track with audio source
+      MusicTrack? track;
+      for (final t in allTracks) {
+        if (t.audioPath != null && t.audioPath!.isNotEmpty) {
+          track = t;
+          print('✅ Selected track: ${track.name} (${track.audioPath})');
+          break;
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _suggestedMusicTrack = track;
+        });
+      }
+    } catch (e) {
+      print('❌ Error updating suggested music track: $e');
+    }
+  }
+
+  Future<void> _updateSuggestedEssentialOil() async {
+    try {
+      // Use the current detected mood from SuggestionService (most up-to-date)
+      final currentMood = _suggestionService.detectedMood ?? _suggestedMood ?? MoodType.normal;
+      
+      // Get the suggested essential oil name from chatbot
+      final suggestedOilName = _suggestionService.essentialOilSuggestion;
+      
+      print('🛢️ Updating suggested essential oil - name: $suggestedOilName, mood: ${currentMood.label}');
+      
+      // Get all oils from library and suggestions
+      final allOils = await EssentialOilService.getAllOils();
+      
+      // Try to find matching oil by name
+      EssentialOil? matchedOil;
+      
+      if (suggestedOilName != null && suggestedOilName.isNotEmpty) {
+        // Try exact match first
+        try {
+          matchedOil = allOils.firstWhere(
+            (oil) => oil.name.toLowerCase() == suggestedOilName.toLowerCase(),
+          );
+        } catch (e) {
+          // Try partial match
+          try {
+            matchedOil = allOils.firstWhere(
+              (oil) => oil.name.toLowerCase().contains(suggestedOilName.toLowerCase()) ||
+                       suggestedOilName.toLowerCase().contains(oil.name.toLowerCase()),
+            );
+          } catch (e) {
+            // Try normalized match
+            matchedOil = _findOilByName(suggestedOilName, allOils);
+          }
+        }
+      }
+      
+      // If no match found, use default for mood
+      matchedOil ??= _findOilByName(_getDefaultOilNameForMood(currentMood), allOils);
+      
+      print('✅ Selected essential oil: ${matchedOil?.name ?? "none"}');
+      
+      if (mounted) {
+        setState(() {
+          _suggestedEssentialOil = matchedOil;
+        });
+      }
+    } catch (e) {
+      print('❌ Error updating suggested essential oil: $e');
+    }
+  }
+
+  EssentialOil? _findOilByName(String name, List<EssentialOil> oils) {
+    final normalizedName = _normalizeOilName(name);
+    
+    // Try exact match
+    try {
+      return oils.firstWhere(
+        (oil) => _normalizeOilName(oil.name) == normalizedName,
+      );
+    } catch (e) {
+      // Try partial match
+      try {
+        return oils.firstWhere(
+          (oil) => _normalizeOilName(oil.name).contains(normalizedName) ||
+                   normalizedName.contains(_normalizeOilName(oil.name)),
+        );
+      } catch (e) {
+        // Try English name mapping
+        return _findOilByEnglishName(name, oils);
+      }
+    }
+  }
+
+  EssentialOil? _findOilByEnglishName(String englishName, List<EssentialOil> oils) {
+    final nameLower = englishName.toLowerCase();
+    
+    // Map English names to Vietnamese names
+    final nameMap = {
+      'lavender': ['oải hương', 'lavender'],
+      'sweet orange': ['hương cam', 'cam ngot'],
+      'peppermint': ['bạc hà', 'bac ha'],
+      'chamomile': ['chamomile'],
+      'frankincense': ['hương trầm', 'huong tram'],
+      'eucalyptus': ['khuynh diệp', 'khuynh diep'],
+      'tea tree': ['tràm trà', 'tram tra'],
+      'grapefruit': ['bưởi', 'buoi'],
+      'lemongrass': ['sả chanh', 'sa chanh'],
+      'ginger': ['gừng', 'gung'],
+      'ylang-ylang': ['ngọc lan tây', 'ngoc lan tay'],
+      'jasmine': ['hoa nhài', 'hoa nhai'],
+      'lemon': ['chanh'],
+    };
+    
+    for (final entry in nameMap.entries) {
+      if (nameLower.contains(entry.key)) {
+        for (final vnName in entry.value) {
+          try {
+            return oils.firstWhere(
+              (oil) => _normalizeOilName(oil.name).contains(vnName),
+            );
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+    }
+    
+    return oils.isNotEmpty ? oils.first : null;
+  }
+
+  String _normalizeOilName(String name) {
+    return name.toLowerCase().replaceAll('tinh dầu', '').replaceAll('tinhdầu', '').trim();
+  }
+
+  String _getDefaultOilNameForMood(MoodType mood) {
+    switch (mood) {
+      case MoodType.stressed:
+        return 'Tinh dầu Oải Hương';
+      case MoodType.sad:
+        return 'Tinh dầu Hương Cam';
+      case MoodType.tired:
+        return 'Tinh dầu Bạc Hà';
+      case MoodType.insomnia:
+        return 'Tinh dầu Oải Hương';
+      case MoodType.normal:
+        return 'Tinh dầu Oải Hương';
+    }
+  }
+
+  void _onMusicPlayerChanged() {
+    if (mounted) {
+      setState(() {
+        // Update device status based on global music player
+        _deviceStatus = _deviceStatus.copyWith(
+          isMusicPlaying: _globalMusicPlayer.isPlaying,
+          currentMusic: _globalMusicPlayer.currentTrack?.name,
+          musicVolume: _globalMusicPlayer.volume,
+        );
+      });
+    }
   }
 
   @override
@@ -70,16 +373,14 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.deviceStatus != widget.deviceStatus) {
       _deviceStatus = widget.deviceStatus;
-      // Check for danger temperature
-      if (_deviceStatus.temperature > 50.0) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          DangerAlertDialog.show(context, _deviceStatus.temperature);
-        });
-      }
+      // Check for danger temperature using settings threshold
+      _checkTemperatureThreshold(_deviceStatus.temperature);
     }
   }
 
   void _updateStatus(DeviceStatus newStatus) {
+    if (!mounted) return; // Don't update if widget is disposed
+    
     setState(() {
       // Save temperature history if temperature changed
       if (_deviceStatus.temperature != newStatus.temperature) {
@@ -92,23 +393,50 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       }
 
       _deviceStatus = newStatus;
-      // Check for danger temperature
-      if (newStatus.temperature > 50.0) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          DangerAlertDialog.show(context, newStatus.temperature);
-        });
-      }
+      // Check for danger temperature using settings threshold
+      _checkTemperatureThreshold(newStatus.temperature);
     });
     widget.onStatusChanged(newStatus);
   }
 
+  Future<void> _checkTemperatureThreshold(double temperature) async {
+    if (!mounted) return;
+    
+    try {
+      // Get temperature threshold from settings
+      final threshold = await SettingsService.getTemperatureThreshold();
+      final notificationsEnabled = await SettingsService.getNotificationsEnabled();
+      
+      // Check if temperature exceeds threshold
+      if (temperature > threshold && notificationsEnabled && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            DangerAlertDialog.show(context, temperature);
+          }
+        });
+      }
+    } catch (e) {
+      print('Error checking temperature threshold: $e');
+      // Fallback to default threshold (50.0)
+      if (temperature > 50.0 && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            DangerAlertDialog.show(context, temperature);
+          }
+        });
+      }
+    }
+  }
+
   void _handleMoodSelected(MoodType mood) {
+    if (!mounted) return; // Don't update if widget is disposed
+    
     setState(() {
       _selectedMood = mood;
       _suggestedMood = mood;
 
       final lightMode = ChatbotService.getLightSuggestion(mood);
-      final suggestedMusic = ChatbotService.getMusicSuggestions(mood).first;
+      final suggestedMusic = _suggestionService.musicSuggestion ?? ChatbotService.getMusicSuggestions(mood).first;
       _deviceStatus = _deviceStatus.copyWith(
         isLightOn: true,
         lightMode: lightMode,
@@ -117,7 +445,11 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       );
     });
     _updateStatus(_deviceStatus);
+    // Update suggested music track and essential oil based on new mood
+    _updateSuggestedMusicTrack();
+    _updateSuggestedEssentialOil();
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -203,90 +535,208 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
             // Music Control Widget (always show with suggested or current music)
             MusicControlHome(
+              currentTrack: _globalMusicPlayer.currentTrack, // Pass the track for image
               musicTitle:
+                  _globalMusicPlayer.currentTrack?.name ??
                   _deviceStatus.currentMusic ??
                   ChatbotService.getMusicSuggestions(
                     _suggestedMood ?? MoodType.normal,
                   ).first,
               musicSubtitle:
-                  _deviceStatus.currentMusic != null && _suggestedMood != null
+                  _globalMusicPlayer.currentTrack?.category ??
+                  (_deviceStatus.currentMusic != null && _suggestedMood != null
                   ? '(Gợi ý)'
-                  : '',
-              isPlaying: _deviceStatus.isMusicPlaying,
-              volume: _deviceStatus.musicVolume,
+                  : ''),
+              isPlaying: _globalMusicPlayer.isPlaying || _deviceStatus.isMusicPlaying,
+              volume: _globalMusicPlayer.volume,
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => MeditationGuideScreen(
                       currentTrack:
+                          _globalMusicPlayer.currentTrack?.name ??
                           _deviceStatus.currentMusic ??
                           ChatbotService.getMusicSuggestions(
                             _suggestedMood ?? MoodType.normal,
                           ).first,
-                      isPlaying: _deviceStatus.isMusicPlaying,
+                      isPlaying: _globalMusicPlayer.isPlaying || _deviceStatus.isMusicPlaying,
                     ),
                   ),
                 );
               },
-              onPlayPause: () {
-                // If no current music, set it from suggestion
-                if (_deviceStatus.currentMusic == null) {
-                  final currentMood = _suggestedMood ?? MoodType.normal;
-                  final suggestedMusic = ChatbotService.getMusicSuggestions(
-                    currentMood,
-                  ).first;
-                  _updateStatus(
-                    _deviceStatus.copyWith(
-                      isMusicPlaying: true,
-                      currentMusic: suggestedMusic,
-                    ),
-                  );
+              onPlayPause: () async {
+                // Use global music player if there's a current track
+                if (_globalMusicPlayer.currentTrack != null) {
+                  await _globalMusicPlayer.togglePlayPause();
                 } else {
-                  _updateStatus(
-                    _deviceStatus.copyWith(
-                      isMusicPlaying: !_deviceStatus.isMusicPlaying,
-                    ),
-                  );
+                  // If no current music, set it from suggestion
+                  if (_deviceStatus.currentMusic == null) {
+                    final currentMood = _suggestedMood ?? MoodType.normal;
+                    final suggestedMusic = ChatbotService.getMusicSuggestions(
+                      currentMood,
+                    ).first;
+                    _updateStatus(
+                      _deviceStatus.copyWith(
+                        isMusicPlaying: true,
+                        currentMusic: suggestedMusic,
+                      ),
+                    );
+                  } else {
+                    _updateStatus(
+                      _deviceStatus.copyWith(
+                        isMusicPlaying: !_deviceStatus.isMusicPlaying,
+                      ),
+                    );
+                  }
                 }
               },
               onPrevious: () {
-                // Handle previous track
+                // Handle previous track (TODO: implement playlist)
               },
               onNext: () {
-                // Handle next track
+                // Handle next track (TODO: implement playlist)
               },
-              onVolumeChanged: (newVolume) {
+              onVolumeChanged: (newVolume) async {
+                await _globalMusicPlayer.setVolume(newVolume);
                 _updateStatus(_deviceStatus.copyWith(musicVolume: newVolume));
               },
             ),
 
             // Essential Oil Suggestion Card (always show with current or default mood)
-            EssentialOilSuggestionCard(mood: _suggestedMood ?? MoodType.normal),
+            EssentialOilSuggestionCard(
+              mood: _suggestedMood ?? MoodType.normal,
+              customEssentialOil: _suggestionService.essentialOilSuggestion,
+              suggestedOil: _suggestedEssentialOil,
+            ),
 
             // Music Suggestion Card (always show with current or default mood)
             MusicSuggestionCard(
-              musicType: ChatbotService.getMusicSuggestions(
-                _suggestedMood ?? MoodType.normal,
+              suggestedTrack: _suggestedMusicTrack,
+              musicType: _suggestionService.musicSuggestion ?? ChatbotService.getMusicSuggestions(
+                _suggestionService.detectedMood ?? _suggestedMood ?? MoodType.normal,
               ).first,
-              onPlayPressed: () {
-                final currentMood = _suggestedMood ?? MoodType.normal;
-                final suggestedMusic = ChatbotService.getMusicSuggestions(
-                  currentMood,
-                ).first;
-                _updateStatus(
-                  _deviceStatus.copyWith(
-                    isMusicPlaying: true,
-                    currentMusic: suggestedMusic,
-                  ),
-                );
-                // Update suggested mood if it was null
-                if (_suggestedMood == null) {
-                  setState(() {
-                    _suggestedMood = currentMood;
-                  });
+              onPlayPressed: () async {
+                // Use the suggested track if available
+                if (_suggestedMusicTrack != null) {
+                  try {
+                    await _globalMusicPlayer.playTrack(_suggestedMusicTrack!);
+                    
+                    // Update device status (only if still mounted)
+                    if (mounted) {
+                      _updateStatus(
+                        _deviceStatus.copyWith(
+                          isMusicPlaying: true,
+                          currentMusic: _suggestedMusicTrack!.name,
+                        ),
+                      );
+                    }
+                    
+                    print('✅ Successfully playing: ${_suggestedMusicTrack!.name}');
+                  } catch (e) {
+                    print('❌ Error playing track: $e');
+                    // Show error message to user
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Không thể phát nhạc. Vui lòng tải lên file nhạc từ thư viện.',
+                          ),
+                          duration: const Duration(seconds: 3),
+                        ),
+                      );
+                    }
+                  }
+                } else {
+                  // Try to get a track from library
+                  final musicType = _suggestionService.musicSuggestion ?? 
+                      ChatbotService.getMusicSuggestions(
+                        _suggestedMood ?? MoodType.normal,
+                      ).first;
+                  
+                  // Map music type to category
+                  String category = 'Thiền'; // default
+                  if (musicType.toLowerCase().contains('piano')) {
+                    category = 'Nhạc Piano';
+                  } else if (musicType.toLowerCase().contains('ambient')) {
+                    category = 'Ambient';
+                  } else if (musicType.toLowerCase().contains('nature') || 
+                            musicType.toLowerCase().contains('mưa') || 
+                            musicType.toLowerCase().contains('thiên nhiên')) {
+                    category = 'Thiên nhiên';
+                  } else if (musicType.toLowerCase().contains('thiền') || 
+                            musicType.toLowerCase().contains('meditation')) {
+                    category = 'Thiền';
+                  }
+                  
+                  // Get tracks for this category
+                  final allTracksByCategory = await MusicService.getAllTracksByCategory();
+                  final allTracks = allTracksByCategory[category] ?? [];
+                  
+                  // Find first track with audio source
+                  MusicTrack? track;
+                  for (final t in allTracks) {
+                    if (t.audioPath != null && t.audioPath!.isNotEmpty) {
+                      track = t;
+                      break;
+                    }
+                  }
+                  
+                  if (track != null) {
+                    try {
+                      await _globalMusicPlayer.playTrack(track);
+                      
+                      if (mounted) {
+                        setState(() {
+                          _suggestedMusicTrack = track;
+                        });
+                        _updateStatus(
+                          _deviceStatus.copyWith(
+                            isMusicPlaying: true,
+                            currentMusic: track.name,
+                          ),
+                        );
+                      }
+                      
+                      print('✅ Successfully playing: ${track.name}');
+                    } catch (e) {
+                      print('❌ Error playing track: $e');
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Không thể phát nhạc. Vui lòng tải lên file nhạc từ thư viện.',
+                            ),
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                    }
+                  } else {
+                    // No tracks available - prompt user to upload
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Chưa có nhạc cho "$musicType". Vui lòng tải lên từ thư viện.',
+                          ),
+                          duration: const Duration(seconds: 3),
+                          action: SnackBarAction(
+                            label: 'Mở thư viện',
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const MusicLibraryScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    }
+                  }
                 }
               },
-            ),
+              ),
 
             // Smartwatch Data Card
             SmartwatchCardHome(smartwatchData: _smartwatchData),

@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import '../models/music_track.dart';
 
 class MusicControlHome extends StatelessWidget {
   final String musicTitle;
@@ -10,6 +12,7 @@ class MusicControlHome extends StatelessWidget {
   final VoidCallback? onNext;
   final ValueChanged<double>? onVolumeChanged;
   final VoidCallback? onTap;
+  final MusicTrack? currentTrack; // Track để lấy ảnh
 
   const MusicControlHome({
     super.key,
@@ -22,6 +25,7 @@ class MusicControlHome extends StatelessWidget {
     this.onNext,
     this.onVolumeChanged,
     this.onTap,
+    this.currentTrack,
   });
 
   @override
@@ -29,8 +33,8 @@ class MusicControlHome extends StatelessWidget {
     return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
+      decoration: BoxDecoration(
+        color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -39,7 +43,7 @@ class MusicControlHome extends StatelessWidget {
               offset: const Offset(0, 4),
             ),
           ],
-        ),
+      ),
         child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -56,76 +60,74 @@ class MusicControlHome extends StatelessWidget {
           // Player section with album art, info, and controls
           Row(
             children: [
-              // Album art placeholder - tappable
+              // Album art - tappable
               GestureDetector(
                 onTap: onTap,
                 child: Container(
                   width: 80,
                   height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800],
+            decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
+            ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: _buildTrackImage(),
                   ),
-                  child: const Icon(
-                    Icons.piano,
-                    color: Colors.white,
-                    size: 40,
-                  ),
-                ),
-              ),
+            ),
+          ),
               const SizedBox(width: 16),
               // Music info - tappable
-              Expanded(
+          Expanded(
                 child: GestureDetector(
                   onTap: onTap,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                       const Text(
-                        'Music',
-                        style: TextStyle(
+                  'Music',
+                  style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
                         musicSubtitle.isNotEmpty 
                             ? '$musicTitle $musicSubtitle'
                             : musicTitle,
-                        style: TextStyle(
+                    style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[700],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+                ],
+                  ),
+            ),
+          ),
               // Playback controls - not tappable (use their own onPressed)
-              IconButton(
-                icon: const Icon(Icons.skip_previous),
-                onPressed: onPrevious,
-                color: Colors.grey[700],
+          IconButton(
+            icon: const Icon(Icons.skip_previous),
+            onPressed: onPrevious,
+            color: Colors.grey[700],
                 iconSize: 28,
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.purple[600],
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                  onPressed: onPlayPause,
-                  color: Colors.white,
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.purple[600],
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+              onPressed: onPlayPause,
+              color: Colors.white,
                   iconSize: 28,
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.skip_next),
-                onPressed: onNext,
-                color: Colors.grey[700],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.skip_next),
+            onPressed: onNext,
+            color: Colors.grey[700],
                 iconSize: 28,
               ),
             ],
@@ -173,6 +175,137 @@ class MusicControlHome extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildTrackImage() {
+    // If we have a track with imagePath, use it
+    if (currentTrack != null && currentTrack!.imagePath != null && currentTrack!.imagePath!.isNotEmpty) {
+      final imagePath = currentTrack!.imagePath!;
+      
+      // Check if it's an asset path (starts with "assets/")
+      if (imagePath.startsWith('assets/')) {
+        return Image.asset(
+          imagePath,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildDefaultImage(currentTrack!.category);
+          },
+        );
+      } 
+      // Check if it's a URL
+      else if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        return Image.network(
+          imagePath,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildDefaultImage(currentTrack!.category);
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              color: Colors.grey[200],
+              child: Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                      : null,
+                ),
+              ),
+            );
+          },
+        );
+      } 
+      // Local file (user uploaded)
+      else {
+        if (File(imagePath).existsSync()) {
+          return Image.file(
+            File(imagePath),
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildDefaultImage(currentTrack!.category);
+            },
+          );
+        }
+      }
+    }
+    
+    // Default image based on category from subtitle or track
+    String category = 'Thiền'; // default
+    if (currentTrack != null) {
+      category = currentTrack!.category;
+    } else if (musicSubtitle.toLowerCase().contains('thiên nhiên') || 
+               musicTitle.toLowerCase().contains('thiên nhiên')) {
+      category = 'Thiên nhiên';
+    } else if (musicSubtitle.toLowerCase().contains('piano') || 
+               musicTitle.toLowerCase().contains('piano')) {
+      category = 'Nhạc Piano';
+    } else if (musicSubtitle.toLowerCase().contains('ambient') || 
+               musicTitle.toLowerCase().contains('ambient')) {
+      category = 'Ambient';
+    }
+    
+    return _buildDefaultImage(category);
+  }
+
+  Widget _buildDefaultImage(String category) {
+    switch (category) {
+      case 'Thiên nhiên':
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.green[400]!, Colors.green[600]!],
+            ),
+          ),
+          child: const Icon(Icons.nature, color: Colors.white, size: 40),
+        );
+      case 'Nhạc Piano':
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.brown[400]!, Colors.brown[600]!],
+            ),
+          ),
+          child: const Icon(Icons.piano, color: Colors.white, size: 40),
+        );
+      case 'Thiền':
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.orange[300]!, Colors.pink[300]!],
+            ),
+          ),
+          child: const Icon(
+            Icons.self_improvement,
+            color: Colors.white,
+            size: 40,
+          ),
+        );
+      case 'Ambient':
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.purple[300]!, Colors.blue[300]!],
+            ),
+          ),
+          child: const Icon(Icons.music_note, color: Colors.white, size: 40),
+        );
+      default:
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[800],
+          ),
+          child: const Icon(Icons.music_note, color: Colors.white, size: 40),
+        );
+    }
   }
 }
 

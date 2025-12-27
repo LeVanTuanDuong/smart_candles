@@ -40,6 +40,9 @@ class TemperatureHistoryService {
       // Load existing entries
       final entries = await loadEntries();
       
+      // Remove entries older than 1 day
+      _removeOldEntries(entries);
+      
       // Add new entry at the beginning (most recent first)
       entries.insert(0, entry);
       
@@ -54,12 +57,34 @@ class TemperatureHistoryService {
 
       // Save to SharedPreferences
       await prefs.setString(_storageKey, jsonString);
+      
+      print('✅ Đã lưu entry nhiệt độ. Tổng số entries: ${entries.length}');
     } catch (e) {
       print('Error saving temperature history entry: $e');
     }
   }
 
-  // Load all temperature history entries
+  // Remove entries older than 1 day
+  static void _removeOldEntries(List<TemperatureHistoryEntry> entries) {
+    final now = DateTime.now();
+    final oneDayAgo = now.subtract(const Duration(days: 1));
+    
+    final beforeCount = entries.length;
+    entries.removeWhere((entry) {
+      final isOld = entry.timestamp.isBefore(oneDayAgo);
+      if (isOld) {
+        print('🗑️ Xóa entry cũ: ${entry.timestamp} (${entry.temperature}°C)');
+      }
+      return isOld;
+    });
+    
+    final afterCount = entries.length;
+    if (beforeCount > afterCount) {
+      print('✅ Đã xóa ${beforeCount - afterCount} entries cũ hơn 1 ngày');
+    }
+  }
+
+  // Load all temperature history entries (only entries from last 24 hours)
   static Future<List<TemperatureHistoryEntry>> loadEntries() async {
     try {
       final prefs = await _getPreferences();
@@ -75,9 +100,31 @@ class TemperatureHistoryService {
 
       try {
         final List<dynamic> entriesList = jsonDecode(jsonString);
-        return entriesList
+        final allEntries = entriesList
             .map((item) => TemperatureHistoryEntry.fromMap(item))
             .toList();
+        
+        // Filter entries to only keep those from last 24 hours
+        final now = DateTime.now();
+        final oneDayAgo = now.subtract(const Duration(days: 1));
+        
+        final recentEntries = allEntries.where((entry) {
+          return entry.timestamp.isAfter(oneDayAgo);
+        }).toList();
+        
+        // If we removed old entries, save the filtered list back
+        if (recentEntries.length < allEntries.length) {
+          final removedCount = allEntries.length - recentEntries.length;
+          print('🗑️ Đã xóa $removedCount entries cũ hơn 1 ngày khi load');
+          
+          // Save filtered entries back to storage
+          final entriesListToSave = recentEntries.map((e) => e.toMap()).toList();
+          final jsonStringToSave = jsonEncode(entriesListToSave);
+          await prefs.setString(_storageKey, jsonStringToSave);
+        }
+        
+        print('📊 Load ${recentEntries.length} entries (trong 24 giờ qua)');
+        return recentEntries;
       } catch (e) {
         print('Error parsing temperature history entries: $e');
         return [];
@@ -94,8 +141,43 @@ class TemperatureHistoryService {
       final prefs = await _getPreferences();
       if (prefs == null) return;
       await prefs.remove(_storageKey);
+      print('✅ Đã xóa toàn bộ lịch sử nhiệt độ');
     } catch (e) {
       print('Error clearing temperature history: $e');
+    }
+  }
+
+  // Clean up old entries (can be called periodically)
+  static Future<void> cleanupOldEntries() async {
+    try {
+      final prefs = await _getPreferences();
+      if (prefs == null) return;
+
+      final jsonString = prefs.getString(_storageKey);
+      if (jsonString == null || jsonString.isEmpty) {
+        return;
+      }
+
+      final List<dynamic> entriesList = jsonDecode(jsonString);
+      final allEntries = entriesList
+          .map((item) => TemperatureHistoryEntry.fromMap(item))
+          .toList();
+
+      final now = DateTime.now();
+      final oneDayAgo = now.subtract(const Duration(days: 1));
+      
+      final beforeCount = allEntries.length;
+      allEntries.removeWhere((entry) => entry.timestamp.isBefore(oneDayAgo));
+      final afterCount = allEntries.length;
+      
+      if (beforeCount > afterCount) {
+        final entriesListToSave = allEntries.map((e) => e.toMap()).toList();
+        final jsonStringToSave = jsonEncode(entriesListToSave);
+        await prefs.setString(_storageKey, jsonStringToSave);
+        print('🧹 Đã dọn dẹp ${beforeCount - afterCount} entries cũ hơn 1 ngày');
+      }
+    } catch (e) {
+      print('Error cleaning up old entries: $e');
     }
   }
 }

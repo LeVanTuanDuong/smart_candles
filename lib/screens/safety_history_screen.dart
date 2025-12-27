@@ -25,6 +25,10 @@ class _SafetyHistoryScreenState extends State<SafetyHistoryScreen> {
       _isLoading = true;
     });
 
+    // Clean up old entries before loading
+    await TemperatureHistoryService.cleanupOldEntries();
+    
+    // Load entries (already filtered to last 24 hours)
     final entries = await TemperatureHistoryService.loadEntries();
     
     setState(() {
