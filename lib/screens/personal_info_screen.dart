@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../services/auth_service.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
@@ -125,39 +126,103 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         throw Exception('User not logged in');
       }
 
+      // Prepare data to save
+      final displayName = _nameController.text.trim();
+      
       // Update display name in Firebase Auth
-      if (_nameController.text.trim().isNotEmpty) {
-        await user.updateDisplayName(_nameController.text.trim());
+      if (displayName.isNotEmpty) {
+        await user.updateDisplayName(displayName);
         await user.reload();
       }
 
-      // TODO: Upload photo to Firebase Storage if _selectedImage is not null
-      // For now, we'll just update the display name in Firestore
+      // Upload image to Firebase Storage if a new image was selected
+      String? photoURL = user.photoURL;
+      if (_selectedImage != null) {
+        try {
+          // Create a reference to the location you want to upload to
+          final storageRef = FirebaseStorage.instance
+              .ref()
+              .child('user_profiles')
+              .child('${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg');
 
-      // Update in Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({
-        'displayName': _nameController.text.trim(),
+          // Upload the file
+          await storageRef.putFile(File(_selectedImage!.path));
+
+          // Get the download URL
+          photoURL = await storageRef.getDownloadURL();
+
+          // Update photoURL in Firebase Auth
+          await user.updatePhotoURL(photoURL);
+          await user.reload();
+        } catch (e) {
+          print('Error uploading image: $e');
+          // Continue without photoURL if upload fails
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Lỗi khi upload ảnh: ${e.toString()}'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      }
+
+      // Prepare Firestore update data
+      final Map<String, dynamic> updateData = {
+        'displayName': displayName,
+        'email': user.email ?? '',
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      // Add photoURL if available
+      if (photoURL != null && photoURL.isNotEmpty) {
+        updateData['photoURL'] = photoURL;
+      }
+
+      // Check if document exists, if not create it
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid);
+      
+      final docSnapshot = await userRef.get();
+      
+      if (docSnapshot.exists) {
+        // Update existing document
+        await userRef.update(updateData);
+      } else {
+        // Create new document with all user data
+        updateData['uid'] = user.uid;
+        updateData['createdAt'] = FieldValue.serverTimestamp();
+        await userRef.set(updateData);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Đã cập nhật thông tin thành công!'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
         );
-        Navigator.of(context).pop();
+        
+        // Wait a bit before navigating to ensure data is saved
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        if (mounted) {
+          // Return true to indicate successful save, so ProfileScreen can reload
+          Navigator.of(context).pop(true);
+        }
       }
     } catch (e) {
+      print('Error saving profile: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Lỗi khi cập nhật: $e'),
+            content: Text('Lỗi khi cập nhật: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -359,6 +424,40 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   enabled: false,
                 ),
               ),
+              const SizedBox(height: 32),
+              // Save button at bottom
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _saveProfile,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple[600],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          'Lưu thông tin',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

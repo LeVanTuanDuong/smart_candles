@@ -39,25 +39,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final user = _authService.currentUser;
       if (user != null) {
-        // Load user data from Firestore
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
+        // Reload user to get latest data from Firebase Auth
+        await user.reload();
+        final updatedUser = _authService.currentUser;
+        
+        if (updatedUser != null) {
+          // Load user data from Firestore
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(updatedUser.uid)
+              .get();
 
-        if (userDoc.exists) {
-          setState(() {
-            _userData = userDoc.data();
-            _isLoading = false;
-          });
+          if (userDoc.exists) {
+            final firestoreData = userDoc.data()!;
+            // Merge Firestore data with Auth data (Auth takes priority for email/photoURL)
+            setState(() {
+              _userData = {
+                ...firestoreData,
+                'displayName': updatedUser.displayName ?? firestoreData['displayName'] ?? '',
+                'email': updatedUser.email ?? firestoreData['email'] ?? '',
+                'photoURL': updatedUser.photoURL ?? firestoreData['photoURL'],
+              };
+              _isLoading = false;
+            });
+          } else {
+            // If no Firestore data, use Auth data
+            setState(() {
+              _userData = {
+                'displayName': updatedUser.displayName ?? '',
+                'email': updatedUser.email ?? '',
+                'photoURL': updatedUser.photoURL ?? '',
+              };
+              _isLoading = false;
+            });
+          }
         } else {
-          // If no Firestore data, use Auth data
           setState(() {
-            _userData = {
-              'displayName': user.displayName ?? '',
-              'email': user.email ?? '',
-              'photoURL': user.photoURL ?? '',
-            };
             _isLoading = false;
           });
         }
@@ -222,12 +239,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.person_outline,
                     title: 'Thông tin cá nhân',
                     subtitle: 'Xem và chỉnh sửa thông tin của bạn',
-                    onTap: () {
-                      Navigator.of(context).push(
+                    onTap: () async {
+                      final result = await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const PersonalInfoScreen(),
                         ),
                       );
+                      // Reload user data if save was successful
+                      if (result == true) {
+                        _loadUserData();
+                      }
                     },
                   ),
                   const SizedBox(height: 12),

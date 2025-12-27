@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HelpSupportScreen extends StatefulWidget {
   const HelpSupportScreen({super.key});
@@ -45,9 +47,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Trợ giúp & Hỗ trợ'),
-      ),
+      appBar: AppBar(title: const Text('Trợ giúp & Hỗ trợ')),
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -58,33 +58,24 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
               color: Colors.purple[50],
               child: Column(
                 children: [
-                  Icon(Icons.support_agent, size: 64, color: Colors.purple[600]),
+                  Icon(
+                    Icons.support_agent,
+                    size: 64,
+                    color: Colors.purple[600],
+                  ),
                   const SizedBox(height: 16),
                   const Text(
                     'Cần hỗ trợ?',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Liên hệ với chúng tôi',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      // TODO: Open email client or support form
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Tính năng đang phát triển'),
-                        ),
-                      );
-                    },
+                    onPressed: () => _sendSupportEmail(context),
                     icon: const Icon(Icons.email),
                     label: const Text('Gửi email hỗ trợ'),
                     style: ElevatedButton.styleFrom(
@@ -107,10 +98,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 children: [
                   const Text(
                     'Câu hỏi thường gặp',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   ..._faqs.map((faq) => _buildFAQCard(faq)),
@@ -127,16 +115,11 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
         title: Text(
           faq.question,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         children: [
           Padding(
@@ -154,6 +137,95 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       ),
     );
   }
+
+  Future<void> _sendSupportEmail(BuildContext context) async {
+    const String supportEmail = 'lephinam260224@gmail.com';
+    const String subject = 'Yêu cầu hỗ trợ - Smart Candles';
+    const String body =
+        'Xin chào,\n\nTôi cần hỗ trợ về ứng dụng Smart Candles.\n\n';
+
+    // Create mailto URL
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: supportEmail,
+      queryParameters: {'subject': subject, 'body': body},
+    );
+
+    try {
+      // Try to launch the email client
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: Show dialog with email address
+        if (context.mounted) {
+          _showEmailDialog(context, supportEmail);
+        }
+      }
+    } catch (e) {
+      print('Error launching email: $e');
+      // If launching fails, show dialog with email address
+      if (context.mounted) {
+        _showEmailDialog(context, supportEmail);
+      }
+    }
+  }
+
+  void _showEmailDialog(BuildContext context, String email) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Gửi email hỗ trợ'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Vui lòng gửi email đến địa chỉ:',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            SelectableText(
+              email,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.purple,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () async {
+                // Copy email to clipboard
+                await Clipboard.setData(ClipboardData(text: email));
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Đã sao chép email vào clipboard'),
+                      backgroundColor: Colors.green,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.copy, size: 18),
+              label: const Text('Sao chép email'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple[600],
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Đóng'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class FAQItem {
@@ -162,4 +234,3 @@ class FAQItem {
 
   FAQItem({required this.question, required this.answer});
 }
-
