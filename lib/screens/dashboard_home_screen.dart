@@ -30,13 +30,13 @@ import '../models/essential_oil.dart';
 class DashboardHomeScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
   final Function(DeviceStatus) onStatusChanged;
-  final VoidCallback? onNavigateToChatbot;
+  final Function(MoodType)? onNavigateToChatbotWithMood;
 
   const DashboardHomeScreen({
     super.key,
     required this.deviceStatus,
     required this.onStatusChanged,
-    this.onNavigateToChatbot,
+    this.onNavigateToChatbotWithMood,
   });
 
   @override
@@ -459,6 +459,11 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     // Update suggested music track and essential oil based on new mood
     _updateSuggestedMusicTrack();
     _updateSuggestedEssentialOil();
+
+    // Navigate to chatbot and pass the mood message
+    if (widget.onNavigateToChatbotWithMood != null) {
+      widget.onNavigateToChatbotWithMood!(mood);
+    }
   }
 
   @override
@@ -540,7 +545,11 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
             ChatbotSectionHome(
               selectedMood: _selectedMood,
               onMoodSelected: _handleMoodSelected,
-              onChatbotTap: widget.onNavigateToChatbot,
+              onChatbotTap: () {
+                if (widget.onNavigateToChatbotWithMood != null) {
+                  widget.onNavigateToChatbotWithMood!(MoodType.normal);
+                }
+              },
             ),
 
             // Music Control Widget (always show with suggested or current music)

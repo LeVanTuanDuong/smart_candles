@@ -16,6 +16,7 @@ class ChatbotScreen extends StatefulWidget {
   final Function(String)? onMusicSuggested;
   final Function(String)? onLightSuggested;
   final Function(String)? onEssentialOilSuggested;
+  final String? initialMessage;
 
   const ChatbotScreen({
     super.key,
@@ -23,6 +24,7 @@ class ChatbotScreen extends StatefulWidget {
     this.onMusicSuggested,
     this.onLightSuggested,
     this.onEssentialOilSuggested,
+    this.initialMessage,
   });
 
   @override
@@ -71,6 +73,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToBottom();
+        // If there's an initial message, send it automatically after greeting
+        if (widget.initialMessage != null && widget.initialMessage!.isNotEmpty) {
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) {
+              _sendMessage(widget.initialMessage!);
+            }
+          });
+        }
       });
     }
   }

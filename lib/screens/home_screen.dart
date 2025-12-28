@@ -25,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
     isBluetoothConnected: false,
   );
   final BluetoothService _bluetoothService = BluetoothService();
+  String? _initialChatbotMessage; // Store initial message for chatbot
 
   @override
   Widget build(BuildContext context) {
@@ -40,14 +41,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 _deviceStatus = newStatus;
               });
             },
-            onNavigateToChatbot: () {
+            onNavigateToChatbotWithMood: (mood) {
               setState(() {
+                // Store the mood message to pass to chatbot
+                _initialChatbotMessage = mood.label;
                 _currentIndex = 1;
+                // Increment key to reset chatbot with new message
+                _chatbotKey++;
               });
             },
           ),
           ChatbotScreen(
             key: ValueKey(_chatbotKey),
+            initialMessage: _initialChatbotMessage,
             onMoodSelected: _handleMoodSelected,
             onMusicSuggested: _handleMusicSuggested,
             onLightSuggested: _handleLightSuggested,
@@ -59,9 +65,10 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
-            // If switching away from chatbot (index 1), increment key to reset it
+            // If switching away from chatbot (index 1), increment key to reset it and clear initial message
             if (_currentIndex == 1 && index != 1) {
               _chatbotKey++;
+              _initialChatbotMessage = null;
             }
             _currentIndex = index;
           });
@@ -91,21 +98,20 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-
   void _handleLightSuggested(String lightMode) async {
     // Check if auto light is enabled
     final autoLightEnabled = await SettingsService.getAutoLightEnabled();
     if (!autoLightEnabled) {
       // Removed print statement: '⚠️ Auto light is disabled in settings');
       return;
-  }
+    }
 
     // Control light via Bluetooth if connected
     if (_bluetoothService.isConnected) {
       await _bluetoothService.setLightOn(true);
       await _bluetoothService.setLightMode(lightMode);
     }
-    
+
     setState(() {
       _deviceStatus = _deviceStatus.copyWith(
         isLightOn: true,
@@ -125,28 +131,32 @@ class _HomeScreenState extends State<HomeScreen> {
       // Removed print statement: '⚠️ Auto music is disabled in settings');
       return;
     }
-    
+
     // Automatically play music when chatbot suggests it
     try {
       final globalPlayer = GlobalMusicPlayerService();
-      
+
       // Map music suggestion to category
       String category = 'Thiền'; // default
       if (music.toLowerCase().contains('piano')) {
         category = 'Nhạc Piano';
       } else if (music.toLowerCase().contains('ambient')) {
         category = 'Ambient';
-      } else if (music.toLowerCase().contains('nature') || music.toLowerCase().contains('mưa') || music.toLowerCase().contains('thiên nhiên')) {
+      } else if (music.toLowerCase().contains('nature') ||
+          music.toLowerCase().contains('mưa') ||
+          music.toLowerCase().contains('thiên nhiên')) {
         category = 'Thiên nhiên';
-      } else if (music.toLowerCase().contains('lofi') || music.toLowerCase().contains('lo-fi')) {
+      } else if (music.toLowerCase().contains('lofi') ||
+          music.toLowerCase().contains('lo-fi')) {
         category = 'Thiền'; // fallback to meditation
-      } else if (music.toLowerCase().contains('thiền') || music.toLowerCase().contains('meditation')) {
+      } else if (music.toLowerCase().contains('thiền') ||
+          music.toLowerCase().contains('meditation')) {
         category = 'Thiền';
       }
-      
+
       // Get tracks for this category (static method)
       final tracks = MusicService.getDefaultTracksForCategory(category);
-      
+
       // Find a track with valid audio source (assets or local file)
       MusicTrack? playableTrack;
       for (final track in tracks) {
@@ -169,12 +179,12 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
       }
-      
+
       if (playableTrack != null) {
         // Play the track automatically
         try {
           await globalPlayer.playTrack(playableTrack);
-          
+
           setState(() {
             _deviceStatus = _deviceStatus.copyWith(
               isMusicPlaying: true,
@@ -212,4 +222,3 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 }
-
