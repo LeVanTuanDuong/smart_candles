@@ -1,4 +1,4 @@
-package com.example.smart_candles
+package com.phinam.smart_candles
 
 import io.flutter.embedding.android.FlutterActivity
 
