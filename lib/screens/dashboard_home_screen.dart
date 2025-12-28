@@ -365,6 +365,23 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     }
   }
 
+  /// Play track with playlist for navigation
+  Future<void> _playTrackWithPlaylist(MusicTrack track,
+      {List<MusicTrack>? playlist}) async {
+    // If no playlist provided, get tracks from same category
+    List<MusicTrack> tracksToPlay = playlist ?? [];
+    if (tracksToPlay.isEmpty) {
+      final allTracksByCategory = await MusicService.getAllTracksByCategory();
+      final categoryTracks = allTracksByCategory[track.category] ?? [];
+      // Filter to only tracks with valid audio paths
+      tracksToPlay = categoryTracks
+          .where((t) => t.audioPath != null && t.audioPath!.isNotEmpty)
+          .toList();
+    }
+
+    await _globalMusicPlayer.playTrack(track, playlist: tracksToPlay);
+  }
+
   void _onMusicPlayerChanged() {
     if (mounted) {
       setState(() {
@@ -653,15 +670,46 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                   }
                 }
               },
-              onPrevious: () {
-                // Handle previous track (TODO: implement playlist)
+              onPrevious: () async {
+                try {
+                  await _globalMusicPlayer.playPreviousTrack();
+                  if (mounted && _globalMusicPlayer.currentTrack != null) {
+                    setState(() {
+                      _suggestedMusicTrack = _globalMusicPlayer.currentTrack;
+                    });
+                    _updateStatus(
+                      _deviceStatus.copyWith(
+                        isMusicPlaying: _globalMusicPlayer.isPlaying,
+                        currentMusic: _globalMusicPlayer.currentTrack!.name,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Error handled silently
+                }
               },
-              onNext: () {
-                // Handle next track (TODO: implement playlist)
+              onNext: () async {
+                try {
+                  await _globalMusicPlayer.playNextTrack();
+                  if (mounted && _globalMusicPlayer.currentTrack != null) {
+                    setState(() {
+                      _suggestedMusicTrack = _globalMusicPlayer.currentTrack;
+                    });
+                    _updateStatus(
+                      _deviceStatus.copyWith(
+                        isMusicPlaying: _globalMusicPlayer.isPlaying,
+                        currentMusic: _globalMusicPlayer.currentTrack!.name,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Error handled silently
+                }
               },
               onVolumeChanged: (newVolume) async {
-                await _globalMusicPlayer.setVolume(newVolume);
-                _updateStatus(_deviceStatus.copyWith(musicVolume: newVolume));
+                // Volume is updated smoothly via _VolumeSlider
+                // This callback is called during dragging for immediate feedback
+                await _globalMusicPlayer.setVolumeSilent(newVolume);
               },
             ),
 
@@ -747,7 +795,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
                   if (track != null) {
                     try {
-                      await _globalMusicPlayer.playTrack(track);
+                      await _playTrackWithPlaylist(track, playlist: allTracks);
 
                       if (mounted) {
                         setState(() {

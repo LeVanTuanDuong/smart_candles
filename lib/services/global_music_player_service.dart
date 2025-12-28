@@ -17,6 +17,8 @@ class GlobalMusicPlayerService extends ChangeNotifier {
   StreamSubscription<Duration>? _positionSubscription;
   
   MusicTrack? _currentTrack;
+  List<MusicTrack> _currentPlaylist = []; // Current playlist for navigation
+  int _currentTrackIndex = -1; // Index of current track in playlist
   bool _isPlaying = false;
   bool _isLoading = false;
   double _volume = 0.5;
@@ -91,7 +93,7 @@ class GlobalMusicPlayerService extends ChangeNotifier {
   }
 
   /// Play a track
-  Future<void> playTrack(MusicTrack track) async {
+  Future<void> playTrack(MusicTrack track, {List<MusicTrack>? playlist}) async {
     try {
       _isLoading = true;
       notifyListeners();
@@ -106,8 +108,29 @@ class GlobalMusicPlayerService extends ChangeNotifier {
         // Removed print statement: 'Error stopping previous track: $e');
       }
 
-      // Set the new track
+      // Set the new track and playlist
       _currentTrack = track;
+      
+      // Update playlist if provided, otherwise try to find track in current playlist
+      if (playlist != null && playlist.isNotEmpty) {
+        _currentPlaylist = playlist;
+        _currentTrackIndex = playlist.indexWhere((t) => t.id == track.id);
+        if (_currentTrackIndex == -1) {
+          _currentTrackIndex = 0; // Default to first track if not found
+        }
+      } else if (_currentPlaylist.isNotEmpty) {
+        // Try to find track in existing playlist
+        _currentTrackIndex = _currentPlaylist.indexWhere((t) => t.id == track.id);
+        if (_currentTrackIndex == -1) {
+          // Track not in playlist, add it or create new playlist
+          _currentPlaylist = [track];
+          _currentTrackIndex = 0;
+        }
+      } else {
+        // No playlist, create new one with just this track
+        _currentPlaylist = [track];
+        _currentTrackIndex = 0;
+      }
       
       // Check if it's an asset path (starts with "assets/")
       if (track.audioPath != null && track.audioPath!.isNotEmpty) {
@@ -198,8 +221,51 @@ class GlobalMusicPlayerService extends ChangeNotifier {
     if (_audioPlayer != null) {
       await _audioPlayer!.setVolume(_volume);
     }
+    // Don't notify listeners here for smoother volume adjustment
+    // Listeners will be notified when volume change is complete
+  }
+
+  /// Set volume without notifying (for smooth dragging)
+  Future<void> setVolumeSilent(double volume) async {
+    _volume = volume.clamp(0.0, 1.0);
+    if (_audioPlayer != null) {
+      await _audioPlayer!.setVolume(_volume);
+    }
+  }
+
+  /// Set volume and notify (for when dragging ends)
+  Future<void> setVolumeAndNotify(double volume) async {
+    await setVolume(volume);
     notifyListeners();
   }
+
+  /// Play previous track in playlist
+  Future<void> playPreviousTrack() async {
+    if (_currentPlaylist.isEmpty || _currentTrackIndex <= 0) {
+      return; // No previous track available
+    }
+
+    _currentTrackIndex--;
+    final previousTrack = _currentPlaylist[_currentTrackIndex];
+    await playTrack(previousTrack);
+  }
+
+  /// Play next track in playlist
+  Future<void> playNextTrack() async {
+    if (_currentPlaylist.isEmpty || _currentTrackIndex >= _currentPlaylist.length - 1) {
+      return; // No next track available
+    }
+
+    _currentTrackIndex++;
+    final nextTrack = _currentPlaylist[_currentTrackIndex];
+    await playTrack(nextTrack);
+  }
+
+  /// Check if previous track is available
+  bool get hasPreviousTrack => _currentPlaylist.isNotEmpty && _currentTrackIndex > 0;
+
+  /// Check if next track is available
+  bool get hasNextTrack => _currentPlaylist.isNotEmpty && _currentTrackIndex < _currentPlaylist.length - 1;
 
   /// Seek to position
   Future<void> seek(Duration position) async {
@@ -213,6 +279,7 @@ class GlobalMusicPlayerService extends ChangeNotifier {
   }
 
   /// Dispose the service
+  @override
   void dispose() {
     _playerStateSubscription?.cancel();
     _durationSubscription?.cancel();
