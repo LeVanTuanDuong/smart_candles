@@ -15,13 +15,12 @@ class MusicService {
       _prefs = await SharedPreferences.getInstance();
       return _prefs;
     } catch (e) {
-      print('Error getting SharedPreferences: $e');
+      // Retry once if SharedPreferences fails
       try {
         await Future.delayed(const Duration(milliseconds: 500));
         _prefs = await SharedPreferences.getInstance();
         return _prefs;
       } catch (e2) {
-        print('Error getting SharedPreferences on retry: $e2');
         return null;
       }
     }

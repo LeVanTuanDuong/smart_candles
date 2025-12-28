@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../services/music_service.dart';
+import '../services/global_music_player_service.dart';
+import '../models/music_track.dart';
+import 'dart:io';
 
 class MeditationGuideScreen extends StatefulWidget {
-  final String? currentTrack;
-  final bool isPlaying;
-  
   const MeditationGuideScreen({
     super.key,
-    this.currentTrack,
-    this.isPlaying = false,
   });
 
   @override
@@ -17,80 +16,204 @@ class MeditationGuideScreen extends StatefulWidget {
 
 class _MeditationGuideScreenState extends State<MeditationGuideScreen>
     with SingleTickerProviderStateMixin {
-  bool _isPlaying = false;
-  Duration _currentPosition = const Duration(seconds: 1);
-  Duration _totalDuration = const Duration(seconds: 31);
-  Timer? _timer;
+  final GlobalMusicPlayerService _musicPlayer = GlobalMusicPlayerService();
   late AnimationController _waveformController;
-
-  final List<MeditationTrack> _suggestedTracks = [
-    MeditationTrack(
-      title: 'Hơi thở Chánh niệm',
-      subtitle: 'Hơi thở thiền gợi ý',
-      imageType: 'forest',
-    ),
-    MeditationTrack(
-      title: 'Hơi thở Thiền',
-      subtitle: 'Hơi thở thiền gợi ý',
-      imageType: 'meditation',
-    ),
-  ];
+  List<MusicTrack> _suggestedTracks = [];
+  List<MusicTrack> _allTracks = []; // Full playlist for navigation
+  bool _isLoadingTracks = true;
 
   @override
   void initState() {
     super.initState();
-    _isPlaying = widget.isPlaying;
     _waveformController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
-    )..repeat();
-    
-    if (_isPlaying) {
-      _startTimer();
+    );
+
+    // Load suggested tracks from library
+    _loadSuggestedTracks();
+
+    // Listen to music player changes
+    _musicPlayer.addListener(_onMusicPlayerChanged);
+
+    // Position updates are handled by GlobalMusicPlayerService listeners
+
+    // Start waveform animation if playing
+    if (_musicPlayer.isPlaying) {
+      _waveformController.repeat();
     }
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     _waveformController.dispose();
+    _musicPlayer.removeListener(_onMusicPlayerChanged);
     super.dispose();
   }
 
-  void _startTimer() {
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          if (_currentPosition < _totalDuration) {
-            _currentPosition = Duration(seconds: _currentPosition.inSeconds + 1);
-          } else {
-            _currentPosition = _totalDuration;
-            _isPlaying = false;
-            timer.cancel();
+  void _onMusicPlayerChanged() {
+    if (mounted) {
+      setState(() {
+        // Update waveform animation
+        if (_musicPlayer.isPlaying) {
+          if (!_waveformController.isAnimating) {
+            _waveformController.repeat();
           }
-        });
-      }
+        } else {
+          _waveformController.stop();
+        }
+      });
+    }
+  }
+
+  Future<void> _loadSuggestedTracks() async {
+    setState(() {
+      _isLoadingTracks = true;
     });
+
+    try {
+      // Get all tracks from library (default + uploaded)
+      final tracksByCategory = await MusicService.getAllTracksByCategory();
+
+      // Get meditation tracks from "Thiền" category
+      List<MusicTrack> meditationTracks = tracksByCategory['Thiền'] ?? [];
+
+      // Also include some tracks from other categories for variety
+      final otherCategories = ['Thiên nhiên', 'Nhạc Piano', 'Ambient'];
+      for (var category in otherCategories) {
+        final tracks = tracksByCategory[category] ?? [];
+        if (tracks.isNotEmpty) {
+          meditationTracks
+              .addAll(tracks.take(2)); // Add 2 tracks from each category
+        }
+      }
+
+      // Store all tracks as playlist for navigation (filter only tracks with valid audio)
+      _allTracks = meditationTracks
+          .where(
+              (track) => track.audioPath != null && track.audioPath!.isNotEmpty)
+          .toList();
+
+      // Shuffle the full playlist for variety
+      _allTracks.shuffle();
+
+      // If there's a current track, try to include it in the playlist if not already there
+      final currentTrack = _musicPlayer.currentTrack;
+      if (currentTrack != null) {
+        final existsInPlaylist =
+            _allTracks.any((track) => track.id == currentTrack.id);
+        if (!existsInPlaylist &&
+            currentTrack.audioPath != null &&
+            currentTrack.audioPath!.isNotEmpty) {
+          _allTracks.insert(0, currentTrack);
+        }
+      }
+
+      // Remove current playing track from suggestions
+      List<MusicTrack> suggestedTracks = List.from(_allTracks);
+      if (currentTrack != null) {
+        suggestedTracks.removeWhere((track) => track.id == currentTrack.id);
+      }
+
+      // Take 4-6 tracks for suggestions display
+      suggestedTracks = suggestedTracks.take(6).toList();
+
+      setState(() {
+        _suggestedTracks = suggestedTracks;
+        _isLoadingTracks = false;
+      });
+    } catch (e) {
+      // Error loading tracks - silently fail to avoid log spam
+      setState(() {
+        _isLoadingTracks = false;
+      });
+    }
+  }
+
+  Future<void> _playTrack(MusicTrack track) async {
+    try {
+      await _musicPlayer.playTrack(track);
+
+      // Reload suggestions to remove the newly playing track
+      await _loadSuggestedTracks();
+
+      // Start waveform animation
+      if (!_waveformController.isAnimating) {
+        _waveformController.repeat();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể phát nhạc: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _togglePlayPause() {
-    setState(() {
-      _isPlaying = !_isPlaying;
-      if (_isPlaying) {
-        _startTimer();
-        _waveformController.repeat();
-      } else {
-        _timer?.cancel();
-        _waveformController.stop();
-      }
-    });
+    // If no track is playing, play the first track in playlist
+    if (_musicPlayer.currentTrack == null && _allTracks.isNotEmpty) {
+      _playTrack(_allTracks.first);
+    } else {
+      _musicPlayer.togglePlayPause();
+      // Waveform animation will be updated by _onMusicPlayerChanged listener
+    }
   }
 
-  void _seekTo(Duration position) {
-    setState(() {
-      _currentPosition = position;
-    });
+  Future<void> _playPreviousTrack() async {
+    if (_allTracks.isEmpty) return;
+
+    final currentTrack = _musicPlayer.currentTrack;
+    if (currentTrack == null) {
+      // If no track is playing, play the last track
+      await _playTrack(_allTracks.last);
+      return;
+    }
+
+    // Find current track index in playlist
+    final currentIndex =
+        _allTracks.indexWhere((track) => track.id == currentTrack.id);
+    if (currentIndex == -1) {
+      // Current track not in playlist, play last track
+      await _playTrack(_allTracks.last);
+      return;
+    }
+
+    // Play previous track (wrap around to end if at beginning)
+    final previousIndex =
+        currentIndex > 0 ? currentIndex - 1 : _allTracks.length - 1;
+    await _playTrack(_allTracks[previousIndex]);
+  }
+
+  Future<void> _playNextTrack() async {
+    if (_allTracks.isEmpty) return;
+
+    final currentTrack = _musicPlayer.currentTrack;
+    if (currentTrack == null) {
+      // If no track is playing, play the first track
+      await _playTrack(_allTracks.first);
+      return;
+    }
+
+    // Find current track index in playlist
+    final currentIndex =
+        _allTracks.indexWhere((track) => track.id == currentTrack.id);
+    if (currentIndex == -1) {
+      // Current track not in playlist, play first track
+      await _playTrack(_allTracks.first);
+      return;
+    }
+
+    // Play next track (wrap around to beginning if at end)
+    final nextIndex = (currentIndex + 1) % _allTracks.length;
+    await _playTrack(_allTracks[nextIndex]);
+  }
+
+  Future<void> _seekTo(Duration position) async {
+    await _musicPlayer.seek(position);
   }
 
   String _formatDuration(Duration duration) {
@@ -99,10 +222,161 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
     return '${minutes}:${seconds.toString().padLeft(2, '0')}';
   }
 
+  Widget _buildTrackImage(MusicTrack track) {
+    if (track.imagePath != null && track.imagePath!.startsWith('assets/')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.asset(
+          track.imagePath!,
+          width: 80,
+          height: 80,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildDefaultImage();
+          },
+        ),
+      );
+    } else if (track.imagePath != null) {
+      // Local file
+      final file = File(track.imagePath!);
+      if (file.existsSync()) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.file(
+            file,
+            width: 80,
+            height: 80,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildDefaultImage();
+            },
+          ),
+        );
+      }
+    }
+
+    return _buildDefaultImage();
+  }
+
+  Widget _buildDefaultImage() {
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.orange[300]!,
+            Colors.pink[300]!,
+          ],
+        ),
+      ),
+      child: Icon(
+        Icons.music_note,
+        size: 40,
+        color: Colors.blue[900],
+      ),
+    );
+  }
+
+  /// Build circular image for current track (for center of audio visualizer)
+  Widget _buildCurrentTrackImage() {
+    final currentTrack = _musicPlayer.currentTrack;
+
+    // If no track or no image, show default circular image
+    if (currentTrack == null ||
+        currentTrack.imagePath == null ||
+        currentTrack.imagePath!.isEmpty) {
+      return Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.orange[200]!,
+              Colors.pink[200]!,
+            ],
+          ),
+        ),
+        child: Icon(
+          Icons.music_note,
+          size: 60,
+          color: Colors.blue[900],
+        ),
+      );
+    }
+
+    // Build circular image from track's image path
+    if (currentTrack.imagePath!.startsWith('assets/')) {
+      // Asset image
+      return ClipOval(
+        child: Image.asset(
+          currentTrack.imagePath!,
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildDefaultCircularImage();
+          },
+        ),
+      );
+    } else {
+      // Local file
+      final file = File(currentTrack.imagePath!);
+      if (file.existsSync()) {
+        return ClipOval(
+          child: Image.file(
+            file,
+            width: 120,
+            height: 120,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildDefaultCircularImage();
+            },
+          ),
+        );
+      } else {
+        return _buildDefaultCircularImage();
+      }
+    }
+  }
+
+  /// Build default circular image (fallback)
+  Widget _buildDefaultCircularImage() {
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.orange[200]!,
+            Colors.pink[200]!,
+          ],
+        ),
+      ),
+      child: Icon(
+        Icons.music_note,
+        size: 60,
+        color: Colors.blue[900],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currentTrackTitle = widget.currentTrack ?? 'Hơi thở Chánh niệm';
-    
+    final currentTrack = _musicPlayer.currentTrack;
+    final currentTrackTitle = currentTrack?.name ?? 'Chưa có nhạc đang phát';
+    final position = _musicPlayer.position;
+    final duration = _musicPlayer.duration;
+
     return Scaffold(
       backgroundColor: Colors.amber[50],
       appBar: AppBar(
@@ -150,11 +424,18 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildControlButton(Icons.skip_previous),
+                  _buildControlButton(
+                    Icons.skip_previous,
+                    onPressed:
+                        _allTracks.isNotEmpty ? _playPreviousTrack : null,
+                  ),
                   const SizedBox(width: 20),
                   _buildPlayPauseButton(),
                   const SizedBox(width: 20),
-                  _buildControlButton(Icons.skip_next),
+                  _buildControlButton(
+                    Icons.skip_next,
+                    onPressed: _allTracks.isNotEmpty ? _playNextTrack : null,
+                  ),
                 ],
               ),
             ),
@@ -175,9 +456,13 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
                       trackHeight: 4,
                     ),
                     child: Slider(
-                      value: _currentPosition.inSeconds.toDouble(),
+                      value: duration.inSeconds > 0
+                          ? position.inSeconds.toDouble()
+                          : 0.0,
                       min: 0,
-                      max: _totalDuration.inSeconds.toDouble(),
+                      max: duration.inSeconds > 0
+                          ? duration.inSeconds.toDouble()
+                          : 100.0,
                       onChanged: (value) {
                         _seekTo(Duration(seconds: value.toInt()));
                       },
@@ -187,14 +472,16 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        _formatDuration(_currentPosition),
+                        _formatDuration(position),
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[700],
                         ),
                       ),
                       Text(
-                        '-${_formatDuration(_totalDuration - _currentPosition)}',
+                        duration.inSeconds > 0
+                            ? '-${_formatDuration(Duration(seconds: duration.inSeconds - position.inSeconds))}'
+                            : '--:--',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[700],
@@ -220,7 +507,26 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
             ),
             const SizedBox(height: 16),
             // Suggestion Cards
-            ..._suggestedTracks.map((track) => _buildSuggestionCard(track)),
+            if (_isLoadingTracks)
+              const Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_suggestedTracks.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Center(
+                  child: Text(
+                    'Chưa có nhạc gợi ý',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ),
+              )
+            else
+              ..._suggestedTracks.map((track) => _buildSuggestionCard(track)),
             const SizedBox(height: 20),
           ],
         ),
@@ -239,20 +545,8 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
             // Left waveform
             _buildWaveform(isLeft: true),
             const SizedBox(width: 20),
-            // Center meditation icon
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.orange[200],
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.self_improvement,
-                size: 60,
-                color: Colors.blue[900],
-              ),
-            ),
+            // Center track image (circular)
+            _buildCurrentTrackImage(),
             const SizedBox(width: 20),
             // Right waveform
             _buildWaveform(isLeft: false),
@@ -266,10 +560,8 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
     final bars = List.generate(8, (index) {
       final delay = index * 0.1;
       final animationValue = (_waveformController.value + delay) % 1.0;
-      final height = _isPlaying
-          ? 20 + (animationValue * 40)
-          : 20.0;
-      
+      final height = _musicPlayer.isPlaying ? 20 + (animationValue * 40) : 20.0;
+
       return Container(
         width: 4,
         height: height,
@@ -280,26 +572,25 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
         ),
       );
     });
-    
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: bars,
     );
   }
 
-  Widget _buildControlButton(IconData icon) {
+  Widget _buildControlButton(IconData icon, {VoidCallback? onPressed}) {
+    final isEnabled = onPressed != null;
     return Container(
       width: 50,
       height: 50,
       decoration: BoxDecoration(
-        color: Colors.blue[700],
+        color: isEnabled ? Colors.blue[700] : Colors.grey[400],
         shape: BoxShape.circle,
       ),
       child: IconButton(
         icon: Icon(icon, color: Colors.white),
-        onPressed: () {
-          // Handle previous/next
-        },
+        onPressed: onPressed,
       ),
     );
   }
@@ -314,7 +605,7 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
       ),
       child: IconButton(
         icon: Icon(
-          _isPlaying ? Icons.pause : Icons.play_arrow,
+          _musicPlayer.isPlaying ? Icons.pause : Icons.play_arrow,
           color: Colors.white,
           size: 32,
         ),
@@ -323,134 +614,74 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
     );
   }
 
-  Widget _buildSuggestionCard(MeditationTrack track) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Image
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              gradient: track.imageType == 'forest'
-                  ? LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.green[400]!,
-                        Colors.green[600]!,
-                      ],
-                    )
-                  : LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.orange[300]!,
-                        Colors.pink[300]!,
-                      ],
+  Widget _buildSuggestionCard(MusicTrack track) {
+    final isCurrentTrack = _musicPlayer.currentTrack?.id == track.id;
+
+    return GestureDetector(
+      onTap: () => _playTrack(track),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: isCurrentTrack
+              ? Border.all(color: Colors.blue[700]!, width: 2)
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Image
+            _buildTrackImage(track),
+            const SizedBox(width: 16),
+            // Text content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    track.name,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    track.description.isNotEmpty
+                        ? track.description
+                        : track.category,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
-            child: track.imageType == 'forest'
-                ? Stack(
-                    children: [
-                      // Tree trunk
-                      Positioned(
-                        bottom: 10,
-                        left: 30,
-                        child: Container(
-                          width: 20,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: Colors.brown[700],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ),
-                      // Tree leaves
-                      Positioned(
-                        top: 15,
-                        left: 25,
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: Colors.green[800],
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                      // Sun rays
-                      Positioned(
-                        top: 5,
-                        right: 5,
-                        child: Icon(
-                          Icons.wb_sunny,
-                          color: Colors.yellow[300],
-                          size: 20,
-                        ),
-                      ),
-                    ],
-                  )
-                : Icon(
-                    Icons.self_improvement,
-                    size: 50,
-                    color: Colors.blue[900],
-                  ),
-          ),
-          const SizedBox(width: 16),
-          // Text content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  track.title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  track.subtitle,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
+            // Play icon
+            Icon(
+              isCurrentTrack
+                  ? Icons.pause_circle_filled
+                  : Icons.play_circle_fill,
+              color: Colors.blue[700],
+              size: 32,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
-
-class MeditationTrack {
-  final String title;
-  final String subtitle;
-  final String imageType; // 'forest' or 'meditation'
-
-  MeditationTrack({
-    required this.title,
-    required this.subtitle,
-    required this.imageType,
-  });
-}
-
