@@ -96,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Check if auto light is enabled
     final autoLightEnabled = await SettingsService.getAutoLightEnabled();
     if (!autoLightEnabled) {
-      print('⚠️ Auto light is disabled in settings');
+      // Removed print statement: '⚠️ Auto light is disabled in settings');
       return;
   }
 
@@ -122,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Check if auto music is enabled
     final autoMusicEnabled = await SettingsService.getAutoMusicEnabled();
     if (!autoMusicEnabled) {
-      print('⚠️ Auto music is disabled in settings');
+      // Removed print statement: '⚠️ Auto music is disabled in settings');
       return;
     }
     
@@ -181,17 +181,17 @@ class _HomeScreenState extends State<HomeScreen> {
               currentMusic: playableTrack!.name,
             );
           });
-          print('✅ Auto-playing music: ${playableTrack.name}');
+          // Removed print statement: '✅ Auto-playing music: ${playableTrack.name}');
         } catch (e) {
-          print('❌ Error auto-playing music: $e');
+          // Removed print statement: '❌ Error auto-playing music: $e');
           // Don't update status if playback failed
           // User can manually play from music library
           // Don't throw - just log the error and continue
         }
       } else {
         // No playable tracks found
-        print('⚠️ No playable tracks found for category: $category');
-        print('💡 User should upload music files or check network connection');
+        // Removed print statement: '⚠️ No playable tracks found for category: $category');
+        // Removed print statement: '💡 User should upload music files or check network connection');
         // Don't update status - let user know they need to upload music
         setState(() {
           _deviceStatus = _deviceStatus.copyWith(
@@ -201,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      print('❌ Error in _handleMusicSuggested: $e');
+      // Removed print statement: '❌ Error in _handleMusicSuggested: $e');
       // Don't update status on error
       setState(() {
         _deviceStatus = _deviceStatus.copyWith(

@@ -51,7 +51,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         _favoriteTracks.addAll(tracks.where((track) => track.isUploaded));
       }
     } catch (e) {
-      print('Error loading favorites: $e');
+      // Removed print statement: 'Error loading favorites: $e');
     } finally {
       setState(() {
         _isLoading = false;

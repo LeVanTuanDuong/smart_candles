@@ -195,72 +195,65 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
-                Builder(
-                  builder: (context) {
+                StatefulBuilder(
+                  builder: (context, setButtonState) {
                     bool isPickingFile = false;
-                    return StatefulBuilder(
-                      builder: (context, setButtonState) {
-                        return OutlinedButton.icon(
-                          icon: isPickingFile
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.upload_file),
-                          label: Text(
-                            isPickingFile
-                                ? 'Đang chọn...'
-                                : 'Chọn file nhạc từ thư viện',
-                          ),
-                          onPressed: isPickingFile
-                              ? null
-                              : () async {
-                                  setButtonState(() => isPickingFile = true);
-                                  try {
-                                    FilePickerResult? result = await FilePicker
-                                        .platform
-                                        .pickFiles(type: FileType.audio);
-                                    if (result != null &&
-                                        result.files.single.path != null) {
-                                      setDialogState(() {
-                                        selectedAudio = result.files.single;
-                                      });
-                                    }
-                                  } catch (e) {
-                                    // Handle multiple_request exception gracefully
-                                    if (e.toString().contains(
+                    return OutlinedButton.icon(
+                      icon: isPickingFile
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.upload_file),
+                      label: Text(
+                        isPickingFile
+                            ? 'Đang chọn...'
+                            : 'Chọn file nhạc từ thư viện',
+                      ),
+                      onPressed: isPickingFile
+                          ? null
+                          : () async {
+                              setButtonState(() => isPickingFile = true);
+                              try {
+                                FilePickerResult? result = await FilePicker
+                                    .platform
+                                    .pickFiles(type: FileType.audio);
+                                if (result != null &&
+                                    result.files.single.path != null) {
+                                  setDialogState(() {
+                                    selectedAudio = result.files.single;
+                                  });
+                                }
+                              } catch (e) {
+                                // Handle multiple_request exception gracefully
+                                if (e.toString().contains(
                                       'multiple_request',
                                     )) {
-                                      // User cancelled or another request started - ignore silently
-                                      print(
-                                        'File picker cancelled or multiple request',
-                                      );
-                                    } else {
-                                      // Show error for other exceptions
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Lỗi khi chọn file: ${e.toString()}',
-                                            ),
-                                            duration: const Duration(
-                                              seconds: 2,
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  } finally {
-                                    setButtonState(() => isPickingFile = false);
+                                  // User cancelled or another request started - ignore silently
+                                } else {
+                                  // Show error for other exceptions
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(
+                                      context,
+                                    ).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Lỗi khi chọn file: ${e.toString()}',
+                                        ),
+                                        duration: const Duration(
+                                          seconds: 2,
+                                        ),
+                                      ),
+                                    );
                                   }
-                                },
-                        );
-                      },
+                                }
+                              } finally {
+                                setButtonState(() => isPickingFile = false);
+                              }
+                            },
                     );
                   },
                 ),
@@ -336,9 +329,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                     final savedImage = File(path.join(appDir.path, fileName));
                     await File(selectedImage!.path).copy(savedImage.path);
                     imagePath = savedImage.path;
-                  } catch (e) {
-                    print('Error saving image: $e');
-                  }
+                  } catch (e) {}
                 }
 
                 // Save audio file
@@ -350,7 +341,6 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                   await File(selectedAudio!.path!).copy(savedAudio.path);
                   audioPath = savedAudio.path;
                 } catch (e) {
-                  print('Error saving audio file: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Lỗi khi lưu file nhạc: $e'),
@@ -579,72 +569,65 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                   ),
                   const SizedBox(height: 8),
                 ],
-                Builder(
-                  builder: (context) {
+                StatefulBuilder(
+                  builder: (context, setButtonState) {
                     bool isPickingFile = false;
-                    return StatefulBuilder(
-                      builder: (context, setButtonState) {
-                        return OutlinedButton.icon(
-                          icon: isPickingFile
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.upload_file),
-                          label: Text(
-                            isPickingFile
-                                ? 'Đang chọn...'
-                                : 'Chọn file nhạc mới từ thư viện',
-                          ),
-                          onPressed: isPickingFile
-                              ? null
-                              : () async {
-                                  setButtonState(() => isPickingFile = true);
-                                  try {
-                                    FilePickerResult? result = await FilePicker
-                                        .platform
-                                        .pickFiles(type: FileType.audio);
-                                    if (result != null &&
-                                        result.files.single.path != null) {
-                                      setDialogState(() {
-                                        selectedAudio = result.files.single;
-                                      });
-                                    }
-                                  } catch (e) {
-                                    // Handle multiple_request exception gracefully
-                                    if (e.toString().contains(
+                    return OutlinedButton.icon(
+                      icon: isPickingFile
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.upload_file),
+                      label: Text(
+                        isPickingFile
+                            ? 'Đang chọn...'
+                            : 'Chọn file nhạc mới từ thư viện',
+                      ),
+                      onPressed: isPickingFile
+                          ? null
+                          : () async {
+                              setButtonState(() => isPickingFile = true);
+                              try {
+                                FilePickerResult? result = await FilePicker
+                                    .platform
+                                    .pickFiles(type: FileType.audio);
+                                if (result != null &&
+                                    result.files.single.path != null) {
+                                  setDialogState(() {
+                                    selectedAudio = result.files.single;
+                                  });
+                                }
+                              } catch (e) {
+                                // Handle multiple_request exception gracefully
+                                if (e.toString().contains(
                                       'multiple_request',
                                     )) {
-                                      // User cancelled or another request started - ignore silently
-                                      print(
-                                        'File picker cancelled or multiple request',
-                                      );
-                                    } else {
-                                      // Show error for other exceptions
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Lỗi khi chọn file: ${e.toString()}',
-                                            ),
-                                            duration: const Duration(
-                                              seconds: 2,
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  } finally {
-                                    setButtonState(() => isPickingFile = false);
+                                  // User cancelled or another request started - ignore silently
+                                } else {
+                                  // Show error for other exceptions
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(
+                                      context,
+                                    ).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Lỗi khi chọn file: ${e.toString()}',
+                                        ),
+                                        duration: const Duration(
+                                          seconds: 2,
+                                        ),
+                                      ),
+                                    );
                                   }
-                                },
-                        );
-                      },
+                                }
+                              } finally {
+                                setButtonState(() => isPickingFile = false);
+                              }
+                            },
                     );
                   },
                 ),
@@ -709,9 +692,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                         File(track.imagePath!).existsSync()) {
                       try {
                         await File(track.imagePath!).delete();
-                      } catch (e) {
-                        print('Error deleting old image: $e');
-                      }
+                      } catch (e) {}
                     }
 
                     final appDir = await getApplicationDocumentsDirectory();
@@ -720,9 +701,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                     final savedImage = File(path.join(appDir.path, fileName));
                     await File(selectedImage!.path).copy(savedImage.path);
                     imagePath = savedImage.path;
-                  } catch (e) {
-                    print('Error saving image: $e');
-                  }
+                  } catch (e) {}
                 }
 
                 // Save new audio file if selected
@@ -733,9 +712,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                         File(track.audioPath!).existsSync()) {
                       try {
                         await File(track.audioPath!).delete();
-                      } catch (e) {
-                        print('Error deleting old audio file: $e');
-                      }
+                      } catch (e) {}
                     }
 
                     final appDir = await getApplicationDocumentsDirectory();
@@ -745,7 +722,6 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                     await File(selectedAudio!.path!).copy(savedAudio.path);
                     audioPath = savedAudio.path;
                   } catch (e) {
-                    print('Error saving audio file: $e');
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Lỗi khi lưu file nhạc: $e'),
@@ -800,7 +776,6 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
     // Allow switching tracks even if one is loading - this is user intent
     // Reset loading state first to allow new track to play
     if (_isLoadingTrack) {
-      print('🔄 Switching to new track while previous one was loading...');
       _isLoadingTrack = false;
     }
 
@@ -829,10 +804,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
           _isLoadingTrack = false;
         });
       }
-
-      print('✅ Started playing via global player: ${track.name}');
     } catch (e) {
-      print('Error playing track: $e');
       if (mounted) {
         // Provide user-friendly error message
         String errorMessage = 'Không thể phát nhạc. Vui lòng thử lại.';
@@ -876,9 +848,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
     if (!mounted) return;
     try {
       await _globalMusicPlayer.togglePlayPause();
-    } catch (e) {
-      print('Error pausing track: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _stopTrack() async {
@@ -891,9 +861,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
           _isLoadingTrack = false;
         });
       }
-    } catch (e) {
-      print('Error stopping track: $e');
-    }
+    } catch (e) {}
   }
 
   @override
@@ -1035,8 +1003,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
   }) {
     final isCurrentlyPlaying =
         _currentlyPlayingId == track.id && _globalMusicPlayer.isPlaying;
-    final isLoadingThisTrack =
-        _currentlyPlayingId == track.id &&
+    final isLoadingThisTrack = _currentlyPlayingId == track.id &&
         (_isLoadingTrack || _globalMusicPlayer.isLoading);
 
     return Container(
@@ -1229,7 +1196,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                   child: CircularProgressIndicator(
                     value: loadingProgress.expectedTotalBytes != null
                         ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
+                            loadingProgress.expectedTotalBytes!
                         : null,
                   ),
                 ),

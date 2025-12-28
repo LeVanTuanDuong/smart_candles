@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/message.dart';
 import '../models/mood_type.dart';
 import '../services/chatbot_service.dart';
-import '../services/dialogflow_service.dart';
 import '../services/suggestion_service.dart';
 import '../services/chatbot_response_variations.dart';
 import '../services/emotion_analysis_service.dart';
@@ -39,7 +38,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   bool _isLoading = false;
   MoodType? _currentMood;
   int? _currentIntensity;
-  String? _currentContext;
   final ConversationManager _conversationManager = ConversationManager();
 
   // Track adjustment status
@@ -61,27 +59,19 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       _isLoading = true;
     });
 
-    try {
-      final greeting = await DialogflowService.getGreetingMessage();
-      if (mounted) {
-        setState(() {
-          _messages.add(
-            ChatMessage(text: greeting, isBot: true, timestamp: DateTime.now()),
-          );
-          _isLoading = false;
-        });
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToBottom();
-        });
-      }
-    } catch (e) {
-      print('Error loading greeting: $e');
-      if (mounted) {
-        setState(() {
-          _messages.add(ChatbotService.getGreetingMessage());
-          _isLoading = false;
-        });
-      }
+    // Use ChatbotFlowService for greeting
+    final greetingMessage = ChatbotFlowService.getCheckInGreeting();
+    if (mounted) {
+      setState(() {
+        _messages.add(
+          ChatMessage(
+              text: greetingMessage, isBot: true, timestamp: DateTime.now()),
+        );
+        _isLoading = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
     }
   }
 
@@ -148,8 +138,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   // Provide suggestions directly without encouragement
   Future<void> _provideSuggestionsDirectly(MoodType mood) async {
     try {
-      // Get suggestions from Dialogflow
-      final suggestions = await DialogflowService.getSuggestions(mood);
+      // Get suggestions from ChatbotService (fallback)
+      final suggestions = await ChatbotService.getSuggestions(mood);
 
       // Update suggestion service
       final suggestionService = SuggestionService();
@@ -166,12 +156,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       // Create suggestion message with confirmation (skip encouragement)
       final suggestionMessage =
           ChatbotResponseVariations.getSuggestionMessageWithOptions(
-            mood: mood,
-            essentialOil: suggestions['essential_oil'] ?? mood.essentialOil,
-            music: suggestions['music'] ?? 'Thiền',
-            lightMode: lightSuggestion['mode'] as String,
-            lightBrightness: lightSuggestion['brightness'] as double,
-          );
+        mood: mood,
+        essentialOil: suggestions['essential_oil'] ?? mood.essentialOil,
+        music: suggestions['music'] ?? 'Thiền',
+        lightMode: lightSuggestion['mode'] as String,
+        lightBrightness: lightSuggestion['brightness'] as double,
+      );
 
       if (mounted) {
         setState(() {
@@ -194,7 +184,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         _scrollToBottom();
       }
     } catch (e) {
-      print('Error providing suggestions: $e');
+      // Removed print statement: 'Error providing suggestions: $e');
     }
   }
 
@@ -228,8 +218,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         alternativeLight = 'warm';
       }
 
-      final alternativeMessage =
-          '\n\nMình gợi ý khác cho bạn:\n'
+      final alternativeMessage = '\n\nMình gợi ý khác cho bạn:\n'
           '• Tinh dầu $alternativeOil\n'
           '• Nhạc $alternativeMusic\n'
           '• Đèn $alternativeLight\n\n'
@@ -262,7 +251,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         _scrollToBottom();
       }
     } catch (e) {
-      print('Error providing alternative suggestions: $e');
+      // Error providing alternative suggestions
     }
   }
 
@@ -317,7 +306,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
     try {
       // Get current suggestions
-      final suggestions = await DialogflowService.getSuggestions(_currentMood!);
+      final suggestions = await ChatbotService.getSuggestions(_currentMood!);
       final lightSuggestion = ChatbotFlowService.getLightSuggestion(
         _currentMood!,
         null,
@@ -372,8 +361,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         setState(() {
           _messages.add(
             ChatMessage(
-              text:
-                  'Ok, mình sẽ thực hiện cho bạn! 🎵💡\n\n'
+              text: 'Ok, mình sẽ thực hiện cho bạn! 🎵💡\n\n'
                   'Mình đã điều chỉnh:\n'
                   '• Nhạc: $finalMusic\n'
                   '• Đèn: $finalLight\n'
@@ -386,7 +374,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         _scrollToBottom();
       }
     } catch (e) {
-      print('Error applying custom request: $e');
+      // Error applying custom request
       if (mounted) {
         setState(() {
           _messages.add(
@@ -442,27 +430,18 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   }
 
   Future<void> _applySuggestionsAutomatically() async {
-    print('🔵 Applying suggestions automatically...');
-
     // Find the last message with suggestion data
     ChatMessage? suggestionMessage;
     for (int i = _messages.length - 1; i >= 0; i--) {
       if (_messages[i].needsConfirmation == true &&
           _messages[i].suggestionData != null) {
         suggestionMessage = _messages[i];
-        print(
-          '✅ Found suggestion message with data: ${suggestionMessage.suggestionData}',
-        );
         break;
       }
     }
 
     if (suggestionMessage?.suggestionData != null) {
       final data = suggestionMessage!.suggestionData!;
-
-      print(
-        '🎵 Applying: Oil=${data['essential_oil']}, Music=${data['music']}, Light=${data['light_mode']}',
-      );
 
       // Try to apply suggestions with error handling
       try {
@@ -492,8 +471,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           setState(() {
             _messages.add(
               ChatMessage(
-                text:
-                    'Đã điều chỉnh xong rồi nhé! 🎵💡\n\n'
+                text: 'Đã điều chỉnh xong rồi nhé! 🎵💡\n\n'
                     'Mình đã bật nhạc ${data['music']} và đèn ${data['light_mode']} cho bạn.\n'
                     'Tinh dầu ${data['essential_oil']} cũng đã được gợi ý.\n\n'
                     'Bạn cứ thả lỏng và thư giãn nhé. Nếu bạn muốn, bạn có thể tiếp tục chia sẻ với mình.',
@@ -506,12 +484,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           _scrollToBottom();
         }
       } catch (e) {
-        print('❌ Error applying suggestions: $e');
         _lastAdjustmentSuccess = false;
 
         // Provide manual guidance
-        final brightness = ((data['light_brightness'] as double? ?? 0.5) * 100)
-            .toInt();
+        final brightness =
+            ((data['light_brightness'] as double? ?? 0.5) * 100).toInt();
         if (mounted) {
           setState(() {
             _messages.add(
@@ -535,7 +512,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         }
       }
     } else {
-      print('⚠️ No suggestion message found, trying fallback...');
       // Fallback: try to get suggestions from current mood
       if (_currentMood != null) {
         // Get default suggestions
@@ -551,10 +527,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         );
 
         if (suggestions['primary']!.isNotEmpty && musicSuggestions.isNotEmpty) {
-          print(
-            '🎵 Fallback: Applying default suggestions for ${_currentMood!.label}',
-          );
-
           try {
             // Check automation settings before applying
             final autoLightEnabled =
@@ -587,8 +559,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               setState(() {
                 _messages.add(
                   ChatMessage(
-                    text:
-                        'Đã điều chỉnh xong rồi nhé! 🎵💡\n\n'
+                    text: 'Đã điều chỉnh xong rồi nhé! 🎵💡\n\n'
                         'Mình đã bật nhạc và đèn theo gợi ý cho bạn.',
                     isBot: true,
                     timestamp: DateTime.now(),
@@ -598,7 +569,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               _scrollToBottom();
             }
           } catch (e) {
-            print('❌ Error applying fallback suggestions: $e');
             _lastAdjustmentSuccess = false;
             if (mounted) {
               setState(() {
@@ -613,11 +583,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               });
             }
           }
-        } else {
-          print('❌ No default suggestions available');
         }
-      } else {
-        print('❌ No current mood set');
       }
     }
   }
@@ -696,7 +662,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
         if (isConfirmation) {
           // User confirmed - apply suggestions immediately
-          print('✅ User confirmed: $input');
           _conversationHistory.add(input);
 
           // Apply suggestions
@@ -843,11 +808,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     }
 
     try {
-      // Get response from Dialogflow
-      final response = await DialogflowService.getResponse(
-        input,
-        conversationHistory: _conversationHistory,
-      );
+      // Get response using fallback (replaces Dialogflow)
+      final response = ChatbotService.getFallbackResponse(input);
 
       // Add bot response to conversation history
       _conversationHistory.add(response);
@@ -900,8 +862,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             }
           }
 
-          // Get suggestions from Dialogflow (with ESS context)
-          final suggestions = await DialogflowService.getSuggestions(
+          // Get suggestions from ChatbotService (with ESS context)
+          final suggestions = await ChatbotService.getSuggestions(
             detectedMood,
           );
 
@@ -915,7 +877,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           );
 
           // Store context for future use (may be used for alternative suggestions)
-          _currentContext = input;
+          // Note: Context removed as it was unused
 
           // Skip encouragement messages - go straight to suggestions
           // Get light suggestion details (with ESS)
@@ -928,13 +890,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           // Create suggestion message with confirmation (skip encouragement)
           final suggestionMessage =
               ChatbotResponseVariations.getSuggestionMessageWithOptions(
-                mood: detectedMood,
-                essentialOil:
-                    suggestions['essential_oil'] ?? detectedMood.essentialOil,
-                music: suggestions['music'] ?? 'Thiền',
-                lightMode: lightSuggestion['mode'] as String,
-                lightBrightness: lightSuggestion['brightness'] as double,
-              );
+            mood: detectedMood,
+            essentialOil:
+                suggestions['essential_oil'] ?? detectedMood.essentialOil,
+            music: suggestions['music'] ?? 'Thiền',
+            lightMode: lightSuggestion['mode'] as String,
+            lightBrightness: lightSuggestion['brightness'] as double,
+          );
 
           // Only add suggestion message if not in high risk
           if (!emotionAnalysis.shouldActivateSafety) {
@@ -947,8 +909,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                     timestamp: DateTime.now(),
                     needsConfirmation: true,
                     suggestionData: {
-                      'essential_oil':
-                          suggestions['essential_oil'] ??
+                      'essential_oil': suggestions['essential_oil'] ??
                           detectedMood.essentialOil,
                       'music': suggestions['music'] ?? 'Thiền',
                       'light_mode': lightSuggestion['mode'] as String,
@@ -1034,7 +995,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
         if (hasPendingSuggestion && isConfirmation) {
           // User confirmed, apply suggestions automatically
-          print('✅ User confirmed via text input: $input');
           _conversationHistory.add(input);
           _applySuggestionsAutomatically();
 
@@ -1196,16 +1156,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         _conversationHistory.add(finalResponse);
         _scrollToBottom();
       }
-    } catch (e, stackTrace) {
-      print('❌ Error handling user input: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
+      // Error handling user input
 
       if (mounted) {
         setState(() {
           _isLoading = false;
 
           // Use fallback response instead of error message
-          final fallbackResponse = DialogflowService.getFallbackResponse(input);
+          final fallbackResponse = ChatbotService.getFallbackResponse(input);
 
           _messages.add(
             ChatMessage(

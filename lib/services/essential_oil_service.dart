@@ -15,13 +15,13 @@ class EssentialOilService {
       _prefs = await SharedPreferences.getInstance();
       return _prefs;
     } catch (e) {
-      print('Error getting SharedPreferences: $e');
+      // Removed print statement: 'Error getting SharedPreferences: $e');
       try {
         await Future.delayed(const Duration(milliseconds: 500));
         _prefs = await SharedPreferences.getInstance();
         return _prefs;
       } catch (e2) {
-        print('Error getting SharedPreferences on retry: $e2');
+        // Removed print statement: 'Error getting SharedPreferences on retry: $e2');
         return null;
       }
     }
@@ -131,7 +131,7 @@ class EssentialOilService {
       final List<dynamic> oilsList = jsonDecode(jsonString);
       return oilsList.map((item) => EssentialOil.fromMap(item)).toList();
     } catch (e) {
-      print('Error loading essential oil library: $e');
+      // Removed print statement: 'Error loading essential oil library: $e');
       return [];
     }
   }
@@ -146,7 +146,7 @@ class EssentialOilService {
       final jsonString = jsonEncode(oilsList);
       await prefs.setString(_libraryKey, jsonString);
     } catch (e) {
-      print('Error saving essential oil library: $e');
+      // Removed print statement: 'Error saving essential oil library: $e');
     }
   }
 

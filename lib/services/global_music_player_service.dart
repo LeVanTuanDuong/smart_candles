@@ -103,7 +103,7 @@ class GlobalMusicPlayerService extends ChangeNotifier {
       try {
         await _audioPlayer!.stop();
       } catch (e) {
-        print('Error stopping previous track: $e');
+        // Removed print statement: 'Error stopping previous track: $e');
       }
 
       // Set the new track

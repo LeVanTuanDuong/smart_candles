@@ -19,13 +19,13 @@ class SettingsService {
       _prefs = await SharedPreferences.getInstance();
       return _prefs;
     } catch (e) {
-      print('Error getting SharedPreferences: $e');
+      // Removed print statement: 'Error getting SharedPreferences: $e');
       try {
         await Future.delayed(const Duration(milliseconds: 500));
         _prefs = await SharedPreferences.getInstance();
         return _prefs;
       } catch (e2) {
-        print('Error getting SharedPreferences on retry: $e2');
+        // Removed print statement: 'Error getting SharedPreferences on retry: $e2');
         return null;
       }
     }
@@ -38,7 +38,7 @@ class SettingsService {
       if (prefs == null) return 50.0;
       return prefs.getDouble(_keyTemperatureThreshold) ?? 50.0;
     } catch (e) {
-      print('Error loading temperature threshold: $e');
+      // Removed print statement: 'Error loading temperature threshold: $e');
       return 50.0;
     }
   }
@@ -49,7 +49,7 @@ class SettingsService {
       if (prefs == null) return;
       await prefs.setDouble(_keyTemperatureThreshold, threshold);
     } catch (e) {
-      print('Error saving temperature threshold: $e');
+      // Removed print statement: 'Error saving temperature threshold: $e');
     }
   }
 
@@ -60,7 +60,7 @@ class SettingsService {
       if (prefs == null) return true;
       return prefs.getBool(_keyNotificationsEnabled) ?? true;
     } catch (e) {
-      print('Error loading notifications setting: $e');
+      // Removed print statement: 'Error loading notifications setting: $e');
       return true;
     }
   }
@@ -71,7 +71,7 @@ class SettingsService {
       if (prefs == null) return;
       await prefs.setBool(_keyNotificationsEnabled, enabled);
     } catch (e) {
-      print('Error saving notifications setting: $e');
+      // Removed print statement: 'Error saving notifications setting: $e');
     }
   }
 
@@ -82,7 +82,7 @@ class SettingsService {
       if (prefs == null) return true;
       return prefs.getBool(_keyAutoLightEnabled) ?? true;
     } catch (e) {
-      print('Error loading auto light setting: $e');
+      // Removed print statement: 'Error loading auto light setting: $e');
       return true;
     }
   }
@@ -93,7 +93,7 @@ class SettingsService {
       if (prefs == null) return;
       await prefs.setBool(_keyAutoLightEnabled, enabled);
     } catch (e) {
-      print('Error saving auto light setting: $e');
+      // Removed print statement: 'Error saving auto light setting: $e');
     }
   }
 
@@ -104,7 +104,7 @@ class SettingsService {
       if (prefs == null) return true;
       return prefs.getBool(_keyAutoMusicEnabled) ?? true;
     } catch (e) {
-      print('Error loading auto music setting: $e');
+      // Removed print statement: 'Error loading auto music setting: $e');
       return true;
     }
   }
@@ -115,7 +115,7 @@ class SettingsService {
       if (prefs == null) return;
       await prefs.setBool(_keyAutoMusicEnabled, enabled);
     } catch (e) {
-      print('Error saving auto music setting: $e');
+      // Removed print statement: 'Error saving auto music setting: $e');
     }
   }
 
@@ -126,7 +126,7 @@ class SettingsService {
       if (prefs == null) return false;
       return prefs.getBool(_keyBluetoothEnabled) ?? false;
     } catch (e) {
-      print('Error loading bluetooth setting: $e');
+      // Removed print statement: 'Error loading bluetooth setting: $e');
       return false;
     }
   }
@@ -137,7 +137,7 @@ class SettingsService {
       if (prefs == null) return;
       await prefs.setBool(_keyBluetoothEnabled, enabled);
     } catch (e) {
-      print('Error saving bluetooth setting: $e');
+      // Removed print statement: 'Error saving bluetooth setting: $e');
     }
   }
 

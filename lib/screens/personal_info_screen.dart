@@ -55,7 +55,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         }
       }
     } catch (e) {
-      print('Error loading user data: $e');
+      // Removed print statement: 'Error loading user data: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -156,7 +156,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           await user.updatePhotoURL(photoURL);
           await user.reload();
         } catch (e) {
-          print('Error uploading image: $e');
+          // Removed print statement: 'Error uploading image: $e');
           // Continue without photoURL if upload fails
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -216,7 +216,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         }
       }
     } catch (e) {
-      print('Error saving profile: $e');
+      // Removed print statement: 'Error saving profile: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

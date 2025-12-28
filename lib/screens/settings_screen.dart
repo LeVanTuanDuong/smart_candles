@@ -183,7 +183,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _autoMusicEnabled = settings['autoMusicEnabled'] as bool;
       });
     } catch (e) {
-      print('Error loading settings: $e');
+      // Removed print statement: 'Error loading settings: $e');
     }
   }
 

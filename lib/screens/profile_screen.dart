@@ -84,7 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     } catch (e) {
-      print('Error loading user data: $e');
+      // Removed print statement: 'Error loading user data: $e');
       setState(() {
         _isLoading = false;
       });

@@ -16,13 +16,13 @@ class TemperatureHistoryService {
       _prefs = await SharedPreferences.getInstance();
       return _prefs;
     } catch (e) {
-      print('Error getting SharedPreferences: $e');
+      // Removed print statement: 'Error getting SharedPreferences: $e');
       try {
         await Future.delayed(const Duration(milliseconds: 500));
         _prefs = await SharedPreferences.getInstance();
         return _prefs;
       } catch (e2) {
-        print('Error getting SharedPreferences on retry: $e2');
+        // Removed print statement: 'Error getting SharedPreferences on retry: $e2');
         return null;
       }
     }
@@ -33,7 +33,7 @@ class TemperatureHistoryService {
     try {
       final prefs = await _getPreferences();
       if (prefs == null) {
-        print('SharedPreferences not available, cannot save entry');
+        // Removed print statement: 'SharedPreferences not available, cannot save entry');
         return;
       }
 
@@ -58,9 +58,9 @@ class TemperatureHistoryService {
       // Save to SharedPreferences
       await prefs.setString(_storageKey, jsonString);
       
-      print('✅ Đã lưu entry nhiệt độ. Tổng số entries: ${entries.length}');
+      // Removed print statement: '✅ Đã lưu entry nhiệt độ. Tổng số entries: ${entries.length}');
     } catch (e) {
-      print('Error saving temperature history entry: $e');
+      // Removed print statement: 'Error saving temperature history entry: $e');
     }
   }
 
@@ -73,14 +73,14 @@ class TemperatureHistoryService {
     entries.removeWhere((entry) {
       final isOld = entry.timestamp.isBefore(oneDayAgo);
       if (isOld) {
-        print('🗑️ Xóa entry cũ: ${entry.timestamp} (${entry.temperature}°C)');
+        // Removed print statement: '🗑️ Xóa entry cũ: ${entry.timestamp} (${entry.temperature}°C)');
       }
       return isOld;
     });
     
     final afterCount = entries.length;
     if (beforeCount > afterCount) {
-      print('✅ Đã xóa ${beforeCount - afterCount} entries cũ hơn 1 ngày');
+      // Removed print statement: '✅ Đã xóa ${beforeCount - afterCount} entries cũ hơn 1 ngày');
     }
   }
 
@@ -89,7 +89,7 @@ class TemperatureHistoryService {
     try {
       final prefs = await _getPreferences();
       if (prefs == null) {
-        print('SharedPreferences not available, returning empty entries');
+        // Removed print statement: 'SharedPreferences not available, returning empty entries');
         return [];
       }
 
@@ -115,7 +115,7 @@ class TemperatureHistoryService {
         // If we removed old entries, save the filtered list back
         if (recentEntries.length < allEntries.length) {
           final removedCount = allEntries.length - recentEntries.length;
-          print('🗑️ Đã xóa $removedCount entries cũ hơn 1 ngày khi load');
+          // Removed print statement: '🗑️ Đã xóa $removedCount entries cũ hơn 1 ngày khi load');
           
           // Save filtered entries back to storage
           final entriesListToSave = recentEntries.map((e) => e.toMap()).toList();
@@ -123,14 +123,14 @@ class TemperatureHistoryService {
           await prefs.setString(_storageKey, jsonStringToSave);
         }
         
-        print('📊 Load ${recentEntries.length} entries (trong 24 giờ qua)');
+        // Removed print statement: '📊 Load ${recentEntries.length} entries (trong 24 giờ qua)');
         return recentEntries;
       } catch (e) {
-        print('Error parsing temperature history entries: $e');
+        // Removed print statement: 'Error parsing temperature history entries: $e');
         return [];
       }
     } catch (e) {
-      print('Error loading temperature history entries: $e');
+      // Removed print statement: 'Error loading temperature history entries: $e');
       return [];
     }
   }
@@ -141,9 +141,9 @@ class TemperatureHistoryService {
       final prefs = await _getPreferences();
       if (prefs == null) return;
       await prefs.remove(_storageKey);
-      print('✅ Đã xóa toàn bộ lịch sử nhiệt độ');
+      // Removed print statement: '✅ Đã xóa toàn bộ lịch sử nhiệt độ');
     } catch (e) {
-      print('Error clearing temperature history: $e');
+      // Removed print statement: 'Error clearing temperature history: $e');
     }
   }
 
@@ -174,10 +174,10 @@ class TemperatureHistoryService {
         final entriesListToSave = allEntries.map((e) => e.toMap()).toList();
         final jsonStringToSave = jsonEncode(entriesListToSave);
         await prefs.setString(_storageKey, jsonStringToSave);
-        print('🧹 Đã dọn dẹp ${beforeCount - afterCount} entries cũ hơn 1 ngày');
+        // Removed print statement: '🧹 Đã dọn dẹp ${beforeCount - afterCount} entries cũ hơn 1 ngày');
       }
     } catch (e) {
-      print('Error cleaning up old entries: $e');
+      // Removed print statement: 'Error cleaning up old entries: $e');
     }
   }
 }

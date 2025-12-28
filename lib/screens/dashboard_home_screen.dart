@@ -112,9 +112,6 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     final connectionChanged = isConnected != _deviceStatus.isBluetoothConnected;
 
     if (tempChanged || connectionChanged) {
-      print(
-        '🔄 Cập nhật DeviceStatus: Nhiệt độ ${bluetoothTemp.toStringAsFixed(1)}°C, Kết nối: $isConnected',
-      );
       final newStatus = _deviceStatus.copyWith(
         temperature: bluetoothTemp,
         isBluetoothConnected: isConnected,
@@ -139,11 +136,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
           if (temp != null) {
             // Temperature will be updated via notifyListeners in BluetoothService
             // This just triggers a read, the update happens automatically
-            print('📖 Đọc nhiệt độ thủ công: ${temp.toStringAsFixed(1)}°C');
           }
-        } catch (e) {
-          print('⚠️ Lỗi khi đọc nhiệt độ thủ công: $e');
-        }
+        } catch (e) {}
       }
     });
   }
@@ -182,10 +176,6 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       final musicType = _suggestionService.musicSuggestion ??
           ChatbotService.getMusicSuggestions(currentMood).first;
 
-      print(
-        '🎵 Updating suggested music track - musicType: $musicType, mood: ${currentMood.label}',
-      );
-
       // Map music type to category (handle both Vietnamese and English, and exact matches)
       String category = 'Thiền'; // default
       final musicLower = musicType.toLowerCase().trim();
@@ -216,21 +206,14 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
           musicLower.contains('zen')) {
         category = 'Thiền';
       }
-
-      print('🎵 Mapped music type "$musicType" to category: $category');
-
       // Get tracks for this category from library
       final allTracksByCategory = await MusicService.getAllTracksByCategory();
       final allTracks = allTracksByCategory[category] ?? [];
-
-      print('🎵 Found ${allTracks.length} tracks in category $category');
-
       // Find first track with audio source
       MusicTrack? track;
       for (final t in allTracks) {
         if (t.audioPath != null && t.audioPath!.isNotEmpty) {
           track = t;
-          print('✅ Selected track: ${track.name} (${track.audioPath})');
           break;
         }
       }
@@ -240,9 +223,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
           _suggestedMusicTrack = track;
         });
       }
-    } catch (e) {
-      print('❌ Error updating suggested music track: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _updateSuggestedEssentialOil() async {
@@ -253,10 +234,6 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
       // Get the suggested essential oil name from chatbot
       final suggestedOilName = _suggestionService.essentialOilSuggestion;
-
-      print(
-        '🛢️ Updating suggested essential oil - name: $suggestedOilName, mood: ${currentMood.label}',
-      );
 
       // Get all oils from library and suggestions
       final allOils = await EssentialOilService.getAllOils();
@@ -294,17 +271,12 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
         _getDefaultOilNameForMood(currentMood),
         allOils,
       );
-
-      print('✅ Selected essential oil: ${matchedOil?.name ?? "none"}');
-
       if (mounted) {
         setState(() {
           _suggestedEssentialOil = matchedOil;
         });
       }
-    } catch (e) {
-      print('❌ Error updating suggested essential oil: $e');
-    }
+    } catch (e) {}
   }
 
   EssentialOil? _findOilByName(String name, List<EssentialOil> oils) {
@@ -455,7 +427,6 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
         });
       }
     } catch (e) {
-      print('Error checking temperature threshold: $e');
       // Fallback to default threshold (50.0)
       if (temperature > 50.0 && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -663,7 +634,6 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                     }
                   }
                 } catch (e) {
-                  print('Error in onPlayPause: $e');
                   // If play failed, at least toggle the UI state
                   if (mounted) {
                     _updateStatus(
@@ -717,12 +687,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                         ),
                       );
                     }
-
-                    print(
-                      '✅ Successfully playing: ${_suggestedMusicTrack!.name}',
-                    );
                   } catch (e) {
-                    print('❌ Error playing track: $e');
                     // Show error message to user
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -786,10 +751,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                           ),
                         );
                       }
-
-                      print('✅ Successfully playing: ${track.name}');
                     } catch (e) {
-                      print('❌ Error playing track: $e');
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(

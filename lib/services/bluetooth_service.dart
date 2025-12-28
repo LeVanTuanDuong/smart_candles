@@ -48,21 +48,21 @@ class BluetoothService extends ChangeNotifier {
     try {
       // Check if Bluetooth is available
       if (await ble.FlutterBluePlus.isSupported == false) {
-        print('❌ Bluetooth không được hỗ trợ trên thiết bị này');
+        // Removed print statement: '❌ Bluetooth không được hỗ trợ trên thiết bị này');
         return false;
       }
 
       // Check if Bluetooth is on
       ble.BluetoothAdapterState adapterState = await ble.FlutterBluePlus.adapterState.first;
       if (adapterState != ble.BluetoothAdapterState.on) {
-        print('⚠️ Bluetooth chưa được bật. Vui lòng bật Bluetooth.');
+        // Removed print statement: '⚠️ Bluetooth chưa được bật. Vui lòng bật Bluetooth.');
         return false;
       }
 
-      print('✅ Bluetooth adapter đã sẵn sàng');
+      // Removed print statement: '✅ Bluetooth adapter đã sẵn sàng');
       return true;
     } catch (e) {
-      print('❌ Lỗi khởi tạo Bluetooth: $e');
+      // Removed print statement: '❌ Lỗi khởi tạo Bluetooth: $e');
       return false;
     }
   }
@@ -79,7 +79,7 @@ class BluetoothService extends ChangeNotifier {
       ble.BluetoothAdapterState adapterState = await ble.FlutterBluePlus.adapterState.first;
       return adapterState == ble.BluetoothAdapterState.on;
     } catch (e) {
-      print('❌ Lỗi kiểm tra trạng thái Bluetooth: $e');
+      // Removed print statement: '❌ Lỗi kiểm tra trạng thái Bluetooth: $e');
       return false;
     }
   }
@@ -87,7 +87,7 @@ class BluetoothService extends ChangeNotifier {
   /// Start scanning for Smart Candle devices
   Future<void> startScan({Duration timeout = const Duration(seconds: 10)}) async {
     if (_isScanning) {
-      print('⚠️ Đang quét, vui lòng đợi...');
+      // Removed print statement: '⚠️ Đang quét, vui lòng đợi...');
       return;
     }
 
@@ -95,7 +95,7 @@ class BluetoothService extends ChangeNotifier {
       // Check if Bluetooth is ready before scanning
       final isReady = await isBluetoothReady();
       if (!isReady) {
-        print('❌ Bluetooth chưa sẵn sàng. Vui lòng bật Bluetooth và thử lại.');
+        // Removed print statement: '❌ Bluetooth chưa sẵn sàng. Vui lòng bật Bluetooth và thử lại.');
         _isScanning = false;
         notifyListeners();
         throw Exception('Bluetooth chưa được bật hoặc không được hỗ trợ');
@@ -104,7 +104,7 @@ class BluetoothService extends ChangeNotifier {
       _isScanning = true;
       notifyListeners();
 
-      print('🔵 Bắt đầu quét thiết bị Smart Candle...');
+      // Removed print statement: '🔵 Bắt đầu quét thiết bị Smart Candle...');
 
       // Listen to scan results
       _scanSubscription = ble.FlutterBluePlus.scanResults.listen((results) {
@@ -116,14 +116,14 @@ class BluetoothService extends ChangeNotifier {
 
           // Check if device name matches Smart Candle pattern
           if (deviceName.contains(deviceNamePattern)) {
-            print('✅ Tìm thấy Smart Candle: ${device.platformName} (${device.remoteId})');
+            // Removed print statement: '✅ Tìm thấy Smart Candle: ${device.platformName} (${device.remoteId})');
             stopScan();
             connectToDevice(device);
             return;
           }
         }
       }, onError: (error) {
-        print('❌ Lỗi khi quét: $error');
+        // Removed print statement: '❌ Lỗi khi quét: $error');
         _isScanning = false;
         notifyListeners();
       });
@@ -140,7 +140,7 @@ class BluetoothService extends ChangeNotifier {
         if (errorStr.contains('bluetooth must be turned on') || 
             errorStr.contains('cbmanagerstate') ||
             errorStr.contains('unsupported')) {
-          print('❌ Bluetooth chưa được bật hoặc không được hỗ trợ');
+          // Removed print statement: '❌ Bluetooth chưa được bật hoặc không được hỗ trợ');
           _isScanning = false;
           notifyListeners();
           throw Exception('Vui lòng bật Bluetooth trong Cài đặt và thử lại');
@@ -152,11 +152,11 @@ class BluetoothService extends ChangeNotifier {
       Future.delayed(timeout, () {
         if (_isScanning) {
           stopScan();
-          print('⏱️ Hết thời gian quét. Không tìm thấy thiết bị.');
+          // Removed print statement: '⏱️ Hết thời gian quét. Không tìm thấy thiết bị.');
         }
       });
     } catch (e) {
-      print('❌ Lỗi khi bắt đầu quét: $e');
+      // Removed print statement: '❌ Lỗi khi bắt đầu quét: $e');
       _isScanning = false;
       notifyListeners();
       rethrow; // Re-throw để caller có thể xử lý
@@ -171,16 +171,16 @@ class BluetoothService extends ChangeNotifier {
       _scanSubscription = null;
       _isScanning = false;
       notifyListeners();
-      print('🛑 Đã dừng quét');
+      // Removed print statement: '🛑 Đã dừng quét');
     } catch (e) {
-      print('❌ Lỗi khi dừng quét: $e');
+      // Removed print statement: '❌ Lỗi khi dừng quét: $e');
     }
   }
 
   /// Connect to a Bluetooth device
   Future<bool> connectToDevice(ble.BluetoothDevice device) async {
     try {
-      print('🔵 Đang kết nối với ${device.platformName}...');
+      // Removed print statement: '🔵 Đang kết nối với ${device.platformName}...');
 
       _connectedDevice = device;
 
@@ -188,7 +188,7 @@ class BluetoothService extends ChangeNotifier {
       _connectionSubscription = device.connectionState.listen((state) async {
         if (state == ble.BluetoothConnectionState.connected) {
           _isConnected = true;
-          print('✅ Đã kết nối với ${device.platformName}');
+          // Removed print statement: '✅ Đã kết nối với ${device.platformName}');
           
           // Discover services and characteristics
           await _discoverServices();
@@ -200,11 +200,11 @@ class BluetoothService extends ChangeNotifier {
           await Future.delayed(const Duration(milliseconds: 1000));
           if (_isConnected && _temperatureChar != null) {
             await readTemperature();
-            print('🌡️ Đã đọc nhiệt độ ban đầu: ${_currentTemperature.toStringAsFixed(1)}°C');
+            // Removed print statement: '🌡️ Đã đọc nhiệt độ ban đầu: ${_currentTemperature.toStringAsFixed(1)}°C');
           }
         } else if (state == ble.BluetoothConnectionState.disconnected) {
           _isConnected = false;
-          print('❌ Đã ngắt kết nối với ${device.platformName}');
+          // Removed print statement: '❌ Đã ngắt kết nối với ${device.platformName}');
           _clearCharacteristics();
           notifyListeners();
         }
@@ -218,7 +218,7 @@ class BluetoothService extends ChangeNotifier {
 
       return _isConnected;
     } catch (e) {
-      print('❌ Lỗi khi kết nối: $e');
+      // Removed print statement: '❌ Lỗi khi kết nối: $e');
       _isConnected = false;
       notifyListeners();
       return false;
@@ -230,7 +230,7 @@ class BluetoothService extends ChangeNotifier {
     if (_connectedDevice == null) return;
 
     try {
-      print('🔍 Đang tìm kiếm services và characteristics...');
+      // Removed print statement: '🔍 Đang tìm kiếm services và characteristics...');
 
       List<ble.BluetoothService> services = await _connectedDevice!.discoverServices();
 
@@ -243,7 +243,7 @@ class BluetoothService extends ChangeNotifier {
           if (uuid.contains('temperature') || uuid.contains('temp') || 
               uuid == temperatureCharUuid.toLowerCase()) {
             _temperatureChar = characteristic;
-            print('✅ Tìm thấy Temperature characteristic');
+            // Removed print statement: '✅ Tìm thấy Temperature characteristic');
             _subscribeToTemperature();
           }
 
@@ -251,32 +251,32 @@ class BluetoothService extends ChangeNotifier {
           if (uuid.contains('light') && uuid.contains('control') ||
               uuid == lightControlCharUuid.toLowerCase()) {
             _lightControlChar = characteristic;
-            print('✅ Tìm thấy Light Control characteristic');
+            // Removed print statement: '✅ Tìm thấy Light Control characteristic');
           }
 
           // Light color characteristic
           if (uuid.contains('color') || uuid == lightColorCharUuid.toLowerCase()) {
             _lightColorChar = characteristic;
-            print('✅ Tìm thấy Light Color characteristic');
+            // Removed print statement: '✅ Tìm thấy Light Color characteristic');
           }
 
           // Light brightness characteristic
           if (uuid.contains('brightness') || uuid == lightBrightnessCharUuid.toLowerCase()) {
             _lightBrightnessChar = characteristic;
-            print('✅ Tìm thấy Light Brightness characteristic');
+            // Removed print statement: '✅ Tìm thấy Light Brightness characteristic');
           }
 
           // Music control characteristic
           if (uuid.contains('music') || uuid == musicControlCharUuid.toLowerCase()) {
             _musicControlChar = characteristic;
-            print('✅ Tìm thấy Music Control characteristic');
+            // Removed print statement: '✅ Tìm thấy Music Control characteristic');
           }
         }
       }
 
-      print('✅ Đã tìm thấy ${services.length} services');
+      // Removed print statement: '✅ Đã tìm thấy ${services.length} services');
     } catch (e) {
-      print('❌ Lỗi khi tìm kiếm services: $e');
+      // Removed print statement: '❌ Lỗi khi tìm kiếm services: $e');
     }
   }
 
@@ -291,7 +291,7 @@ class BluetoothService extends ChangeNotifier {
 
       // Enable notifications
       await _temperatureChar!.setNotifyValue(true);
-      print('✅ Đã bật notifications cho Temperature characteristic');
+      // Removed print statement: '✅ Đã bật notifications cho Temperature characteristic');
 
       // Listen to temperature updates
       _temperatureSubscription = _temperatureChar!.onValueReceived.listen((value) {
@@ -299,16 +299,16 @@ class BluetoothService extends ChangeNotifier {
           _parseTemperatureValue(value);
         }
       }, onError: (error) {
-        print('❌ Lỗi khi nhận dữ liệu nhiệt độ: $error');
+        // Removed print statement: '❌ Lỗi khi nhận dữ liệu nhiệt độ: $error');
       });
 
       // Read initial temperature immediately after subscribing
       await Future.delayed(const Duration(milliseconds: 500));
       await readTemperature();
 
-      print('✅ Đã đăng ký nhận cập nhật nhiệt độ');
+      // Removed print statement: '✅ Đã đăng ký nhận cập nhật nhiệt độ');
     } catch (e) {
-      print('❌ Lỗi khi đăng ký nhiệt độ: $e');
+      // Removed print statement: '❌ Lỗi khi đăng ký nhiệt độ: $e');
     }
   }
 
@@ -322,7 +322,7 @@ class BluetoothService extends ChangeNotifier {
         try {
           final buffer = Uint8List.fromList(value).buffer.asByteData();
           temperature = buffer.getFloat32(0, Endian.little);
-          print('🌡️ Nhiệt độ (float): ${temperature.toStringAsFixed(1)}°C');
+          // Removed print statement: '🌡️ Nhiệt độ (float): ${temperature.toStringAsFixed(1)}°C');
         } catch (e) {
           // Not a float, try other formats
         }
@@ -335,10 +335,10 @@ class BluetoothService extends ChangeNotifier {
           final json = jsonDecode(str);
           if (json['temperature'] != null) {
             temperature = (json['temperature'] as num).toDouble();
-            print('🌡️ Nhiệt độ (JSON): ${temperature.toStringAsFixed(1)}°C');
+            // Removed print statement: '🌡️ Nhiệt độ (JSON): ${temperature.toStringAsFixed(1)}°C');
           } else if (json['temp'] != null) {
             temperature = (json['temp'] as num).toDouble();
-            print('🌡️ Nhiệt độ (JSON temp): ${temperature.toStringAsFixed(1)}°C');
+            // Removed print statement: '🌡️ Nhiệt độ (JSON temp): ${temperature.toStringAsFixed(1)}°C');
           }
         } catch (e) {
           // Not JSON, try plain string
@@ -351,7 +351,7 @@ class BluetoothService extends ChangeNotifier {
           final str = utf8.decode(value).trim();
           temperature = double.tryParse(str);
           if (temperature != null) {
-            print('🌡️ Nhiệt độ (string): ${temperature.toStringAsFixed(1)}°C');
+            // Removed print statement: '🌡️ Nhiệt độ (string): ${temperature.toStringAsFixed(1)}°C');
           }
         } catch (e) {
           // Not a parseable string
@@ -364,7 +364,7 @@ class BluetoothService extends ChangeNotifier {
           final buffer = Uint8List.fromList(value).buffer.asByteData();
           final tempInt = buffer.getUint16(0, Endian.little);
           temperature = tempInt / 10.0;
-          print('🌡️ Nhiệt độ (int*10): ${temperature.toStringAsFixed(1)}°C');
+          // Removed print statement: '🌡️ Nhiệt độ (int*10): ${temperature.toStringAsFixed(1)}°C');
         } catch (e) {
           // Not a 2-byte integer
         }
@@ -375,31 +375,31 @@ class BluetoothService extends ChangeNotifier {
         // Validate temperature range (reasonable for candle)
         if (_currentTemperature != temperature) {
           _currentTemperature = temperature;
-          print('🌡️ ✅ Cập nhật nhiệt độ: ${temperature.toStringAsFixed(1)}°C');
+          // Removed print statement: '🌡️ ✅ Cập nhật nhiệt độ: ${temperature.toStringAsFixed(1)}°C');
           notifyListeners();
         }
       } else {
-        print('⚠️ Nhiệt độ không hợp lệ: $temperature');
+        // Removed print statement: '⚠️ Nhiệt độ không hợp lệ: $temperature');
       }
     } catch (e) {
-      print('⚠️ Lỗi khi parse nhiệt độ: $e, Raw data: $value');
+      // Removed print statement: '⚠️ Lỗi khi parse nhiệt độ: $e, Raw data: $value');
     }
   }
 
   /// Turn light on/off
   Future<bool> setLightOn(bool on) async {
     if (_lightControlChar == null || !_isConnected) {
-      print('⚠️ Không thể điều khiển đèn: chưa kết nối hoặc characteristic không tồn tại');
+      // Removed print statement: '⚠️ Không thể điều khiển đèn: chưa kết nối hoặc characteristic không tồn tại');
       return false;
     }
 
     try {
       final command = on ? [0x01] : [0x00]; // 1 = on, 0 = off
       await _lightControlChar!.write(command, withoutResponse: false);
-      print('💡 Đèn ${on ? "BẬT" : "TẮT"}');
+      // Removed print statement: '💡 Đèn ${on ? "BẬT" : "TẮT"}');
       return true;
     } catch (e) {
-      print('❌ Lỗi khi điều khiển đèn: $e');
+      // Removed print statement: '❌ Lỗi khi điều khiển đèn: $e');
       return false;
     }
   }
@@ -407,7 +407,7 @@ class BluetoothService extends ChangeNotifier {
   /// Set light color (RGB)
   Future<bool> setLightColor(int red, int green, int blue) async {
     if (_lightColorChar == null || !_isConnected) {
-      print('⚠️ Không thể đổi màu đèn: chưa kết nối hoặc characteristic không tồn tại');
+      // Removed print statement: '⚠️ Không thể đổi màu đèn: chưa kết nối hoặc characteristic không tồn tại');
       return false;
     }
 
@@ -419,10 +419,10 @@ class BluetoothService extends ChangeNotifier {
 
       final command = [red, green, blue];
       await _lightColorChar!.write(command, withoutResponse: false);
-      print('🎨 Đổi màu đèn: RGB($red, $green, $blue)');
+      // Removed print statement: '🎨 Đổi màu đèn: RGB($red, $green, $blue)');
       return true;
     } catch (e) {
-      print('❌ Lỗi khi đổi màu đèn: $e');
+      // Removed print statement: '❌ Lỗi khi đổi màu đèn: $e');
       return false;
     }
   }
@@ -447,7 +447,7 @@ class BluetoothService extends ChangeNotifier {
   /// Set light brightness (0.0 - 1.0)
   Future<bool> setLightBrightness(double brightness) async {
     if (_lightBrightnessChar == null || !_isConnected) {
-      print('⚠️ Không thể chỉnh độ sáng: chưa kết nối hoặc characteristic không tồn tại');
+      // Removed print statement: '⚠️ Không thể chỉnh độ sáng: chưa kết nối hoặc characteristic không tồn tại');
       return false;
     }
 
@@ -458,10 +458,10 @@ class BluetoothService extends ChangeNotifier {
 
       final command = [brightnessValue];
       await _lightBrightnessChar!.write(command, withoutResponse: false);
-      print('💡 Độ sáng: ${(brightness * 100).toStringAsFixed(0)}%');
+      // Removed print statement: '💡 Độ sáng: ${(brightness * 100).toStringAsFixed(0)}%');
       return true;
     } catch (e) {
-      print('❌ Lỗi khi chỉnh độ sáng: $e');
+      // Removed print statement: '❌ Lỗi khi chỉnh độ sáng: $e');
       return false;
     }
   }
@@ -469,22 +469,22 @@ class BluetoothService extends ChangeNotifier {
   /// Request temperature reading (manual read)
   Future<double?> readTemperature() async {
     if (_temperatureChar == null || !_isConnected) {
-      print('⚠️ Không thể đọc nhiệt độ: chưa kết nối hoặc characteristic không tồn tại');
+      // Removed print statement: '⚠️ Không thể đọc nhiệt độ: chưa kết nối hoặc characteristic không tồn tại');
       return null;
     }
 
     try {
-      print('📖 Đang đọc nhiệt độ từ ESP32...');
+      // Removed print statement: '📖 Đang đọc nhiệt độ từ ESP32...');
       final value = await _temperatureChar!.read();
       if (value.isNotEmpty) {
         _parseTemperatureValue(value);
         return _currentTemperature;
       } else {
-        print('⚠️ Không nhận được dữ liệu nhiệt độ');
+        // Removed print statement: '⚠️ Không nhận được dữ liệu nhiệt độ');
         return null;
       }
     } catch (e) {
-      print('❌ Lỗi khi đọc nhiệt độ: $e');
+      // Removed print statement: '❌ Lỗi khi đọc nhiệt độ: $e');
       return null;
     }
   }
@@ -492,7 +492,7 @@ class BluetoothService extends ChangeNotifier {
   /// Control music playback
   Future<bool> setMusicControl(String command) async {
     if (_musicControlChar == null || !_isConnected) {
-      print('⚠️ Không thể điều khiển nhạc: chưa kết nối hoặc characteristic không tồn tại');
+      // Removed print statement: '⚠️ Không thể điều khiển nhạc: chưa kết nối hoặc characteristic không tồn tại');
       return false;
     }
 
@@ -513,10 +513,10 @@ class BluetoothService extends ChangeNotifier {
       }
 
       await _musicControlChar!.write(cmd, withoutResponse: false);
-      print('🎵 Nhạc: $command');
+      // Removed print statement: '🎵 Nhạc: $command');
       return true;
     } catch (e) {
-      print('❌ Lỗi khi điều khiển nhạc: $e');
+      // Removed print statement: '❌ Lỗi khi điều khiển nhạc: $e');
       return false;
     }
   }
@@ -529,7 +529,7 @@ class BluetoothService extends ChangeNotifier {
 
       if (_connectedDevice != null) {
         await _connectedDevice!.disconnect();
-        print('🔌 Đã ngắt kết nối');
+        // Removed print statement: '🔌 Đã ngắt kết nối');
       }
 
       _clearCharacteristics();
@@ -537,7 +537,7 @@ class BluetoothService extends ChangeNotifier {
       _connectedDevice = null;
       notifyListeners();
     } catch (e) {
-      print('❌ Lỗi khi ngắt kết nối: $e');
+      // Removed print statement: '❌ Lỗi khi ngắt kết nối: $e');
     }
   }
 
@@ -553,7 +553,7 @@ class BluetoothService extends ChangeNotifier {
     _lightBrightnessChar = null;
     _musicControlChar = null;
     
-    print('🧹 Đã xóa tất cả characteristics và subscriptions');
+    // Removed print statement: '🧹 Đã xóa tất cả characteristics và subscriptions');
   }
 
   /// Dispose resources
