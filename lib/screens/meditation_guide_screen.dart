@@ -19,6 +19,7 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
   final GlobalMusicPlayerService _musicPlayer = GlobalMusicPlayerService();
   late AnimationController _waveformController;
   List<MusicTrack> _suggestedTracks = [];
+  List<MusicTrack> _allTracks = []; // Full playlist for navigation
   bool _isLoadingTracks = true;
   Timer? _positionUpdateTimer;
 
@@ -100,18 +101,36 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
         }
       }
       
-      // Remove current playing track from suggestions
+      // Store all tracks as playlist for navigation (filter only tracks with valid audio)
+      _allTracks = meditationTracks.where((track) => 
+        track.audioPath != null && track.audioPath!.isNotEmpty
+      ).toList();
+      
+      // Shuffle the full playlist for variety
+      _allTracks.shuffle();
+      
+      // If there's a current track, try to include it in the playlist if not already there
       final currentTrack = _musicPlayer.currentTrack;
       if (currentTrack != null) {
-        meditationTracks.removeWhere((track) => track.id == currentTrack.id);
+        final existsInPlaylist = _allTracks.any((track) => track.id == currentTrack.id);
+        if (!existsInPlaylist && 
+            currentTrack.audioPath != null && 
+            currentTrack.audioPath!.isNotEmpty) {
+          _allTracks.insert(0, currentTrack);
+        }
       }
       
-      // Shuffle and take 4-6 tracks for suggestions
-      meditationTracks.shuffle();
-      meditationTracks = meditationTracks.take(6).toList();
+      // Remove current playing track from suggestions
+      List<MusicTrack> suggestedTracks = List.from(_allTracks);
+      if (currentTrack != null) {
+        suggestedTracks.removeWhere((track) => track.id == currentTrack.id);
+      }
+      
+      // Take 4-6 tracks for suggestions display
+      suggestedTracks = suggestedTracks.take(6).toList();
       
       setState(() {
-        _suggestedTracks = meditationTracks;
+        _suggestedTracks = suggestedTracks;
         _isLoadingTracks = false;
       });
     } catch (e) {
@@ -146,8 +165,61 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
   }
 
   void _togglePlayPause() {
-    _musicPlayer.togglePlayPause();
-    // Waveform animation will be updated by _onMusicPlayerChanged listener
+    // If no track is playing, play the first track in playlist
+    if (_musicPlayer.currentTrack == null && _allTracks.isNotEmpty) {
+      _playTrack(_allTracks.first);
+    } else {
+      _musicPlayer.togglePlayPause();
+      // Waveform animation will be updated by _onMusicPlayerChanged listener
+    }
+  }
+
+  Future<void> _playPreviousTrack() async {
+    if (_allTracks.isEmpty) return;
+    
+    final currentTrack = _musicPlayer.currentTrack;
+    if (currentTrack == null) {
+      // If no track is playing, play the last track
+      await _playTrack(_allTracks.last);
+      return;
+    }
+    
+    // Find current track index in playlist
+    final currentIndex = _allTracks.indexWhere((track) => track.id == currentTrack.id);
+    if (currentIndex == -1) {
+      // Current track not in playlist, play last track
+      await _playTrack(_allTracks.last);
+      return;
+    }
+    
+    // Play previous track (wrap around to end if at beginning)
+    final previousIndex = currentIndex > 0 
+        ? currentIndex - 1 
+        : _allTracks.length - 1;
+    await _playTrack(_allTracks[previousIndex]);
+  }
+
+  Future<void> _playNextTrack() async {
+    if (_allTracks.isEmpty) return;
+    
+    final currentTrack = _musicPlayer.currentTrack;
+    if (currentTrack == null) {
+      // If no track is playing, play the first track
+      await _playTrack(_allTracks.first);
+      return;
+    }
+    
+    // Find current track index in playlist
+    final currentIndex = _allTracks.indexWhere((track) => track.id == currentTrack.id);
+    if (currentIndex == -1) {
+      // Current track not in playlist, play first track
+      await _playTrack(_allTracks.first);
+      return;
+    }
+    
+    // Play next track (wrap around to beginning if at end)
+    final nextIndex = (currentIndex + 1) % _allTracks.length;
+    await _playTrack(_allTracks[nextIndex]);
   }
 
   Future<void> _seekTo(Duration position) async {
@@ -273,15 +345,17 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildControlButton(Icons.skip_previous, onPressed: () {
-                    // Previous track functionality can be added here
-                  }),
+                  _buildControlButton(
+                    Icons.skip_previous, 
+                    onPressed: _allTracks.isNotEmpty ? _playPreviousTrack : null,
+                  ),
                   const SizedBox(width: 20),
                   _buildPlayPauseButton(),
                   const SizedBox(width: 20),
-                  _buildControlButton(Icons.skip_next, onPressed: () {
-                    // Next track functionality can be added here
-                  }),
+                  _buildControlButton(
+                    Icons.skip_next, 
+                    onPressed: _allTracks.isNotEmpty ? _playNextTrack : null,
+                  ),
                 ],
               ),
             ),
@@ -440,11 +514,12 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
   }
 
   Widget _buildControlButton(IconData icon, {VoidCallback? onPressed}) {
+    final isEnabled = onPressed != null;
     return Container(
       width: 50,
       height: 50,
       decoration: BoxDecoration(
-        color: Colors.blue[700],
+        color: isEnabled ? Colors.blue[700] : Colors.grey[400],
         shape: BoxShape.circle,
       ),
       child: IconButton(
