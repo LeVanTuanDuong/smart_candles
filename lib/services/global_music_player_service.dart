@@ -22,6 +22,7 @@ class GlobalMusicPlayerService extends ChangeNotifier {
   double _volume = 0.5;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
+  DateTime? _lastPositionUpdate; // For throttling position updates
 
   // Getters
   MusicTrack? get currentTrack => _currentTrack;
@@ -71,11 +72,21 @@ class GlobalMusicPlayerService extends ChangeNotifier {
       notifyListeners();
     });
 
-    // Listen to position
+    // Listen to position - throttle updates to reduce rebuilds (update every 200ms instead of every frame)
     _positionSubscription?.cancel();
+    _lastPositionUpdate = null;
     _positionSubscription = _audioPlayer!.positionStream.listen((position) {
-      _position = position;
-      notifyListeners();
+      // Only update UI every 200ms to reduce rebuilds
+      final now = DateTime.now();
+      if (_lastPositionUpdate == null || 
+          now.difference(_lastPositionUpdate!).inMilliseconds >= 200) {
+        _position = position;
+        _lastPositionUpdate = now;
+        notifyListeners();
+      } else {
+        // Still update internal state without notifying listeners
+        _position = position;
+      }
     });
   }
 
@@ -103,14 +114,14 @@ class GlobalMusicPlayerService extends ChangeNotifier {
         if (track.audioPath!.startsWith('assets/')) {
           // Play from assets
           await _audioPlayer!.setAsset(track.audioPath!);
-          print('✅ Playing from assets: ${track.audioPath}');
+          // Playing from assets
         } else {
           // Play from local file (user uploaded tracks)
           try {
             final file = File(track.audioPath!);
             if (file.existsSync()) {
               await _audioPlayer!.setFilePath(track.audioPath!);
-              print('✅ Playing from local file: ${track.audioPath}');
+              // Playing from local file
             } else {
               throw Exception('File nhạc không tồn tại. Vui lòng tải lại file nhạc từ thư viện.');
             }
@@ -132,21 +143,11 @@ class GlobalMusicPlayerService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       
-      print('✅ Global player: Started playing ${track.name}');
+      // Track started playing successfully
     } catch (e) {
-      print('❌ Error playing track in global player: $e');
       _isLoading = false;
       _isPlaying = false;
-      
-      // Log network errors specifically
-      final errorStr = e.toString().toLowerCase();
-      if (errorStr.contains('offline') || 
-          errorStr.contains('network') || 
-          errorStr.contains('connection') ||
-          errorStr.contains('socketexception') ||
-          errorStr.contains('failed host lookup')) {
-        print('⚠️ Global player: Network error - device may be offline');
-      }
+      // Error handled by caller
       
       notifyListeners();
       rethrow;
@@ -171,7 +172,7 @@ class GlobalMusicPlayerService extends ChangeNotifier {
       // Note: Listener will confirm the actual state from audio player,
       // but UI has already been updated optimistically for better UX
     } catch (e) {
-      print('Error toggling play/pause: $e');
+      // Error toggling play/pause - handled by state revert
       // Revert state on error
       _isPlaying = !_isPlaying;
       notifyListeners();
@@ -187,7 +188,7 @@ class GlobalMusicPlayerService extends ChangeNotifier {
       _isPlaying = false;
       notifyListeners();
     } catch (e) {
-      print('Error stopping playback: $e');
+      // Error stopping playback
     }
   }
 
@@ -207,7 +208,7 @@ class GlobalMusicPlayerService extends ChangeNotifier {
     try {
       await _audioPlayer!.seek(position);
     } catch (e) {
-      print('Error seeking: $e');
+      // Error seeking
     }
   }
 

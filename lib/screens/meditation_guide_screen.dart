@@ -21,7 +21,6 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
   List<MusicTrack> _suggestedTracks = [];
   List<MusicTrack> _allTracks = []; // Full playlist for navigation
   bool _isLoadingTracks = true;
-  Timer? _positionUpdateTimer;
 
   @override
   void initState() {
@@ -37,8 +36,7 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
     // Listen to music player changes
     _musicPlayer.addListener(_onMusicPlayerChanged);
 
-    // Start position update timer
-    _startPositionUpdateTimer();
+    // Position updates are handled by GlobalMusicPlayerService listeners
 
     // Start waveform animation if playing
     if (_musicPlayer.isPlaying) {
@@ -48,7 +46,6 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
 
   @override
   void dispose() {
-    _positionUpdateTimer?.cancel();
     _waveformController.dispose();
     _musicPlayer.removeListener(_onMusicPlayerChanged);
     super.dispose();
@@ -67,18 +64,6 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
         }
       });
     }
-  }
-
-  void _startPositionUpdateTimer() {
-    _positionUpdateTimer?.cancel();
-    _positionUpdateTimer =
-        Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (mounted && _musicPlayer.isPlaying) {
-        setState(() {
-          // Trigger rebuild to update progress
-        });
-      }
-    });
   }
 
   Future<void> _loadSuggestedTracks() async {
@@ -138,7 +123,7 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
         _isLoadingTracks = false;
       });
     } catch (e) {
-      print('Error loading suggested tracks: $e');
+      // Error loading tracks - silently fail to avoid log spam
       setState(() {
         _isLoadingTracks = false;
       });
