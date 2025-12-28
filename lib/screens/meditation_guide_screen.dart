@@ -30,16 +30,16 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    
+
     // Load suggested tracks from library
     _loadSuggestedTracks();
-    
+
     // Listen to music player changes
     _musicPlayer.addListener(_onMusicPlayerChanged);
-    
+
     // Start position update timer
     _startPositionUpdateTimer();
-    
+
     // Start waveform animation if playing
     if (_musicPlayer.isPlaying) {
       _waveformController.repeat();
@@ -71,7 +71,8 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
 
   void _startPositionUpdateTimer() {
     _positionUpdateTimer?.cancel();
-    _positionUpdateTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+    _positionUpdateTimer =
+        Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (mounted && _musicPlayer.isPlaying) {
         setState(() {
           // Trigger rebuild to update progress
@@ -88,47 +89,50 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
     try {
       // Get all tracks from library (default + uploaded)
       final tracksByCategory = await MusicService.getAllTracksByCategory();
-      
+
       // Get meditation tracks from "Thiền" category
       List<MusicTrack> meditationTracks = tracksByCategory['Thiền'] ?? [];
-      
+
       // Also include some tracks from other categories for variety
       final otherCategories = ['Thiên nhiên', 'Nhạc Piano', 'Ambient'];
       for (var category in otherCategories) {
         final tracks = tracksByCategory[category] ?? [];
         if (tracks.isNotEmpty) {
-          meditationTracks.addAll(tracks.take(2)); // Add 2 tracks from each category
+          meditationTracks
+              .addAll(tracks.take(2)); // Add 2 tracks from each category
         }
       }
-      
+
       // Store all tracks as playlist for navigation (filter only tracks with valid audio)
-      _allTracks = meditationTracks.where((track) => 
-        track.audioPath != null && track.audioPath!.isNotEmpty
-      ).toList();
-      
+      _allTracks = meditationTracks
+          .where(
+              (track) => track.audioPath != null && track.audioPath!.isNotEmpty)
+          .toList();
+
       // Shuffle the full playlist for variety
       _allTracks.shuffle();
-      
+
       // If there's a current track, try to include it in the playlist if not already there
       final currentTrack = _musicPlayer.currentTrack;
       if (currentTrack != null) {
-        final existsInPlaylist = _allTracks.any((track) => track.id == currentTrack.id);
-        if (!existsInPlaylist && 
-            currentTrack.audioPath != null && 
+        final existsInPlaylist =
+            _allTracks.any((track) => track.id == currentTrack.id);
+        if (!existsInPlaylist &&
+            currentTrack.audioPath != null &&
             currentTrack.audioPath!.isNotEmpty) {
           _allTracks.insert(0, currentTrack);
         }
       }
-      
+
       // Remove current playing track from suggestions
       List<MusicTrack> suggestedTracks = List.from(_allTracks);
       if (currentTrack != null) {
         suggestedTracks.removeWhere((track) => track.id == currentTrack.id);
       }
-      
+
       // Take 4-6 tracks for suggestions display
       suggestedTracks = suggestedTracks.take(6).toList();
-      
+
       setState(() {
         _suggestedTracks = suggestedTracks;
         _isLoadingTracks = false;
@@ -144,10 +148,10 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
   Future<void> _playTrack(MusicTrack track) async {
     try {
       await _musicPlayer.playTrack(track);
-      
+
       // Reload suggestions to remove the newly playing track
       await _loadSuggestedTracks();
-      
+
       // Start waveform animation
       if (!_waveformController.isAnimating) {
         _waveformController.repeat();
@@ -176,47 +180,48 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
 
   Future<void> _playPreviousTrack() async {
     if (_allTracks.isEmpty) return;
-    
+
     final currentTrack = _musicPlayer.currentTrack;
     if (currentTrack == null) {
       // If no track is playing, play the last track
       await _playTrack(_allTracks.last);
       return;
     }
-    
+
     // Find current track index in playlist
-    final currentIndex = _allTracks.indexWhere((track) => track.id == currentTrack.id);
+    final currentIndex =
+        _allTracks.indexWhere((track) => track.id == currentTrack.id);
     if (currentIndex == -1) {
       // Current track not in playlist, play last track
       await _playTrack(_allTracks.last);
       return;
     }
-    
+
     // Play previous track (wrap around to end if at beginning)
-    final previousIndex = currentIndex > 0 
-        ? currentIndex - 1 
-        : _allTracks.length - 1;
+    final previousIndex =
+        currentIndex > 0 ? currentIndex - 1 : _allTracks.length - 1;
     await _playTrack(_allTracks[previousIndex]);
   }
 
   Future<void> _playNextTrack() async {
     if (_allTracks.isEmpty) return;
-    
+
     final currentTrack = _musicPlayer.currentTrack;
     if (currentTrack == null) {
       // If no track is playing, play the first track
       await _playTrack(_allTracks.first);
       return;
     }
-    
+
     // Find current track index in playlist
-    final currentIndex = _allTracks.indexWhere((track) => track.id == currentTrack.id);
+    final currentIndex =
+        _allTracks.indexWhere((track) => track.id == currentTrack.id);
     if (currentIndex == -1) {
       // Current track not in playlist, play first track
       await _playTrack(_allTracks.first);
       return;
     }
-    
+
     // Play next track (wrap around to beginning if at end)
     final nextIndex = (currentIndex + 1) % _allTracks.length;
     await _playTrack(_allTracks[nextIndex]);
@@ -264,7 +269,7 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
         );
       }
     }
-    
+
     return _buildDefaultImage();
   }
 
@@ -291,13 +296,102 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
     );
   }
 
+  /// Build circular image for current track (for center of audio visualizer)
+  Widget _buildCurrentTrackImage() {
+    final currentTrack = _musicPlayer.currentTrack;
+
+    // If no track or no image, show default circular image
+    if (currentTrack == null ||
+        currentTrack.imagePath == null ||
+        currentTrack.imagePath!.isEmpty) {
+      return Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.orange[200]!,
+              Colors.pink[200]!,
+            ],
+          ),
+        ),
+        child: Icon(
+          Icons.music_note,
+          size: 60,
+          color: Colors.blue[900],
+        ),
+      );
+    }
+
+    // Build circular image from track's image path
+    if (currentTrack.imagePath!.startsWith('assets/')) {
+      // Asset image
+      return ClipOval(
+        child: Image.asset(
+          currentTrack.imagePath!,
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildDefaultCircularImage();
+          },
+        ),
+      );
+    } else {
+      // Local file
+      final file = File(currentTrack.imagePath!);
+      if (file.existsSync()) {
+        return ClipOval(
+          child: Image.file(
+            file,
+            width: 120,
+            height: 120,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildDefaultCircularImage();
+            },
+          ),
+        );
+      } else {
+        return _buildDefaultCircularImage();
+      }
+    }
+  }
+
+  /// Build default circular image (fallback)
+  Widget _buildDefaultCircularImage() {
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.orange[200]!,
+            Colors.pink[200]!,
+          ],
+        ),
+      ),
+      child: Icon(
+        Icons.music_note,
+        size: 60,
+        color: Colors.blue[900],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentTrack = _musicPlayer.currentTrack;
     final currentTrackTitle = currentTrack?.name ?? 'Chưa có nhạc đang phát';
     final position = _musicPlayer.position;
     final duration = _musicPlayer.duration;
-    
+
     return Scaffold(
       backgroundColor: Colors.amber[50],
       appBar: AppBar(
@@ -346,14 +440,15 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _buildControlButton(
-                    Icons.skip_previous, 
-                    onPressed: _allTracks.isNotEmpty ? _playPreviousTrack : null,
+                    Icons.skip_previous,
+                    onPressed:
+                        _allTracks.isNotEmpty ? _playPreviousTrack : null,
                   ),
                   const SizedBox(width: 20),
                   _buildPlayPauseButton(),
                   const SizedBox(width: 20),
                   _buildControlButton(
-                    Icons.skip_next, 
+                    Icons.skip_next,
                     onPressed: _allTracks.isNotEmpty ? _playNextTrack : null,
                   ),
                 ],
@@ -376,12 +471,12 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
                       trackHeight: 4,
                     ),
                     child: Slider(
-                      value: duration.inSeconds > 0 
-                          ? position.inSeconds.toDouble() 
+                      value: duration.inSeconds > 0
+                          ? position.inSeconds.toDouble()
                           : 0.0,
                       min: 0,
-                      max: duration.inSeconds > 0 
-                          ? duration.inSeconds.toDouble() 
+                      max: duration.inSeconds > 0
+                          ? duration.inSeconds.toDouble()
                           : 100.0,
                       onChanged: (value) {
                         _seekTo(Duration(seconds: value.toInt()));
@@ -465,20 +560,8 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
             // Left waveform
             _buildWaveform(isLeft: true),
             const SizedBox(width: 20),
-            // Center meditation icon
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.orange[200],
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.self_improvement,
-                size: 60,
-                color: Colors.blue[900],
-              ),
-            ),
+            // Center track image (circular)
+            _buildCurrentTrackImage(),
             const SizedBox(width: 20),
             // Right waveform
             _buildWaveform(isLeft: false),
@@ -492,10 +575,8 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
     final bars = List.generate(8, (index) {
       final delay = index * 0.1;
       final animationValue = (_waveformController.value + delay) % 1.0;
-      final height = _musicPlayer.isPlaying
-          ? 20 + (animationValue * 40)
-          : 20.0;
-      
+      final height = _musicPlayer.isPlaying ? 20 + (animationValue * 40) : 20.0;
+
       return Container(
         width: 4,
         height: height,
@@ -506,7 +587,7 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
         ),
       );
     });
-    
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: bars,
@@ -550,7 +631,7 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
 
   Widget _buildSuggestionCard(MusicTrack track) {
     final isCurrentTrack = _musicPlayer.currentTrack?.id == track.id;
-    
+
     return GestureDetector(
       onTap: () => _playTrack(track),
       child: Container(
@@ -592,8 +673,8 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    track.description.isNotEmpty 
-                        ? track.description 
+                    track.description.isNotEmpty
+                        ? track.description
                         : track.category,
                     style: TextStyle(
                       fontSize: 14,
@@ -607,7 +688,9 @@ class _MeditationGuideScreenState extends State<MeditationGuideScreen>
             ),
             // Play icon
             Icon(
-              isCurrentTrack ? Icons.pause_circle_filled : Icons.play_circle_fill,
+              isCurrentTrack
+                  ? Icons.pause_circle_filled
+                  : Icons.play_circle_fill,
               color: Colors.blue[700],
               size: 32,
             ),
