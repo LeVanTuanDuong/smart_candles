@@ -36,18 +36,27 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await _authService.signInWithEmailPassword(
-        email: _emailController.text,
+      final credential = await _authService.signInWithEmailPassword(
+        email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      // Không cần navigate thủ công vì StreamBuilder trong main.dart sẽ tự động chuyển
-      // Chỉ cần reset loading state, StreamBuilder sẽ xử lý navigation
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        // StreamBuilder sẽ tự động chuyển sang HomeScreen khi auth state thay đổi
+      if (credential != null && credential.user != null) {
+        // Đảm bảo user đã được reload để có thông tin đầy đủ
+        await credential.user?.reload();
+
+        // StreamBuilder trong main.dart sẽ tự động chuyển sang HomeScreen
+        // Nhưng để đảm bảo, chúng ta sẽ đợi một chút để stream được cập nhật
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      } else {
+        throw Exception(
+            'Đăng nhập thất bại: Không nhận được thông tin người dùng');
       }
     } catch (e) {
       if (mounted) {
@@ -56,9 +65,10 @@ class _LoginScreenState extends State<LoginScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text(e.toString().replaceAll('Exception: ', '')),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
