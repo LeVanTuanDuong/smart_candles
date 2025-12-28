@@ -10,13 +10,10 @@ import 'services/auth_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Initialize Auth Service
   await AuthService().initialize();
 
-  // Load Dialogflow service account
   await DialogflowService.loadServiceAccount();
 
   runApp(const MyApp());
@@ -57,17 +54,17 @@ class MyApp extends StatelessWidget {
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
-          // Show loading indicator while checking auth state
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
-          // Show login screen if not authenticated
-          if (!snapshot.hasData || snapshot.data == null) {
+
+          final user = snapshot.data;
+          if (user == null) {
             return const LoginScreen();
           }
-          // Show home screen if authenticated
+
           return const HomeScreen();
         },
       ),
