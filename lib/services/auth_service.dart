@@ -17,8 +17,14 @@ class AuthService extends ChangeNotifier {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  // Configure GoogleSignIn with server client ID for iOS
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+  // Configure GoogleSignIn with client ID for web
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'],
+    // Web Client ID from Firebase Console
+    clientId: kIsWeb
+        ? '427990378688-6l7kdagg582118kdg10c9j2uigk1vfl9.apps.googleusercontent.com'
+        : null,
+  );
   User? _currentUser;
 
   // Getters
