@@ -20,80 +20,46 @@ class EssentialOilSuggestionCard extends StatelessWidget {
     return suggestedOil?.name ?? customEssentialOil ?? mood.essentialOil;
   }
 
-  String _getEffect() {
-    // Use description from suggestedOil if available
+  String _getDescription() {
     if (suggestedOil != null && suggestedOil!.description.isNotEmpty) {
       return suggestedOil!.description;
     }
-    
-    // Use custom oil effect if provided, otherwise use mood effect
-    final oilName = _getEssentialOilName();
-    switch (oilName) {
-      case 'Lavender':
-      case 'Tinh dầu Oải Hương':
-        return 'Thư giãn, giảm lo âu.';
-      case 'Sweet Orange':
-      case 'Tinh dầu Hương Cam':
-        return 'Nâng cao tinh thần.';
-      case 'Peppermint':
-      case 'Tinh dầu Bạc Hà':
-        return 'Tỉnh táo, tập trung.';
-      case 'Chamomile':
-        return 'An thần, hỗ trợ giấc ngủ.';
-      default:
-        return _getEffectFromMood();
-    }
+
+    return '';
   }
 
-  String _getEffectFromMood() {
-    switch (mood) {
-      case MoodType.stressed:
-        return 'Thư giãn, giảm lo âu.';
-      case MoodType.sad:
-        return 'Nâng cao tinh thần.';
-      case MoodType.tired:
-        return 'Tỉnh táo, tập trung.';
-      case MoodType.insomnia:
-        return 'An thần, hỗ trợ giấc ngủ.';
-      case MoodType.normal:
-        return 'Duy trì cảm xúc tích cực.';
+  Widget _buildOilImage() {
+    if (suggestedOil == null) {
+      return const SizedBox(width: 80, height: 80);
     }
-  }
 
-  Color _getOilColor() {
-    final oilName = _getEssentialOilName();
-    switch (oilName) {
-      case 'Lavender':
-      case 'Tinh dầu Oải Hương':
-        return Colors.purple[300]!;
-      case 'Sweet Orange':
-      case 'Tinh dầu Hương Cam':
-        return Colors.orange[300]!;
-      case 'Peppermint':
-      case 'Tinh dầu Bạc Hà':
-        return Colors.green[300]!;
-      case 'Chamomile':
-      case 'Tinh dầu Hương Trầm':
-        return Colors.yellow[300]!;
-      case 'Tinh dầu Khuynh Diệp':
-        return Colors.green[200]!;
-      case 'Tinh dầu Tràm Trà':
-        return Colors.teal[300]!;
-      case 'Tinh dầu Bưởi':
-        return Colors.orange[200]!;
-      case 'Tinh dầu Sả Chanh':
-        return Colors.lime[300]!;
-      case 'Tinh dầu Gừng':
-        return Colors.orange[700]!;
-      case 'Tinh dầu Ngọc Lan Tây':
-        return Colors.yellow[200]!;
-      case 'Tinh dầu Hoa Nhài':
-        return Colors.pink[200]!;
-      case 'Tinh dầu Chanh':
-        return Colors.yellow[100]!;
-      default:
-        return Colors.amber[300]!;
+    if (suggestedOil!.imagePath != null &&
+        File(suggestedOil!.imagePath!).existsSync()) {
+      return Image.file(
+        File(suggestedOil!.imagePath!),
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+      );
     }
+
+    // Use asset image based on imageType
+    final assetPath = _getAssetPathForImageType(suggestedOil!.imageType);
+    if (assetPath != null) {
+      return Image.asset(
+        assetPath,
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          // If asset image fails, return empty container (no fallback icon)
+          return const SizedBox(width: 80, height: 80);
+        },
+      );
+    }
+
+    // If no image available, return empty container (no fallback icon)
+    return const SizedBox(width: 80, height: 80);
   }
 
   String? _getAssetPathForImageType(String imageType) {
@@ -150,121 +116,6 @@ class EssentialOilSuggestionCard extends StatelessWidget {
     }
   }
 
-  Widget _buildOilImage() {
-    // Use image from suggestedOil if available
-    if (suggestedOil != null) {
-      // Check if custom image path exists
-      if (suggestedOil!.imagePath != null && 
-          File(suggestedOil!.imagePath!).existsSync()) {
-        return Image.file(
-          File(suggestedOil!.imagePath!),
-          width: 80,
-          height: 80,
-          fit: BoxFit.cover,
-        );
-      }
-      
-      // Use asset image based on imageType
-      final assetPath = _getAssetPathForImageType(suggestedOil!.imageType);
-      if (assetPath != null) {
-        return Image.asset(
-          assetPath,
-          width: 80,
-          height: 80,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: _getOilColor(),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: _buildBottleIcon(),
-            );
-          },
-        );
-      }
-    }
-    
-    // Fallback to colored container with bottle icon
-    return Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-        color: _getOilColor(),
-              borderRadius: BorderRadius.circular(12),
-            ),
-      child: _buildBottleIcon(),
-    );
-  }
-
-  Widget _buildBottleIcon() {
-    return Stack(
-      alignment: Alignment.center,
-              children: [
-                // Bottle body
-                Positioned(
-                  bottom: 10,
-                  left: 20,
-                  child: Container(
-                    width: 40,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.brown[700],
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(8),
-                        bottomRight: Radius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-                // Label
-                Positioned(
-                  bottom: 25,
-                  left: 22,
-                  child: Container(
-                    width: 36,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: Colors.purple[400],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Center(
-                      child: Text(
-                _getEssentialOilName().split(' ').last.length > 4 
-                    ? _getEssentialOilName().split(' ').last.substring(0, 4)
-                    : _getEssentialOilName().split(' ').last,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ),
-                // Dropper cap
-                Positioned(
-                  top: 10,
-                  left: 28,
-                  child: Container(
-                    width: 24,
-                    height: 15,
-                    decoration: BoxDecoration(
-                      color: Colors.brown[800],
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(2),
-                        topRight: Radius.circular(2),
-                      ),
-                    ),
-                  ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -276,72 +127,71 @@ class EssentialOilSuggestionCard extends StatelessWidget {
         );
       },
       child: Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-                ),
-              ],
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-      child: Row(
-        children: [
-          // Essential oil image or icon
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: _buildOilImage(),
-          ),
-          const SizedBox(width: 16),
-          // Text content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Gợi ý tinh dầu:',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _getEssentialOilName(),
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _getEffect(),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[700],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Thắp 20-30 phút.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
+          ],
+        ),
+        child: Row(
+          children: [
+            // Essential oil image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: _buildOilImage(),
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            // Text content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Gợi ý tinh dầu:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _getEssentialOilName(),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _getDescription(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Thắp 20-30 phút.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
-

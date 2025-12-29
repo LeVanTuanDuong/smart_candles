@@ -486,10 +486,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.person, color: Colors.grey[800]),
+          icon: Icon(Icons.person, color: Colors.white),
           onPressed: () {
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -505,15 +504,20 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
         ),
         title: const Text(
           'Nến Thông Minh',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.white,
+          ),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor:
+            const Color.fromARGB(255, 139, 223, 245), // Xanh da trời
         elevation: 0,
         centerTitle: true,
         actions: [
           // Calendar icon
           IconButton(
-            icon: Icon(Icons.calendar_today, color: Colors.grey[800]),
+            icon: const Icon(Icons.calendar_today, color: Colors.white),
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -526,7 +530,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
           Stack(
             children: [
               IconButton(
-                icon: Icon(Icons.notifications_none, color: Colors.grey[800]),
+                icon: const Icon(Icons.notifications_none, color: Colors.white),
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -551,57 +555,208 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Temperature Card
-            TemperatureCardHome(deviceStatus: _deviceStatus),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color.fromARGB(255, 146, 225, 245), // Xanh dương đậm
+              Color.fromRGBO(171, 230, 244, 1), // Xanh dương vừa
+              Color.fromARGB(255, 193, 238, 244), // Xanh dương nhạt
+              Color.fromARGB(255, 228, 244, 247), // Xanh dương rất nhạt
+            ],
+            stops: [0.0, 0.4, 0.7, 1.0],
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Temperature Card
+              TemperatureCardHome(deviceStatus: _deviceStatus),
 
-            // Chatbot Section
-            ChatbotSectionHome(
-              selectedMood: _selectedMood,
-              onMoodSelected: _handleMoodSelected,
-              onChatbotTap: () {
-                if (widget.onNavigateToChatbotWithMood != null) {
-                  widget.onNavigateToChatbotWithMood!(MoodType.normal);
-                }
-              },
-            ),
+              // Chatbot Section
+              ChatbotSectionHome(
+                selectedMood: _selectedMood,
+                onMoodSelected: _handleMoodSelected,
+                onChatbotTap: () {
+                  if (widget.onNavigateToChatbotWithMood != null) {
+                    widget.onNavigateToChatbotWithMood!(MoodType.normal);
+                  }
+                },
+              ),
 
-            // Music Control Widget (always show with suggested or current music)
-            MusicControlHome(
-              currentTrack:
-                  _globalMusicPlayer.currentTrack, // Pass the track for image
-              musicTitle: _globalMusicPlayer.currentTrack?.name ??
-                  _deviceStatus.currentMusic ??
-                  ChatbotService.getMusicSuggestions(
-                    _suggestedMood ?? MoodType.normal,
-                  ).first,
-              musicSubtitle: _globalMusicPlayer.currentTrack?.category ??
-                  (_deviceStatus.currentMusic != null && _suggestedMood != null
-                      ? '(Gợi ý)'
-                      : ''),
-              isPlaying:
-                  _globalMusicPlayer.isPlaying || _deviceStatus.isMusicPlaying,
-              volume: _globalMusicPlayer.volume,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const MeditationGuideScreen(),
-                  ),
-                );
-              },
-              onPlayPause: () async {
-                try {
-                  // If there's a current track in the global player, toggle play/pause
-                  if (_globalMusicPlayer.currentTrack != null) {
-                    await _globalMusicPlayer.togglePlayPause();
-                  } else {
-                    // No track is currently loaded, need to play a track first
-                    // Try to use suggested track if available
-                    if (_suggestedMusicTrack != null) {
+              // Music Control Widget (always show with suggested or current music)
+              MusicControlHome(
+                currentTrack:
+                    _globalMusicPlayer.currentTrack, // Pass the track for image
+                musicTitle: _globalMusicPlayer.currentTrack?.name ??
+                    _deviceStatus.currentMusic ??
+                    ChatbotService.getMusicSuggestions(
+                      _suggestedMood ?? MoodType.normal,
+                    ).first,
+                musicSubtitle: _globalMusicPlayer.currentTrack?.category ??
+                    (_deviceStatus.currentMusic != null &&
+                            _suggestedMood != null
+                        ? '(Gợi ý)'
+                        : ''),
+                isPlaying: _globalMusicPlayer.isPlaying ||
+                    _deviceStatus.isMusicPlaying,
+                volume: _globalMusicPlayer.volume,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const MeditationGuideScreen(),
+                    ),
+                  );
+                },
+                onPlayPause: () async {
+                  try {
+                    // If there's a current track in the global player, toggle play/pause
+                    if (_globalMusicPlayer.currentTrack != null) {
+                      await _globalMusicPlayer.togglePlayPause();
+                    } else {
+                      // No track is currently loaded, need to play a track first
+                      // Try to use suggested track if available
+                      if (_suggestedMusicTrack != null) {
+                        await _globalMusicPlayer
+                            .playTrack(_suggestedMusicTrack!);
+                        if (mounted) {
+                          _updateStatus(
+                            _deviceStatus.copyWith(
+                              isMusicPlaying: true,
+                              currentMusic: _suggestedMusicTrack!.name,
+                            ),
+                          );
+                        }
+                      } else {
+                        // No suggested track, try to find and play a default track based on mood
+                        final currentMood = _suggestedMood ?? MoodType.normal;
+                        final musicType = _suggestionService.musicSuggestion ??
+                            ChatbotService.getMusicSuggestions(currentMood)
+                                .first;
+
+                        // Map music type to category and get a track
+                        String category = 'Thiền';
+                        final musicLower = musicType.toLowerCase().trim();
+                        if (musicLower.contains('piano')) {
+                          category = 'Nhạc Piano';
+                        } else if (musicLower.contains('ambient')) {
+                          category = 'Ambient';
+                        } else if (musicLower.contains('nature') ||
+                            musicLower.contains('thiên nhiên') ||
+                            musicLower.contains('mưa')) {
+                          category = 'Thiên nhiên';
+                        }
+
+                        final allTracksByCategory =
+                            await MusicService.getAllTracksByCategory();
+                        final tracks = allTracksByCategory[category] ?? [];
+
+                        // Find first playable track
+                        MusicTrack? trackToPlay;
+                        for (final track in tracks) {
+                          if (track.audioPath != null &&
+                              track.audioPath!.isNotEmpty) {
+                            trackToPlay = track;
+                            break;
+                          }
+                        }
+
+                        if (trackToPlay != null) {
+                          await _globalMusicPlayer.playTrack(trackToPlay);
+                          if (mounted) {
+                            setState(() {
+                              _suggestedMusicTrack = trackToPlay;
+                            });
+                            _updateStatus(
+                              _deviceStatus.copyWith(
+                                isMusicPlaying: true,
+                                currentMusic: trackToPlay.name,
+                              ),
+                            );
+                          }
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    // If play failed, at least toggle the UI state
+                    if (mounted) {
+                      _updateStatus(
+                        _deviceStatus.copyWith(
+                          isMusicPlaying: !_deviceStatus.isMusicPlaying,
+                        ),
+                      );
+                    }
+                  }
+                },
+                onPrevious: () async {
+                  try {
+                    await _globalMusicPlayer.playPreviousTrack();
+                    if (mounted && _globalMusicPlayer.currentTrack != null) {
+                      setState(() {
+                        _suggestedMusicTrack = _globalMusicPlayer.currentTrack;
+                      });
+                      _updateStatus(
+                        _deviceStatus.copyWith(
+                          isMusicPlaying: _globalMusicPlayer.isPlaying,
+                          currentMusic: _globalMusicPlayer.currentTrack!.name,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    // Error handled silently
+                  }
+                },
+                onNext: () async {
+                  try {
+                    await _globalMusicPlayer.playNextTrack();
+                    if (mounted && _globalMusicPlayer.currentTrack != null) {
+                      setState(() {
+                        _suggestedMusicTrack = _globalMusicPlayer.currentTrack;
+                      });
+                      _updateStatus(
+                        _deviceStatus.copyWith(
+                          isMusicPlaying: _globalMusicPlayer.isPlaying,
+                          currentMusic: _globalMusicPlayer.currentTrack!.name,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    // Error handled silently
+                  }
+                },
+                onVolumeChanged: (newVolume) async {
+                  // Volume is updated smoothly via _VolumeSlider
+                  // This callback is called during dragging for immediate feedback
+                  await _globalMusicPlayer.setVolumeSilent(newVolume);
+                },
+              ),
+
+              // Essential Oil Suggestion Card (always show with current or default mood)
+              EssentialOilSuggestionCard(
+                mood: _suggestedMood ?? MoodType.normal,
+                customEssentialOil: _suggestionService.essentialOilSuggestion,
+                suggestedOil: _suggestedEssentialOil,
+              ),
+
+              // Music Suggestion Card (always show with current or default mood)
+              MusicSuggestionCard(
+                suggestedTrack: _suggestedMusicTrack,
+                musicType: _suggestionService.musicSuggestion ??
+                    ChatbotService.getMusicSuggestions(
+                      _suggestionService.detectedMood ??
+                          _suggestedMood ??
+                          MoodType.normal,
+                    ).first,
+                onPlayPressed: () async {
+                  // Use the suggested track if available
+                  if (_suggestedMusicTrack != null) {
+                    try {
                       await _globalMusicPlayer.playTrack(_suggestedMusicTrack!);
+
+                      // Update device status (only if still mounted)
                       if (mounted) {
                         _updateStatus(
                           _deviceStatus.copyWith(
@@ -610,205 +765,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                           ),
                         );
                       }
-                    } else {
-                      // No suggested track, try to find and play a default track based on mood
-                      final currentMood = _suggestedMood ?? MoodType.normal;
-                      final musicType = _suggestionService.musicSuggestion ??
-                          ChatbotService.getMusicSuggestions(currentMood).first;
-
-                      // Map music type to category and get a track
-                      String category = 'Thiền';
-                      final musicLower = musicType.toLowerCase().trim();
-                      if (musicLower.contains('piano')) {
-                        category = 'Nhạc Piano';
-                      } else if (musicLower.contains('ambient')) {
-                        category = 'Ambient';
-                      } else if (musicLower.contains('nature') ||
-                          musicLower.contains('thiên nhiên') ||
-                          musicLower.contains('mưa')) {
-                        category = 'Thiên nhiên';
-                      }
-
-                      final allTracksByCategory =
-                          await MusicService.getAllTracksByCategory();
-                      final tracks = allTracksByCategory[category] ?? [];
-
-                      // Find first playable track
-                      MusicTrack? trackToPlay;
-                      for (final track in tracks) {
-                        if (track.audioPath != null &&
-                            track.audioPath!.isNotEmpty) {
-                          trackToPlay = track;
-                          break;
-                        }
-                      }
-
-                      if (trackToPlay != null) {
-                        await _globalMusicPlayer.playTrack(trackToPlay);
-                        if (mounted) {
-                          setState(() {
-                            _suggestedMusicTrack = trackToPlay;
-                          });
-                          _updateStatus(
-                            _deviceStatus.copyWith(
-                              isMusicPlaying: true,
-                              currentMusic: trackToPlay.name,
-                            ),
-                          );
-                        }
-                      }
-                    }
-                  }
-                } catch (e) {
-                  // If play failed, at least toggle the UI state
-                  if (mounted) {
-                    _updateStatus(
-                      _deviceStatus.copyWith(
-                        isMusicPlaying: !_deviceStatus.isMusicPlaying,
-                      ),
-                    );
-                  }
-                }
-              },
-              onPrevious: () async {
-                try {
-                  await _globalMusicPlayer.playPreviousTrack();
-                  if (mounted && _globalMusicPlayer.currentTrack != null) {
-                    setState(() {
-                      _suggestedMusicTrack = _globalMusicPlayer.currentTrack;
-                    });
-                    _updateStatus(
-                      _deviceStatus.copyWith(
-                        isMusicPlaying: _globalMusicPlayer.isPlaying,
-                        currentMusic: _globalMusicPlayer.currentTrack!.name,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  // Error handled silently
-                }
-              },
-              onNext: () async {
-                try {
-                  await _globalMusicPlayer.playNextTrack();
-                  if (mounted && _globalMusicPlayer.currentTrack != null) {
-                    setState(() {
-                      _suggestedMusicTrack = _globalMusicPlayer.currentTrack;
-                    });
-                    _updateStatus(
-                      _deviceStatus.copyWith(
-                        isMusicPlaying: _globalMusicPlayer.isPlaying,
-                        currentMusic: _globalMusicPlayer.currentTrack!.name,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  // Error handled silently
-                }
-              },
-              onVolumeChanged: (newVolume) async {
-                // Volume is updated smoothly via _VolumeSlider
-                // This callback is called during dragging for immediate feedback
-                await _globalMusicPlayer.setVolumeSilent(newVolume);
-              },
-            ),
-
-            // Essential Oil Suggestion Card (always show with current or default mood)
-            EssentialOilSuggestionCard(
-              mood: _suggestedMood ?? MoodType.normal,
-              customEssentialOil: _suggestionService.essentialOilSuggestion,
-              suggestedOil: _suggestedEssentialOil,
-            ),
-
-            // Music Suggestion Card (always show with current or default mood)
-            MusicSuggestionCard(
-              suggestedTrack: _suggestedMusicTrack,
-              musicType: _suggestionService.musicSuggestion ??
-                  ChatbotService.getMusicSuggestions(
-                    _suggestionService.detectedMood ??
-                        _suggestedMood ??
-                        MoodType.normal,
-                  ).first,
-              onPlayPressed: () async {
-                // Use the suggested track if available
-                if (_suggestedMusicTrack != null) {
-                  try {
-                    await _globalMusicPlayer.playTrack(_suggestedMusicTrack!);
-
-                    // Update device status (only if still mounted)
-                    if (mounted) {
-                      _updateStatus(
-                        _deviceStatus.copyWith(
-                          isMusicPlaying: true,
-                          currentMusic: _suggestedMusicTrack!.name,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    // Show error message to user
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Không thể phát nhạc. Vui lòng tải lên file nhạc từ thư viện.',
-                          ),
-                          duration: const Duration(seconds: 3),
-                        ),
-                      );
-                    }
-                  }
-                } else {
-                  // Try to get a track from library
-                  final musicType = _suggestionService.musicSuggestion ??
-                      ChatbotService.getMusicSuggestions(
-                        _suggestedMood ?? MoodType.normal,
-                      ).first;
-
-                  // Map music type to category
-                  String category = 'Thiền'; // default
-                  if (musicType.toLowerCase().contains('piano')) {
-                    category = 'Nhạc Piano';
-                  } else if (musicType.toLowerCase().contains('ambient')) {
-                    category = 'Ambient';
-                  } else if (musicType.toLowerCase().contains('nature') ||
-                      musicType.toLowerCase().contains('mưa') ||
-                      musicType.toLowerCase().contains('thiên nhiên')) {
-                    category = 'Thiên nhiên';
-                  } else if (musicType.toLowerCase().contains('thiền') ||
-                      musicType.toLowerCase().contains('meditation')) {
-                    category = 'Thiền';
-                  }
-
-                  // Get tracks for this category
-                  final allTracksByCategory =
-                      await MusicService.getAllTracksByCategory();
-                  final allTracks = allTracksByCategory[category] ?? [];
-
-                  // Find first track with audio source
-                  MusicTrack? track;
-                  for (final t in allTracks) {
-                    if (t.audioPath != null && t.audioPath!.isNotEmpty) {
-                      track = t;
-                      break;
-                    }
-                  }
-
-                  if (track != null) {
-                    try {
-                      await _playTrackWithPlaylist(track, playlist: allTracks);
-
-                      if (mounted) {
-                        setState(() {
-                          _suggestedMusicTrack = track;
-                        });
-                        _updateStatus(
-                          _deviceStatus.copyWith(
-                            isMusicPlaying: true,
-                            currentMusic: track.name,
-                          ),
-                        );
-                      }
                     } catch (e) {
+                      // Show error message to user
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -821,38 +779,103 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                       }
                     }
                   } else {
-                    // No tracks available - prompt user to upload
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Chưa có nhạc cho "$musicType". Vui lòng tải lên từ thư viện.',
+                    // Try to get a track from library
+                    final musicType = _suggestionService.musicSuggestion ??
+                        ChatbotService.getMusicSuggestions(
+                          _suggestedMood ?? MoodType.normal,
+                        ).first;
+
+                    // Map music type to category
+                    String category = 'Thiền'; // default
+                    if (musicType.toLowerCase().contains('piano')) {
+                      category = 'Nhạc Piano';
+                    } else if (musicType.toLowerCase().contains('ambient')) {
+                      category = 'Ambient';
+                    } else if (musicType.toLowerCase().contains('nature') ||
+                        musicType.toLowerCase().contains('mưa') ||
+                        musicType.toLowerCase().contains('thiên nhiên')) {
+                      category = 'Thiên nhiên';
+                    } else if (musicType.toLowerCase().contains('thiền') ||
+                        musicType.toLowerCase().contains('meditation')) {
+                      category = 'Thiền';
+                    }
+
+                    // Get tracks for this category
+                    final allTracksByCategory =
+                        await MusicService.getAllTracksByCategory();
+                    final allTracks = allTracksByCategory[category] ?? [];
+
+                    // Find first track with audio source
+                    MusicTrack? track;
+                    for (final t in allTracks) {
+                      if (t.audioPath != null && t.audioPath!.isNotEmpty) {
+                        track = t;
+                        break;
+                      }
+                    }
+
+                    if (track != null) {
+                      try {
+                        await _playTrackWithPlaylist(track,
+                            playlist: allTracks);
+
+                        if (mounted) {
+                          setState(() {
+                            _suggestedMusicTrack = track;
+                          });
+                          _updateStatus(
+                            _deviceStatus.copyWith(
+                              isMusicPlaying: true,
+                              currentMusic: track.name,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Không thể phát nhạc. Vui lòng tải lên file nhạc từ thư viện.',
+                              ),
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      }
+                    } else {
+                      // No tracks available - prompt user to upload
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Chưa có nhạc cho "$musicType". Vui lòng tải lên từ thư viện.',
+                            ),
+                            duration: const Duration(seconds: 3),
+                            action: SnackBarAction(
+                              label: 'Mở thư viện',
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const MusicLibraryScreen(),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                          duration: const Duration(seconds: 3),
-                          action: SnackBarAction(
-                            label: 'Mở thư viện',
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const MusicLibraryScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      );
+                        );
+                      }
                     }
                   }
-                }
-              },
-            ),
+                },
+              ),
 
-            // Smartwatch Data Card
-            SmartwatchCardHome(smartwatchData: _smartwatchData),
+              // Smartwatch Data Card
+              SmartwatchCardHome(smartwatchData: _smartwatchData),
 
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );

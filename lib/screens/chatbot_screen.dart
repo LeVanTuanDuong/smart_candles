@@ -71,8 +71,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         );
         _isLoading = false;
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
         // If there's an initial message, send it automatically after greeting
         if (widget.initialMessage != null && widget.initialMessage!.isNotEmpty) {
           Future.delayed(const Duration(milliseconds: 300), () {
@@ -81,7 +81,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             }
           });
         }
-      });
+    });
     }
   }
 
@@ -809,7 +809,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       await _provideSuggestionsDirectly(detectedMoodFromInput);
 
       if (mounted) {
-        setState(() {
+      setState(() {
           _isLoading = false;
         });
         _scrollToBottom();
@@ -855,7 +855,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           _hasSelectedMood = true;
           _currentMood = detectedMood;
           _currentIntensity = emotionAnalysis.intensityLevel;
-          widget.onMoodSelected?.call(detectedMood);
+      widget.onMoodSelected?.call(detectedMood);
 
           // Check for safety flags
           if (emotionAnalysis.shouldActivateSafety) {
@@ -1164,13 +1164,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           _isLoading = false;
         });
         _conversationHistory.add(finalResponse);
-        _scrollToBottom();
+      _scrollToBottom();
       }
     } catch (e) {
       // Error handling user input
 
       if (mounted) {
-        setState(() {
+      setState(() {
           _isLoading = false;
 
           // Use fallback response instead of error message
@@ -1179,12 +1179,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           _messages.add(
             ChatMessage(
               text: fallbackResponse,
-              isBot: true,
-              timestamp: DateTime.now(),
+          isBot: true,
+          timestamp: DateTime.now(),
             ),
           );
-        });
-        _scrollToBottom();
+      });
+      _scrollToBottom();
       }
     }
   }
@@ -1195,9 +1195,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     setState(() {
       _messages.add(
         ChatMessage(
-          text: '${mood.emoji} ${mood.label}',
-          isBot: false,
-          timestamp: DateTime.now(),
+        text: '${mood.emoji} ${mood.label}',
+        isBot: false,
+        timestamp: DateTime.now(),
         ),
       );
       _isLoading = true;
@@ -1214,7 +1214,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       setState(() {
         _isLoading = false;
       });
-      _scrollToBottom();
+    _scrollToBottom();
     }
   }
 
@@ -1330,15 +1330,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                               ),
                             )
                           : IconButton(
-                              icon: const Icon(
-                                Icons.arrow_upward,
-                                color: Colors.white,
-                                size: 20,
-                              ),
+                        icon: const Icon(
+                          Icons.arrow_upward,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                               onPressed: _isLoading
                                   ? null
                                   : () => _sendMessage(_textController.text),
-                            ),
+                      ),
                     ),
                   ],
                 ),
