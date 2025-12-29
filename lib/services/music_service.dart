@@ -134,7 +134,7 @@ class MusicService {
       final List<dynamic> tracksList = jsonDecode(jsonString);
       return tracksList.map((item) => MusicTrack.fromMap(item)).toList();
     } catch (e) {
-      print('Error loading uploaded tracks: $e');
+      // Removed print statement: 'Error loading uploaded tracks: $e');
       return [];
     }
   }
@@ -149,7 +149,7 @@ class MusicService {
       final jsonString = jsonEncode(tracksList);
       await prefs.setString(_uploadedTracksKey, jsonString);
     } catch (e) {
-      print('Error saving uploaded tracks: $e');
+      // Removed print statement: 'Error saving uploaded tracks: $e');
     }
   }
 

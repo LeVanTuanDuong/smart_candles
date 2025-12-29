@@ -33,7 +33,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
       _temperatureEntries = await TemperatureHistoryService.loadEntries();
     } catch (e) {
-      print('Error loading statistics: $e');
+      // Removed print statement: 'Error loading statistics: $e');
     } finally {
       setState(() {
         _isLoading = false;

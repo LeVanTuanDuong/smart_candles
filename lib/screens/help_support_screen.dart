@@ -162,7 +162,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
         }
       }
     } catch (e) {
-      print('Error launching email: $e');
+      // Removed print statement: 'Error launching email: $e');
       // If launching fails, show dialog with email address
       if (context.mounted) {
         _showEmailDialog(context, supportEmail);

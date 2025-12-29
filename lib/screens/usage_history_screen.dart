@@ -49,7 +49,7 @@ class _UsageHistoryScreenState extends State<UsageHistoryScreen>
       // Load temperature entries
       _temperatureEntries = await TemperatureHistoryService.loadEntries();
     } catch (e) {
-      print('Error loading history: $e');
+      // Removed print statement: 'Error loading history: $e');
     } finally {
       setState(() {
         _isLoading = false;

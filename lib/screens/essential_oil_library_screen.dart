@@ -396,7 +396,7 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                         try {
                           await File(oil.imagePath!).delete();
                         } catch (e) {
-                          print('Error deleting old image: $e');
+                          // Removed print statement: 'Error deleting old image: $e');
                         }
                       }
 
@@ -408,7 +408,7 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                       await File(selectedImage!.path).copy(savedImage.path);
                       imagePath = savedImage.path;
                     } catch (e) {
-                      print('Error saving image: $e');
+                      // Removed print statement: 'Error saving image: $e');
                     }
                   } else if (selectedImageType != 'custom' &&
                       currentImagePath == null) {
@@ -418,7 +418,7 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                       try {
                         await File(oil.imagePath!).delete();
                       } catch (e) {
-                        print('Error deleting old image: $e');
+                        // Removed print statement: 'Error deleting old image: $e');
                       }
                     }
                     imagePath = null;
@@ -716,7 +716,7 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                       await File(selectedImage!.path).copy(savedImage.path);
                       imagePath = savedImage.path;
                     } catch (e) {
-                      print('Error saving image: $e');
+                      // Removed print statement: 'Error saving image: $e');
                     }
                   }
 

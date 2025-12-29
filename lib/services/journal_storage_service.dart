@@ -16,14 +16,14 @@ class JournalStorageService {
       _prefs = await SharedPreferences.getInstance();
       return _prefs;
     } catch (e) {
-      print('Error getting SharedPreferences: $e');
+      // Removed print statement: 'Error getting SharedPreferences: $e');
       // Retry once after a longer delay
       try {
         await Future.delayed(const Duration(milliseconds: 500));
         _prefs = await SharedPreferences.getInstance();
         return _prefs;
       } catch (e2) {
-        print('Error getting SharedPreferences on retry: $e2');
+        // Removed print statement: 'Error getting SharedPreferences on retry: $e2');
         return null;
       }
     }
@@ -36,7 +36,7 @@ class JournalStorageService {
     try {
       final prefs = await _getPreferences();
       if (prefs == null) {
-        print('SharedPreferences not available, cannot save entries');
+        // Removed print statement: 'SharedPreferences not available, cannot save entries');
         return;
       }
 
@@ -55,7 +55,7 @@ class JournalStorageService {
       await prefs.setString(_storageKey, jsonString);
     } catch (e) {
       // If saving fails, silently fail (data will be lost but app won't crash)
-      print('Error saving journal entries: $e');
+      // Removed print statement: 'Error saving journal entries: $e');
     }
   }
 
@@ -64,7 +64,7 @@ class JournalStorageService {
     try {
       final prefs = await _getPreferences();
       if (prefs == null) {
-        print('SharedPreferences not available, returning empty entries');
+        // Removed print statement: 'SharedPreferences not available, returning empty entries');
         return {};
       }
       final jsonString = prefs.getString(_storageKey);
@@ -92,12 +92,12 @@ class JournalStorageService {
         return entries;
       } catch (e) {
         // If parsing fails, return empty map
-        print('Error parsing journal entries: $e');
+        // Removed print statement: 'Error parsing journal entries: $e');
         return {};
       }
     } catch (e) {
       // If loading fails (e.g., platform exception), return empty map
-      print('Error loading journal entries: $e');
+      // Removed print statement: 'Error loading journal entries: $e');
       return {};
     }
   }
@@ -114,7 +114,7 @@ class JournalStorageService {
       entries[dateOnly] = entry;
       await saveEntries(entries);
     } catch (e) {
-      print('Error saving journal entry: $e');
+      // Removed print statement: 'Error saving journal entry: $e');
     }
   }
 
@@ -126,7 +126,7 @@ class JournalStorageService {
       entries.remove(dateOnly);
       await saveEntries(entries);
     } catch (e) {
-      print('Error deleting journal entry: $e');
+      // Removed print statement: 'Error deleting journal entry: $e');
     }
   }
 }

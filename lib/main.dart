@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
-import 'services/dialogflow_service.dart';
 import 'services/auth_service.dart';
 
 void main() async {
@@ -13,8 +12,6 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await AuthService().initialize();
-
-  await DialogflowService.loadServiceAccount();
 
   runApp(const MyApp());
 }

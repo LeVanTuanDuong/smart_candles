@@ -155,11 +155,9 @@ class MusicControlHome extends StatelessWidget {
                     ),
                     trackHeight: 4,
                   ),
-                  child: Slider(
+                  child: _VolumeSlider(
                     value: volume,
                     onChanged: onVolumeChanged,
-                    min: 0.0,
-                    max: 1.0,
                   ),
                 ),
               ),
@@ -306,6 +304,58 @@ class MusicControlHome extends StatelessWidget {
           child: const Icon(Icons.music_note, color: Colors.white, size: 40),
         );
     }
+  }
+}
+
+/// Custom volume slider widget for smoother volume adjustment
+class _VolumeSlider extends StatefulWidget {
+  final double value;
+  final ValueChanged<double>? onChanged;
+
+  const _VolumeSlider({
+    required this.value,
+    this.onChanged,
+  });
+
+  @override
+  State<_VolumeSlider> createState() => _VolumeSliderState();
+}
+
+class _VolumeSliderState extends State<_VolumeSlider> {
+  double? _dragValue;
+  bool _isDragging = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayValue = _isDragging ? (_dragValue ?? widget.value) : widget.value;
+
+    return Slider(
+      value: displayValue.clamp(0.0, 1.0),
+      onChanged: (value) {
+        setState(() {
+          _dragValue = value;
+          _isDragging = true;
+        });
+        // Update volume immediately while dragging (silent update)
+        widget.onChanged?.call(value);
+      },
+      onChangeStart: (value) {
+        setState(() {
+          _dragValue = value;
+          _isDragging = true;
+        });
+      },
+      onChangeEnd: (value) {
+        setState(() {
+          _isDragging = false;
+          _dragValue = null;
+        });
+        // Final update when dragging ends
+        widget.onChanged?.call(value);
+      },
+      min: 0.0,
+      max: 1.0,
+    );
   }
 }
 
