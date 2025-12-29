@@ -18,7 +18,10 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      return web;
+      throw UnsupportedError(
+        'DefaultFirebaseOptions have not been configured for web - '
+        'you can reconfigure this by running the FlutterFire CLI again.',
+      );
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -63,14 +66,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'pnfood-merchant.firebasestorage.app',
     iosBundleId: 'com.phinam.smart',
   );
-
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyC5fbDMVT6KsTbATFJF_4KzrI0DKFhU4JE',
-    appId: '1:427990378688:web:85e5bf8a40b8956f432525',
-    messagingSenderId: '427990378688',
-    projectId: 'pnfood-merchant',
-    authDomain: 'pnfood-merchant.firebaseapp.com',
-    storageBucket: 'pnfood-merchant.firebasestorage.app',
-    measurementId: 'G-D7K4NEHETD',
-  );
 }
+

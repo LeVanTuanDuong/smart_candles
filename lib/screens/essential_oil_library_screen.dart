@@ -308,7 +308,7 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                     }),
                     _buildImageTypeOption(
                       'cam ngot',
-                      'Hương Cam',
+                      'Cam Ngọt',
                       selectedImageType,
                       (type) {
                         setDialogState(() {
@@ -633,7 +633,7 @@ class _EssentialOilLibraryScreenState extends State<EssentialOilLibraryScreen>
                     }),
                     _buildImageTypeOption(
                       'cam ngot',
-                      'Hương Cam',
+                      'Cam Ngọt',
                       selectedImageType,
                       (type) {
                         setDialogState(() {

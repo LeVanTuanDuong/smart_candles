@@ -64,7 +64,7 @@
   - Hiển thị tiến trình phát
 - **Tải lên nhạc**: Người dùng có thể tải lên file nhạc từ thiết bị
 - **Gợi ý nhạc thông minh**: Chatbot gợi ý nhạc phù hợp với tâm trạng
-- **Hướng dẫn thiền**: Màn hình thiền định với nhạc và gợi ý bài tập
+- **Trang Phát Nhạc**: Màn hình thiền định với nhạc và gợi ý bài tập
 
 ### 🌸 Thư viện Tinh dầu
 
@@ -294,7 +294,7 @@
 - **MoodJournalScreen**: Nhật ký tâm trạng
 - **MusicLibraryScreen**: Thư viện nhạc
 - **EssentialOilLibraryScreen**: Thư viện tinh dầu
-- **MeditationGuideScreen**: Hướng dẫn thiền
+- **MeditationGuideScreen**: Trang Phát Nhạc
 - **SafetyHistoryScreen**: Lịch sử an toàn
 - **ProfileScreen**: Hồ sơ người dùng
 - **SettingsScreen**: Cài đặt

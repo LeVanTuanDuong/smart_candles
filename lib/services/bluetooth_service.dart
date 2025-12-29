@@ -5,24 +5,17 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart' as ble;
 import 'package:flutter/foundation.dart';
 
 /// Service UUID for Smart Candle ESP32
-const String candleServiceUuid =
-    '0000180f-0000-1000-8000-00805f9b34fb'; // Battery Service (example, should match ESP32)
+const String candleServiceUuid = '0000180f-0000-1000-8000-00805f9b34fb'; // Battery Service (example, should match ESP32)
 
 /// Characteristic UUIDs for Smart Candle
-const String temperatureCharUuid =
-    '00002a19-0000-1000-8000-00805f9b34fb'; // Temperature reading
-const String lightControlCharUuid =
-    '00002a1a-0000-1000-8000-00805f9b34fb'; // Light on/off
-const String lightColorCharUuid =
-    '00002a1b-0000-1000-8000-00805f9b34fb'; // Light color (RGB)
-const String lightBrightnessCharUuid =
-    '00002a1c-0000-1000-8000-00805f9b34fb'; // Light brightness (0-255)
-const String musicControlCharUuid =
-    '00002a1d-0000-1000-8000-00805f9b34fb'; // Music play/pause/stop
+const String temperatureCharUuid = '00002a19-0000-1000-8000-00805f9b34fb'; // Temperature reading
+const String lightControlCharUuid = '00002a1a-0000-1000-8000-00805f9b34fb'; // Light on/off
+const String lightColorCharUuid = '00002a1b-0000-1000-8000-00805f9b34fb'; // Light color (RGB)
+const String lightBrightnessCharUuid = '00002a1c-0000-1000-8000-00805f9b34fb'; // Light brightness (0-255)
+const String musicControlCharUuid = '00002a1d-0000-1000-8000-00805f9b34fb'; // Music play/pause/stop
 
 /// Device name pattern for Smart Candle
-const String deviceNamePattern =
-    'CandleHub'; // ESP32 should advertise with this name
+const String deviceNamePattern = 'CandleHub'; // ESP32 should advertise with this name
 
 /// Bluetooth Service for Smart Candle ESP32
 class BluetoothService extends ChangeNotifier {
@@ -52,13 +45,6 @@ class BluetoothService extends ChangeNotifier {
 
   /// Initialize Bluetooth adapter
   Future<bool> initialize() async {
-    // Web platform: Bluetooth has limited support via Web Bluetooth API
-    if (kIsWeb) {
-      // Web Bluetooth API requires HTTPS and user gesture
-      // Return false to indicate limited support
-      return false;
-    }
-
     try {
       // Check if Bluetooth is available
       if (await ble.FlutterBluePlus.isSupported == false) {
@@ -67,8 +53,7 @@ class BluetoothService extends ChangeNotifier {
       }
 
       // Check if Bluetooth is on
-      ble.BluetoothAdapterState adapterState =
-          await ble.FlutterBluePlus.adapterState.first;
+      ble.BluetoothAdapterState adapterState = await ble.FlutterBluePlus.adapterState.first;
       if (adapterState != ble.BluetoothAdapterState.on) {
         // Removed print statement: '⚠️ Bluetooth chưa được bật. Vui lòng bật Bluetooth.');
         return false;
@@ -84,11 +69,6 @@ class BluetoothService extends ChangeNotifier {
 
   /// Check if Bluetooth is ready for scanning
   Future<bool> isBluetoothReady() async {
-    // Web platform: Bluetooth has limited support
-    if (kIsWeb) {
-      return false;
-    }
-
     try {
       // Check if Bluetooth is available
       if (await ble.FlutterBluePlus.isSupported == false) {
@@ -96,8 +76,7 @@ class BluetoothService extends ChangeNotifier {
       }
 
       // Check if Bluetooth is on
-      ble.BluetoothAdapterState adapterState =
-          await ble.FlutterBluePlus.adapterState.first;
+      ble.BluetoothAdapterState adapterState = await ble.FlutterBluePlus.adapterState.first;
       return adapterState == ble.BluetoothAdapterState.on;
     } catch (e) {
       // Removed print statement: '❌ Lỗi kiểm tra trạng thái Bluetooth: $e');
@@ -106,14 +85,7 @@ class BluetoothService extends ChangeNotifier {
   }
 
   /// Start scanning for Smart Candle devices
-  Future<void> startScan(
-      {Duration timeout = const Duration(seconds: 10)}) async {
-    // Web platform: Bluetooth scanning not fully supported
-    if (kIsWeb) {
-      throw Exception(
-          'Bluetooth không được hỗ trợ đầy đủ trên trình duyệt web. Vui lòng sử dụng ứng dụng mobile.');
-    }
-
+  Future<void> startScan({Duration timeout = const Duration(seconds: 10)}) async {
     if (_isScanning) {
       // Removed print statement: '⚠️ Đang quét, vui lòng đợi...');
       return;
@@ -138,8 +110,9 @@ class BluetoothService extends ChangeNotifier {
       _scanSubscription = ble.FlutterBluePlus.scanResults.listen((results) {
         for (ble.ScanResult result in results) {
           final device = result.device;
-          final deviceName =
-              device.platformName.isNotEmpty ? device.platformName : 'Unknown';
+          final deviceName = device.platformName.isNotEmpty 
+              ? device.platformName 
+              : 'Unknown';
 
           // Check if device name matches Smart Candle pattern
           if (deviceName.contains(deviceNamePattern)) {
@@ -164,7 +137,7 @@ class BluetoothService extends ChangeNotifier {
       } catch (scanError) {
         // Handle specific scan errors
         final errorStr = scanError.toString().toLowerCase();
-        if (errorStr.contains('bluetooth must be turned on') ||
+        if (errorStr.contains('bluetooth must be turned on') || 
             errorStr.contains('cbmanagerstate') ||
             errorStr.contains('unsupported')) {
           // Removed print statement: '❌ Bluetooth chưa được bật hoặc không được hỗ trợ');
@@ -216,13 +189,13 @@ class BluetoothService extends ChangeNotifier {
         if (state == ble.BluetoothConnectionState.connected) {
           _isConnected = true;
           // Removed print statement: '✅ Đã kết nối với ${device.platformName}');
-
+          
           // Discover services and characteristics
           await _discoverServices();
-
+          
           // Notify listeners about connection
           notifyListeners();
-
+          
           // Read initial temperature after a short delay to ensure services are discovered
           await Future.delayed(const Duration(milliseconds: 1000));
           if (_isConnected && _temperatureChar != null) {
@@ -259,18 +232,15 @@ class BluetoothService extends ChangeNotifier {
     try {
       // Removed print statement: '🔍 Đang tìm kiếm services và characteristics...');
 
-      List<ble.BluetoothService> services =
-          await _connectedDevice!.discoverServices();
+      List<ble.BluetoothService> services = await _connectedDevice!.discoverServices();
 
       for (ble.BluetoothService service in services) {
         // Find characteristics
-        for (ble.BluetoothCharacteristic characteristic
-            in service.characteristics) {
+        for (ble.BluetoothCharacteristic characteristic in service.characteristics) {
           final uuid = characteristic.uuid.toString().toLowerCase();
 
           // Temperature characteristic
-          if (uuid.contains('temperature') ||
-              uuid.contains('temp') ||
+          if (uuid.contains('temperature') || uuid.contains('temp') || 
               uuid == temperatureCharUuid.toLowerCase()) {
             _temperatureChar = characteristic;
             // Removed print statement: '✅ Tìm thấy Temperature characteristic');
@@ -285,22 +255,19 @@ class BluetoothService extends ChangeNotifier {
           }
 
           // Light color characteristic
-          if (uuid.contains('color') ||
-              uuid == lightColorCharUuid.toLowerCase()) {
+          if (uuid.contains('color') || uuid == lightColorCharUuid.toLowerCase()) {
             _lightColorChar = characteristic;
             // Removed print statement: '✅ Tìm thấy Light Color characteristic');
           }
 
           // Light brightness characteristic
-          if (uuid.contains('brightness') ||
-              uuid == lightBrightnessCharUuid.toLowerCase()) {
+          if (uuid.contains('brightness') || uuid == lightBrightnessCharUuid.toLowerCase()) {
             _lightBrightnessChar = characteristic;
             // Removed print statement: '✅ Tìm thấy Light Brightness characteristic');
           }
 
           // Music control characteristic
-          if (uuid.contains('music') ||
-              uuid == musicControlCharUuid.toLowerCase()) {
+          if (uuid.contains('music') || uuid == musicControlCharUuid.toLowerCase()) {
             _musicControlChar = characteristic;
             // Removed print statement: '✅ Tìm thấy Music Control characteristic');
           }
@@ -327,8 +294,7 @@ class BluetoothService extends ChangeNotifier {
       // Removed print statement: '✅ Đã bật notifications cho Temperature characteristic');
 
       // Listen to temperature updates
-      _temperatureSubscription =
-          _temperatureChar!.onValueReceived.listen((value) {
+      _temperatureSubscription = _temperatureChar!.onValueReceived.listen((value) {
         if (value.isNotEmpty) {
           _parseTemperatureValue(value);
         }
@@ -580,13 +546,13 @@ class BluetoothService extends ChangeNotifier {
     // Cancel temperature subscription
     _temperatureSubscription?.cancel();
     _temperatureSubscription = null;
-
+    
     _temperatureChar = null;
     _lightControlChar = null;
     _lightColorChar = null;
     _lightBrightnessChar = null;
     _musicControlChar = null;
-
+    
     // Removed print statement: '🧹 Đã xóa tất cả characteristics và subscriptions');
   }
 
@@ -600,3 +566,4 @@ class BluetoothService extends ChangeNotifier {
     super.dispose();
   }
 }
+

@@ -311,7 +311,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     // Map English names to Vietnamese names
     final nameMap = {
       'lavender': ['oải hương', 'lavender'],
-      'sweet orange': ['hương cam', 'cam ngot'],
+      'sweet orange': ['cam ngọt', 'cam ngot'],
       'peppermint': ['bạc hà', 'bac ha'],
       'chamomile': ['chamomile'],
       'frankincense': ['hương trầm', 'huong tram'],
@@ -355,7 +355,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       case MoodType.stressed:
         return 'Tinh dầu Oải Hương';
       case MoodType.sad:
-        return 'Tinh dầu Hương Cam';
+        return 'Tinh dầu Cam Ngọt';
       case MoodType.tired:
         return 'Tinh dầu Bạc Hà';
       case MoodType.insomnia:
