@@ -9,6 +9,7 @@ import '../services/global_music_player_service.dart';
 import '../services/music_service.dart';
 import '../services/settings_service.dart';
 import '../services/bluetooth_service.dart';
+import '../widgets/custom_bottom_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,12 +27,28 @@ class _HomeScreenState extends State<HomeScreen> {
   );
   final BluetoothService _bluetoothService = BluetoothService();
   String? _initialChatbotMessage; // Store initial message for chatbot
+  final PageController _pageController = PageController(initialPage: 0);
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() {
+            if (_currentIndex == 1 && index != 1) {
+              _chatbotKey++;
+              _initialChatbotMessage = null;
+            }
+            _currentIndex = index;
+          });
+        },
         children: [
           DashboardHomeScreen(
             key: ValueKey(_deviceStatus.hashCode),
@@ -43,12 +60,16 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             onNavigateToChatbotWithMood: (mood) {
               setState(() {
-                // Store the mood message to pass to chatbot
                 _initialChatbotMessage = mood.label;
                 _currentIndex = 1;
-                // Increment key to reset chatbot with new message
+
                 _chatbotKey++;
               });
+              _pageController.animateToPage(
+                1,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
             },
           ),
           ChatbotScreen(
@@ -61,11 +82,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _currentIndex,
         onTap: (index) {
+          _pageController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
           setState(() {
-            // If switching away from chatbot (index 1), increment key to reset it and clear initial message
             if (_currentIndex == 1 && index != 1) {
               _chatbotKey++;
               _initialChatbotMessage = null;
@@ -73,40 +98,20 @@ class _HomeScreenState extends State<HomeScreen> {
             _currentIndex = index;
           });
         },
-        selectedItemColor: Colors.purple[600],
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Trang chủ',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat),
-            label: 'Chatbot',
-          ),
-        ],
       ),
     );
   }
 
   void _handleMoodSelected(MoodType mood) {
-    // Update device status based on mood
-    setState(() {
-      // Could update temperature simulation based on mood
-      // This is just a demo, real implementation would communicate with ESP32
-    });
+    setState(() {});
   }
 
   void _handleLightSuggested(String lightMode) async {
-    // Check if auto light is enabled
     final autoLightEnabled = await SettingsService.getAutoLightEnabled();
     if (!autoLightEnabled) {
-      // Removed print statement: '⚠️ Auto light is disabled in settings');
       return;
     }
 
-    // Control light via Bluetooth if connected
     if (_bluetoothService.isConnected) {
       await _bluetoothService.setLightOn(true);
       await _bluetoothService.setLightMode(lightMode);
