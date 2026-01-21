@@ -3,45 +3,77 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as ble;
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'esp_api_service.dart';
 
 /// Service UUID for Smart Candle ESP32
-const String candleServiceUuid = '0000180f-0000-1000-8000-00805f9b34fb'; // Battery Service (example, should match ESP32)
+const String candleServiceUuid =
+    '0000180f-0000-1000-8000-00805f9b34fb'; // Battery Service (example, should match ESP32)
 
 /// Characteristic UUIDs for Smart Candle
-const String temperatureCharUuid = '00002a19-0000-1000-8000-00805f9b34fb'; // Temperature reading
-const String lightControlCharUuid = '00002a1a-0000-1000-8000-00805f9b34fb'; // Light on/off
-const String lightColorCharUuid = '00002a1b-0000-1000-8000-00805f9b34fb'; // Light color (RGB)
-const String lightBrightnessCharUuid = '00002a1c-0000-1000-8000-00805f9b34fb'; // Light brightness (0-255)
-const String musicControlCharUuid = '00002a1d-0000-1000-8000-00805f9b34fb'; // Music play/pause/stop
+const String temperatureCharUuid =
+    '00002a19-0000-1000-8000-00805f9b34fb'; // Temperature reading
+const String lightControlCharUuid =
+    '00002a1a-0000-1000-8000-00805f9b34fb'; // Light on/off
+const String lightColorCharUuid =
+    '00002a1b-0000-1000-8000-00805f9b34fb'; // Light color (RGB)
+const String lightBrightnessCharUuid =
+    '00002a1c-0000-1000-8000-00805f9b34fb'; // Light brightness (0-255)
+const String musicControlCharUuid =
+    '00002a1d-0000-1000-8000-00805f9b34fb'; // Music play/pause/stop
+const String voiceDataCharUuid =
+    '00002a1e-0000-1000-8000-00805f9b34fb'; // Voice interaction data (JSON)
+const String wifiConfigCharUuid =
+    '00002a1f-0000-1000-8000-00805f9b34fb'; // WiFi credentials (JSON)
 
 /// Device name pattern for Smart Candle
-const String deviceNamePattern = 'CandleHub'; // ESP32 should advertise with this name
+const String deviceNamePattern =
+    'CandleHub'; // ESP32 should advertise with this name
 
 /// Bluetooth Service for Smart Candle ESP32
 class BluetoothService extends ChangeNotifier {
   static final BluetoothService _instance = BluetoothService._internal();
   factory BluetoothService() => _instance;
-  BluetoothService._internal();
+  BluetoothService._internal() {
+    _loadSavedIp();
+  }
 
+  final EspApiService _espApiService = EspApiService();
+  String? _deviceIp;
   ble.BluetoothDevice? _connectedDevice;
   ble.BluetoothCharacteristic? _temperatureChar;
   ble.BluetoothCharacteristic? _lightControlChar;
   ble.BluetoothCharacteristic? _lightColorChar;
   ble.BluetoothCharacteristic? _lightBrightnessChar;
   ble.BluetoothCharacteristic? _musicControlChar;
+  ble.BluetoothCharacteristic? _voiceDataChar;
+  ble.BluetoothCharacteristic? _wifiConfigChar;
 
   bool _isConnected = false;
   bool _isScanning = false;
   double _currentTemperature = 25.0;
+
+  // Voice Data State
+  String _lastUserText = '';
+  String _lastAiResponse = '';
+  String _lastDetectedEmotion = '';
+
   StreamSubscription<List<ble.ScanResult>>? _scanSubscription;
   StreamSubscription<ble.BluetoothConnectionState>? _connectionSubscription;
   StreamSubscription<List<int>>? _temperatureSubscription;
+  StreamSubscription<List<int>>? _voiceDataSubscription;
 
   // Getters
   bool get isConnected => _isConnected;
   ble.BluetoothDevice? get connectedDevice => _connectedDevice;
   double get currentTemperature => _currentTemperature;
+  String get lastUserText => _lastUserText;
+  String get lastAiResponse => _lastAiResponse;
+  String get lastDetectedEmotion => _lastDetectedEmotion;
   bool get isScanning => _isScanning;
+
+  bool get hasWifiConnection => _hasWifiConnection;
+  String? get deviceIp => _deviceIp;
 
   /// Initialize Bluetooth adapter
   Future<bool> initialize() async {
@@ -53,7 +85,8 @@ class BluetoothService extends ChangeNotifier {
       }
 
       // Check if Bluetooth is on
-      ble.BluetoothAdapterState adapterState = await ble.FlutterBluePlus.adapterState.first;
+      ble.BluetoothAdapterState adapterState =
+          await ble.FlutterBluePlus.adapterState.first;
       if (adapterState != ble.BluetoothAdapterState.on) {
         // Removed print statement: '⚠️ Bluetooth chưa được bật. Vui lòng bật Bluetooth.');
         return false;
@@ -76,7 +109,8 @@ class BluetoothService extends ChangeNotifier {
       }
 
       // Check if Bluetooth is on
-      ble.BluetoothAdapterState adapterState = await ble.FlutterBluePlus.adapterState.first;
+      ble.BluetoothAdapterState adapterState =
+          await ble.FlutterBluePlus.adapterState.first;
       return adapterState == ble.BluetoothAdapterState.on;
     } catch (e) {
       // Removed print statement: '❌ Lỗi kiểm tra trạng thái Bluetooth: $e');
@@ -85,7 +119,8 @@ class BluetoothService extends ChangeNotifier {
   }
 
   /// Start scanning for Smart Candle devices
-  Future<void> startScan({Duration timeout = const Duration(seconds: 10)}) async {
+  Future<void> startScan(
+      {Duration timeout = const Duration(seconds: 10)}) async {
     if (_isScanning) {
       // Removed print statement: '⚠️ Đang quét, vui lòng đợi...');
       return;
@@ -110,9 +145,8 @@ class BluetoothService extends ChangeNotifier {
       _scanSubscription = ble.FlutterBluePlus.scanResults.listen((results) {
         for (ble.ScanResult result in results) {
           final device = result.device;
-          final deviceName = device.platformName.isNotEmpty 
-              ? device.platformName 
-              : 'Unknown';
+          final deviceName =
+              device.platformName.isNotEmpty ? device.platformName : 'Unknown';
 
           // Check if device name matches Smart Candle pattern
           if (deviceName.contains(deviceNamePattern)) {
@@ -137,7 +171,7 @@ class BluetoothService extends ChangeNotifier {
       } catch (scanError) {
         // Handle specific scan errors
         final errorStr = scanError.toString().toLowerCase();
-        if (errorStr.contains('bluetooth must be turned on') || 
+        if (errorStr.contains('bluetooth must be turned on') ||
             errorStr.contains('cbmanagerstate') ||
             errorStr.contains('unsupported')) {
           // Removed print statement: '❌ Bluetooth chưa được bật hoặc không được hỗ trợ');
@@ -189,13 +223,13 @@ class BluetoothService extends ChangeNotifier {
         if (state == ble.BluetoothConnectionState.connected) {
           _isConnected = true;
           // Removed print statement: '✅ Đã kết nối với ${device.platformName}');
-          
+
           // Discover services and characteristics
           await _discoverServices();
-          
+
           // Notify listeners about connection
           notifyListeners();
-          
+
           // Read initial temperature after a short delay to ensure services are discovered
           await Future.delayed(const Duration(milliseconds: 1000));
           if (_isConnected && _temperatureChar != null) {
@@ -232,15 +266,18 @@ class BluetoothService extends ChangeNotifier {
     try {
       // Removed print statement: '🔍 Đang tìm kiếm services và characteristics...');
 
-      List<ble.BluetoothService> services = await _connectedDevice!.discoverServices();
+      List<ble.BluetoothService> services =
+          await _connectedDevice!.discoverServices();
 
       for (ble.BluetoothService service in services) {
         // Find characteristics
-        for (ble.BluetoothCharacteristic characteristic in service.characteristics) {
+        for (ble.BluetoothCharacteristic characteristic
+            in service.characteristics) {
           final uuid = characteristic.uuid.toString().toLowerCase();
 
           // Temperature characteristic
-          if (uuid.contains('temperature') || uuid.contains('temp') || 
+          if (uuid.contains('temperature') ||
+              uuid.contains('temp') ||
               uuid == temperatureCharUuid.toLowerCase()) {
             _temperatureChar = characteristic;
             // Removed print statement: '✅ Tìm thấy Temperature characteristic');
@@ -255,21 +292,37 @@ class BluetoothService extends ChangeNotifier {
           }
 
           // Light color characteristic
-          if (uuid.contains('color') || uuid == lightColorCharUuid.toLowerCase()) {
+          if (uuid.contains('color') ||
+              uuid == lightColorCharUuid.toLowerCase()) {
             _lightColorChar = characteristic;
             // Removed print statement: '✅ Tìm thấy Light Color characteristic');
           }
 
           // Light brightness characteristic
-          if (uuid.contains('brightness') || uuid == lightBrightnessCharUuid.toLowerCase()) {
+          if (uuid.contains('brightness') ||
+              uuid == lightBrightnessCharUuid.toLowerCase()) {
             _lightBrightnessChar = characteristic;
             // Removed print statement: '✅ Tìm thấy Light Brightness characteristic');
           }
 
           // Music control characteristic
-          if (uuid.contains('music') || uuid == musicControlCharUuid.toLowerCase()) {
+          if (uuid.contains('music') ||
+              uuid == musicControlCharUuid.toLowerCase()) {
             _musicControlChar = characteristic;
             // Removed print statement: '✅ Tìm thấy Music Control characteristic');
+          }
+
+          // Voice Data characteristic
+          if (uuid.contains('voice') ||
+              uuid == voiceDataCharUuid.toLowerCase()) {
+            _voiceDataChar = characteristic;
+            _subscribeToVoiceData();
+          }
+
+          // WiFi Config characteristic
+          if (uuid.contains('wifi') ||
+              uuid == wifiConfigCharUuid.toLowerCase()) {
+            _wifiConfigChar = characteristic;
           }
         }
       }
@@ -294,7 +347,8 @@ class BluetoothService extends ChangeNotifier {
       // Removed print statement: '✅ Đã bật notifications cho Temperature characteristic');
 
       // Listen to temperature updates
-      _temperatureSubscription = _temperatureChar!.onValueReceived.listen((value) {
+      _temperatureSubscription =
+          _temperatureChar!.onValueReceived.listen((value) {
         if (value.isNotEmpty) {
           _parseTemperatureValue(value);
         }
@@ -309,6 +363,72 @@ class BluetoothService extends ChangeNotifier {
       // Removed print statement: '✅ Đã đăng ký nhận cập nhật nhiệt độ');
     } catch (e) {
       // Removed print statement: '❌ Lỗi khi đăng ký nhiệt độ: $e');
+    }
+  }
+
+  /// Subscribe to Voice Data updates
+  Future<void> _subscribeToVoiceData() async {
+    if (_voiceDataChar == null) return;
+
+    try {
+      await _voiceDataSubscription?.cancel();
+      _voiceDataSubscription = null;
+
+      await _voiceDataChar!.setNotifyValue(true);
+
+      _voiceDataSubscription = _voiceDataChar!.onValueReceived.listen((value) {
+        if (value.isNotEmpty) {
+          _parseVoiceData(value);
+        }
+      });
+    } catch (e) {
+      debugPrint('❌ Error subscribing to voice data: $e');
+    }
+  }
+
+  /// Parse Voice Data packet (JSON)
+  void _parseVoiceData(List<int> value) {
+    try {
+      final str = utf8.decode(value);
+      final json = jsonDecode(str);
+
+      bool changed = false;
+
+      if (json['user_text'] != null) {
+        _lastUserText = json['user_text'];
+        changed = true;
+      }
+
+      if (json['ai_text'] != null) {
+        _lastAiResponse = json['ai_text'];
+        changed = true;
+      }
+
+      if (json['emotion'] != null) {
+        _lastDetectedEmotion = json['emotion'];
+        changed = true;
+      }
+
+      if (changed) {
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error parsing voice data: $e');
+    }
+  }
+
+  /// Send WiFi Credentials
+  Future<bool> sendWifiCredentials(String jsonPayload) async {
+    if (_wifiConfigChar == null || !_isConnected) {
+      return false;
+    }
+
+    try {
+      List<int> bytes = utf8.encode(jsonPayload);
+      await _wifiConfigChar!.write(bytes, withoutResponse: false);
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -388,26 +508,35 @@ class BluetoothService extends ChangeNotifier {
 
   /// Turn light on/off
   Future<bool> setLightOn(bool on) async {
+    // 1. Try WiFi first
+    if (_hasWifiConnection) {
+      final success = await _espApiService.setLightOn(on);
+      if (success) return true;
+    }
+
+    // 2. Fallback to BLE
     if (_lightControlChar == null || !_isConnected) {
-      // Removed print statement: '⚠️ Không thể điều khiển đèn: chưa kết nối hoặc characteristic không tồn tại');
       return false;
     }
 
     try {
       final command = on ? [0x01] : [0x00]; // 1 = on, 0 = off
       await _lightControlChar!.write(command, withoutResponse: false);
-      // Removed print statement: '💡 Đèn ${on ? "BẬT" : "TẮT"}');
       return true;
     } catch (e) {
-      // Removed print statement: '❌ Lỗi khi điều khiển đèn: $e');
       return false;
     }
   }
 
   /// Set light color (RGB)
   Future<bool> setLightColor(int red, int green, int blue) async {
+    // 1. Try WiFi first
+    if (_hasWifiConnection) {
+      final success = await _espApiService.setLightColor(red, green, blue);
+      if (success) return true;
+    }
+
     if (_lightColorChar == null || !_isConnected) {
-      // Removed print statement: '⚠️ Không thể đổi màu đèn: chưa kết nối hoặc characteristic không tồn tại');
       return false;
     }
 
@@ -419,10 +548,8 @@ class BluetoothService extends ChangeNotifier {
 
       final command = [red, green, blue];
       await _lightColorChar!.write(command, withoutResponse: false);
-      // Removed print statement: '🎨 Đổi màu đèn: RGB($red, $green, $blue)');
       return true;
     } catch (e) {
-      // Removed print statement: '❌ Lỗi khi đổi màu đèn: $e');
       return false;
     }
   }
@@ -446,8 +573,13 @@ class BluetoothService extends ChangeNotifier {
 
   /// Set light brightness (0.0 - 1.0)
   Future<bool> setLightBrightness(double brightness) async {
+    // 1. Try WiFi first
+    if (_hasWifiConnection) {
+      final success = await _espApiService.setLightBrightness(brightness);
+      if (success) return true;
+    }
+
     if (_lightBrightnessChar == null || !_isConnected) {
-      // Removed print statement: '⚠️ Không thể chỉnh độ sáng: chưa kết nối hoặc characteristic không tồn tại');
       return false;
     }
 
@@ -458,10 +590,8 @@ class BluetoothService extends ChangeNotifier {
 
       final command = [brightnessValue];
       await _lightBrightnessChar!.write(command, withoutResponse: false);
-      // Removed print statement: '💡 Độ sáng: ${(brightness * 100).toStringAsFixed(0)}%');
       return true;
     } catch (e) {
-      // Removed print statement: '❌ Lỗi khi chỉnh độ sáng: $e');
       return false;
     }
   }
@@ -491,8 +621,13 @@ class BluetoothService extends ChangeNotifier {
 
   /// Control music playback
   Future<bool> setMusicControl(String command) async {
+    // 1. Try WiFi first
+    if (_hasWifiConnection) {
+      final success = await _espApiService.setMusicControl(command);
+      if (success) return true;
+    }
+
     if (_musicControlChar == null || !_isConnected) {
-      // Removed print statement: '⚠️ Không thể điều khiển nhạc: chưa kết nối hoặc characteristic không tồn tại');
       return false;
     }
 
@@ -513,10 +648,8 @@ class BluetoothService extends ChangeNotifier {
       }
 
       await _musicControlChar!.write(cmd, withoutResponse: false);
-      // Removed print statement: '🎵 Nhạc: $command');
       return true;
     } catch (e) {
-      // Removed print statement: '❌ Lỗi khi điều khiển nhạc: $e');
       return false;
     }
   }
@@ -546,13 +679,15 @@ class BluetoothService extends ChangeNotifier {
     // Cancel temperature subscription
     _temperatureSubscription?.cancel();
     _temperatureSubscription = null;
-    
+
     _temperatureChar = null;
     _lightControlChar = null;
     _lightColorChar = null;
     _lightBrightnessChar = null;
     _musicControlChar = null;
-    
+    _voiceDataChar = null;
+    _wifiConfigChar = null;
+
     // Removed print statement: '🧹 Đã xóa tất cả characteristics và subscriptions');
   }
 
@@ -563,7 +698,32 @@ class BluetoothService extends ChangeNotifier {
     disconnect();
     _temperatureSubscription?.cancel();
     _temperatureSubscription = null;
+    _voiceDataSubscription?.cancel();
+    _voiceDataSubscription = null;
     super.dispose();
   }
-}
 
+  // --- Hybrid WiFi/BLE Logic ---
+
+  bool get _hasWifiConnection => _deviceIp != null && _deviceIp!.isNotEmpty;
+
+  /// Load device IP from shared preferences
+  Future<void> _loadSavedIp() async {
+    final prefs = await SharedPreferences.getInstance();
+    final ip = prefs.getString('candle_device_ip');
+    if (ip != null && ip.isNotEmpty) {
+      setDeviceIp(ip);
+    }
+  }
+
+  /// Set and Save Device IP
+  Future<void> setDeviceIp(String ip) async {
+    _deviceIp = ip;
+    _espApiService.setBaseUrl(ip);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('candle_device_ip', ip);
+
+    notifyListeners();
+  }
+}

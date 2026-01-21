@@ -3,6 +3,7 @@ import '../models/device_status.dart';
 import '../services/settings_service.dart';
 import '../services/bluetooth_service.dart';
 import '../services/auth_service.dart';
+import '../services/wifi_service.dart';
 import 'login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -229,6 +230,154 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void _showWifiDialog() {
+    final ssidController = TextEditingController();
+    final passwordController = TextEditingController();
+    bool isObscure = true;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Cấu hình WiFi cho Nến'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: ssidController,
+                    decoration: const InputDecoration(
+                      labelText: 'Tên WiFi (SSID)',
+                      prefixIcon: Icon(Icons.wifi),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: isObscure,
+                    decoration: InputDecoration(
+                      labelText: 'Mật khẩu',
+                      prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          isObscure ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            isObscure = !isObscure;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Hủy'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(context); // Close dialog first
+                    
+                    if (!_deviceStatus.isBluetoothConnected) {
+                       ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Vui lòng kết nối Bluetooth trước')),
+                      );
+                      return;
+                    }
+
+                    // Show loading
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Đang gửi cấu hình WiFi...')),
+                    );
+
+                    final success = await WifiService().configureWifi(
+                      ssidController.text,
+                      passwordController.text,
+                    );
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            success 
+                              ? '✅ Đã gửi cấu hình WiFi thành công!' 
+                              : '❌ Gửi cấu hình thất bại.',
+                          ),
+                          backgroundColor: success ? Colors.green : Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Kết nối'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showIpDialog() {
+    final ipController = TextEditingController(text: _bluetoothService.deviceIp ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Cấu hình IP thủ công'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Nhập địa chỉ IP của nến để điều khiển qua WiFi (nhanh hơn Bluetooth).',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ipController,
+                decoration: const InputDecoration(
+                  labelText: 'Địa chỉ IP (VD: 192.168.1.100)',
+                  prefixIcon: Icon(Icons.link),
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Hủy'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await _bluetoothService.setDeviceIp(ipController.text);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        ipController.text.isNotEmpty 
+                        ? '✅ Đã lưu IP: ${ipController.text}' 
+                        : '🗑️ Đã xóa cấu hình IP',
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Lưu'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -287,6 +436,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           },
                           activeColor: Colors.blue[600],
                         ),
+                ),
+                if (_deviceStatus.isBluetoothConnected) ...[
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.wifi, color: Colors.blue),
+                    title: const Text('Cấu hình WiFi'),
+                    subtitle: const Text('Kết nối nến với mạng WiFi'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: _showWifiDialog,
+                  ),
+                ],
+                const Divider(),
+                ListTile(
+                  leading: Icon(
+                    Icons.settings_ethernet, 
+                    color: _bluetoothService.hasWifiConnection ? Colors.green : Colors.grey
+                  ),
+                  title: const Text('IP Thiết bị (WiFi Control)'),
+                  subtitle: Text(
+                    _bluetoothService.deviceIp != null && _bluetoothService.deviceIp!.isNotEmpty
+                      ? _bluetoothService.deviceIp!
+                      : 'Chưa cấu hình',
+                  ),
+                  trailing: const Icon(Icons.edit),
+                  onTap: _showIpDialog,
                 ),
               ],
             ),

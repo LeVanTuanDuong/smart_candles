@@ -10,6 +10,7 @@ import '../widgets/music_suggestion_card.dart';
 import '../widgets/music_control_home.dart';
 import '../widgets/smartwatch_card_home.dart';
 import '../widgets/danger_alert_dialog.dart';
+import '../widgets/voice_monitor_widget.dart';
 import '../screens/profile_screen.dart';
 import '../screens/mood_journal_screen.dart';
 import '../screens/safety_history_screen.dart';
@@ -575,6 +576,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
             children: [
               // Temperature Card
               TemperatureCardHome(deviceStatus: _deviceStatus),
+
+              // Voice Monitor Widget (shows only when connected & active)
+              VoiceMonitorWidget(bluetoothService: _bluetoothService),
 
               // Chatbot Section
               ChatbotSectionHome(

@@ -371,7 +371,7 @@ class EmotionAnalysisService {
     
     final topEmotion = sorted.first.key;
     
-    return _mapEmotionKeyToMoodType(topEmotion);
+    return mapEmotionKeyToMoodType(topEmotion);
   }
 
   /// Get secondary emotion
@@ -382,14 +382,14 @@ class EmotionAnalysisService {
       ..sort((a, b) => b.value.compareTo(a.value));
     
     if (sorted.length >= 2) {
-      return _mapEmotionKeyToMoodType(sorted[1].key);
+      return mapEmotionKeyToMoodType(sorted[1].key);
     }
     
     return null;
   }
 
   /// Map emotion key to MoodType
-  static MoodType? _mapEmotionKeyToMoodType(String emotionKey) {
+  static MoodType? mapEmotionKeyToMoodType(String emotionKey) {
     switch (emotionKey) {
       case 'buồn':
         return MoodType.sad;
