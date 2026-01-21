@@ -281,17 +281,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     Navigator.pop(context); // Close dialog first
-                    
+
                     if (!_deviceStatus.isBluetoothConnected) {
-                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Vui lòng kết nối Bluetooth trước')),
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Vui lòng kết nối Bluetooth trước')),
                       );
                       return;
                     }
 
                     // Show loading
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Đang gửi cấu hình WiFi...')),
+                      const SnackBar(
+                          content: Text('Đang gửi cấu hình WiFi...')),
                     );
 
                     final success = await WifiService().configureWifi(
@@ -303,9 +305,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            success 
-                              ? '✅ Đã gửi cấu hình WiFi thành công!' 
-                              : '❌ Gửi cấu hình thất bại.',
+                            success
+                                ? '✅ Đã gửi cấu hình WiFi thành công!'
+                                : '❌ Gửi cấu hình thất bại.',
                           ),
                           backgroundColor: success ? Colors.green : Colors.red,
                         ),
@@ -323,7 +325,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showIpDialog() {
-    final ipController = TextEditingController(text: _bluetoothService.deviceIp ?? '');
+    final ipController =
+        TextEditingController(text: _bluetoothService.deviceIp ?? '');
 
     showDialog(
       context: context,
@@ -362,9 +365,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        ipController.text.isNotEmpty 
-                        ? '✅ Đã lưu IP: ${ipController.text}' 
-                        : '🗑️ Đã xóa cấu hình IP',
+                        ipController.text.isNotEmpty
+                            ? '✅ Đã lưu IP: ${ipController.text}'
+                            : '🗑️ Đã xóa cấu hình IP',
                       ),
                     ),
                   );
@@ -449,15 +452,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
                 const Divider(),
                 ListTile(
-                  leading: Icon(
-                    Icons.settings_ethernet, 
-                    color: _bluetoothService.hasWifiConnection ? Colors.green : Colors.grey
-                  ),
+                  leading: Icon(Icons.settings_ethernet,
+                      color: _bluetoothService.hasWifiConnection
+                          ? Colors.green
+                          : Colors.grey),
                   title: const Text('IP Thiết bị (WiFi Control)'),
                   subtitle: Text(
-                    _bluetoothService.deviceIp != null && _bluetoothService.deviceIp!.isNotEmpty
-                      ? _bluetoothService.deviceIp!
-                      : 'Chưa cấu hình',
+                    _bluetoothService.deviceIp != null &&
+                            _bluetoothService.deviceIp!.isNotEmpty
+                        ? _bluetoothService.deviceIp!
+                        : 'Chưa cấu hình',
                   ),
                   trailing: const Icon(Icons.edit),
                   onTap: _showIpDialog,
@@ -473,8 +477,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   secondary: Icon(Icons.lightbulb, color: Colors.amber[700]),
                   title: const Text('Bật/Tắt đèn'),
                   value: _deviceStatus.isLightOn,
-                  onChanged: (value) {
+                  onChanged: (value) async {
+                    // 1. Update UI immediately for responsiveness
                     _updateStatus(_deviceStatus.copyWith(isLightOn: value));
+
+                    // 2. Call Service to control device
+                    final success = await _bluetoothService.setLightOn(value);
+
+                    // 3. Revert if failed (optional, but good UX)
+                    if (!success && mounted) {
+                      _updateStatus(_deviceStatus.copyWith(isLightOn: !value));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text(
+                                '❌ Không thể điều khiển đèn (Kiểm tra kết nối)')),
+                      );
+                    }
                   },
                   activeColor: Colors.amber[600],
                 ),
@@ -489,6 +507,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _updateStatus(
                           _deviceStatus.copyWith(lightBrightness: value),
                         );
+                      },
+                      onChangeEnd: (value) async {
+                        await _bluetoothService.setLightBrightness(value);
                       },
                       activeColor: _getLightColor(_deviceStatus.lightMode),
                     ),
@@ -506,11 +527,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: Text(_getLightLabel(mode)),
                         );
                       }).toList(),
-                      onChanged: (value) {
+                      onChanged: (value) async {
                         if (value != null) {
                           _updateStatus(
                             _deviceStatus.copyWith(lightMode: value),
                           );
+                          await _bluetoothService.setLightMode(value);
                         }
                       },
                     ),
@@ -527,10 +549,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   secondary: Icon(Icons.music_note, color: Colors.purple[600]),
                   title: const Text('Phát nhạc'),
                   value: _deviceStatus.isMusicPlaying,
-                  onChanged: (value) {
+                  onChanged: (value) async {
                     _updateStatus(
                       _deviceStatus.copyWith(isMusicPlaying: value),
                     );
+                    final command = value ? 'play' : 'pause';
+                    final success =
+                        await _bluetoothService.setMusicControl(command);
+                    if (!success && mounted) {
+                      _updateStatus(
+                          _deviceStatus.copyWith(isMusicPlaying: !value));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('❌ Không thể điều khiển nhạc')),
+                      );
+                    }
                   },
                   activeColor: Colors.purple[600],
                 ),
