@@ -6,6 +6,7 @@ import '../models/essential_oil.dart';
 import '../models/music_track.dart';
 import 'essential_oil_library_screen.dart';
 import 'music_library_screen.dart';
+import 'essential_oil_detail_screen.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -67,9 +68,9 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         title: const Text('Sở thích'),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
+          labelColor: Colors.black,
+          unselectedLabelColor: Colors.black54,
+          indicatorColor: Colors.black,
           tabs: const [
             Tab(text: 'Tinh dầu yêu thích'),
             Tab(text: 'Nhạc yêu thích'),
@@ -108,11 +109,13 @@ class _FavoritesScreenState extends State<FavoritesScreen>
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const EssentialOilLibraryScreen(),
-                  ),
-                ).then((_) => _loadFavorites());
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (context) => const EssentialOilLibraryScreen(),
+                      ),
+                    )
+                    .then((_) => _loadFavorites());
               },
               icon: const Icon(Icons.add),
               label: const Text('Thêm tinh dầu'),
@@ -144,30 +147,40 @@ class _FavoritesScreenState extends State<FavoritesScreen>
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                    child: _buildOilImage(oil),
+            child: InkWell(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => EssentialOilDetailScreen(oil: oil),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    oil.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(12),
+                      ),
+                      child: _buildOilImage(oil),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      oil.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -195,11 +208,13 @@ class _FavoritesScreenState extends State<FavoritesScreen>
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const MusicLibraryScreen(),
-                  ),
-                ).then((_) => _loadFavorites());
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (context) => const MusicLibraryScreen(),
+                      ),
+                    )
+                    .then((_) => _loadFavorites());
               },
               icon: const Icon(Icons.add),
               label: const Text('Tải nhạc lên'),
@@ -296,9 +311,11 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         case 'bưởi':
           assetPath = 'assets/images/tinh dau/buoi.png';
           break;
-        case 'huong cam':
-        case 'hương cam':
-          assetPath = 'assets/images/tinh dau/huong cam.png';
+        case 'cam ngot':
+        case 'cam ngọt':
+        case 'orange':
+        case 'sweet orange':
+          assetPath = 'assets/images/tinh dau/cam ngot.png';
           break;
         case 'sa chanh':
         case 'sả chanh':
@@ -374,4 +391,3 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     );
   }
 }
-

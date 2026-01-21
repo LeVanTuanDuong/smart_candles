@@ -65,9 +65,9 @@ class _UsageHistoryScreenState extends State<UsageHistoryScreen>
         title: const Text('Lịch sử sử dụng'),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
+          labelColor: Colors.black,
+          unselectedLabelColor: Colors.black54,
+          indicatorColor: Colors.black,
           tabs: const [
             Tab(text: 'Nhật ký tâm trạng'),
             Tab(text: 'Lịch sử nhiệt độ'),
@@ -106,11 +106,13 @@ class _UsageHistoryScreenState extends State<UsageHistoryScreen>
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const MoodJournalScreen(),
-                  ),
-                ).then((_) => _loadHistory());
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (context) => const MoodJournalScreen(),
+                      ),
+                    )
+                    .then((_) => _loadHistory());
               },
               icon: const Icon(Icons.add),
               label: const Text('Thêm nhật ký mới'),
@@ -153,21 +155,23 @@ class _UsageHistoryScreenState extends State<UsageHistoryScreen>
                   fontSize: 16,
                 ),
               ),
-              subtitle: entry.journalText != null &&
-                      entry.journalText!.isNotEmpty
-                  ? Text(
-                      entry.journalText!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    )
-                  : const Text('Không có ghi chú'),
+              subtitle:
+                  entry.journalText != null && entry.journalText!.isNotEmpty
+                      ? Text(
+                          entry.journalText!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : const Text('Không có ghi chú'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const MoodJournalScreen(),
-                  ),
-                ).then((_) => _loadHistory());
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (context) => const MoodJournalScreen(),
+                      ),
+                    )
+                    .then((_) => _loadHistory());
               },
             ),
           );
@@ -197,11 +201,13 @@ class _UsageHistoryScreenState extends State<UsageHistoryScreen>
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const SafetyHistoryScreen(),
-                  ),
-                ).then((_) => _loadHistory());
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (context) => const SafetyHistoryScreen(),
+                      ),
+                    )
+                    .then((_) => _loadHistory());
               },
               icon: const Icon(Icons.history),
               label: const Text('Xem chi tiết'),
@@ -262,11 +268,13 @@ class _UsageHistoryScreenState extends State<UsageHistoryScreen>
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const SafetyHistoryScreen(),
-                  ),
-                ).then((_) => _loadHistory());
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (context) => const SafetyHistoryScreen(),
+                      ),
+                    )
+                    .then((_) => _loadHistory());
               },
             ),
           );
@@ -294,4 +302,3 @@ class _UsageHistoryScreenState extends State<UsageHistoryScreen>
     return status.label;
   }
 }
-

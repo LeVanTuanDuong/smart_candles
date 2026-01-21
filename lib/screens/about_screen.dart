@@ -15,18 +15,9 @@ class AboutScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 40),
             // App Logo/Icon
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.purple[600],
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.spa,
-                size: 60,
-                color: Colors.white,
-              ),
+            ClipOval(
+              child: Image.asset('assets/images/logo.png',
+                  width: 120, height: 120, fit: BoxFit.cover),
             ),
             const SizedBox(height: 24),
             // App Name
@@ -107,11 +98,6 @@ class AboutScreen extends StatelessWidget {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       // TODO: Show terms of service
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Tính năng đang phát triển'),
-                        ),
-                      );
                     },
                   ),
                   Divider(color: Colors.grey[300]),
@@ -121,11 +107,6 @@ class AboutScreen extends StatelessWidget {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       // TODO: Show privacy policy
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Tính năng đang phát triển'),
-                        ),
-                      );
                     },
                   ),
                 ],
@@ -134,7 +115,7 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 40),
             // Copyright
             Text(
-              '© 2024 Smart Candles',
+              '© 2025 Smart Candles',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[500],
@@ -196,4 +177,3 @@ class AboutScreen extends StatelessWidget {
     );
   }
 }
-
