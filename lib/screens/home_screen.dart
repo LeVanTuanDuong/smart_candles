@@ -20,7 +20,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  int _chatbotKey = 0; // Key to force reset chatbot when switching back
   DeviceStatus _deviceStatus = DeviceStatus(
     temperature: 35.0,
     isBluetoothConnected: false,
@@ -43,7 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
         onPageChanged: (index) {
           setState(() {
             if (_currentIndex == 1 && index != 1) {
-              _chatbotKey++;
               _initialChatbotMessage = null;
             }
             _currentIndex = index;
@@ -62,8 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
               setState(() {
                 _initialChatbotMessage = mood.label;
                 _currentIndex = 1;
-
-                _chatbotKey++;
               });
               _pageController.animateToPage(
                 1,
@@ -73,7 +69,6 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           ChatbotScreen(
-            key: ValueKey(_chatbotKey),
             initialMessage: _initialChatbotMessage,
             onMoodSelected: _handleMoodSelected,
             onMusicSuggested: _handleMusicSuggested,
@@ -92,7 +87,6 @@ class _HomeScreenState extends State<HomeScreen> {
           );
           setState(() {
             if (_currentIndex == 1 && index != 1) {
-              _chatbotKey++;
               _initialChatbotMessage = null;
             }
             _currentIndex = index;

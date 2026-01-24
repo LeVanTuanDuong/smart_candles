@@ -289,52 +289,52 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       switch (imageType.toLowerCase()) {
         case 'lavender':
         case 'oải hương':
-          assetPath = 'assets/images/tinh dau/lavender.png';
+          assetPath = 'assets/images/tinh_dau/lavender.png';
           break;
         case 'huong tram':
         case 'hương trầm':
-          assetPath = 'assets/images/tinh dau/huong tram.png';
+          assetPath = 'assets/images/tinh_dau/huong_tram.png';
           break;
         case 'bac ha':
         case 'bạc hà':
-          assetPath = 'assets/images/tinh dau/bac ha.png';
+          assetPath = 'assets/images/tinh_dau/bac_ha.png';
           break;
         case 'khuynh diep':
         case 'khuynh diệp':
-          assetPath = 'assets/images/tinh dau/khuynh diep.png';
+          assetPath = 'assets/images/tinh_dau/khuynh_diep.png';
           break;
         case 'tram tra':
         case 'tràm trà':
-          assetPath = 'assets/images/tinh dau/tram tra.png';
+          assetPath = 'assets/images/tinh_dau/tram_tra.png';
           break;
         case 'buoi':
         case 'bưởi':
-          assetPath = 'assets/images/tinh dau/buoi.png';
+          assetPath = 'assets/images/tinh_dau/buoi.png';
           break;
         case 'cam ngot':
         case 'cam ngọt':
         case 'orange':
         case 'sweet orange':
-          assetPath = 'assets/images/tinh dau/cam ngot.png';
+          assetPath = 'assets/images/tinh_dau/cam_ngot.png';
           break;
         case 'sa chanh':
         case 'sả chanh':
-          assetPath = 'assets/images/tinh dau/sa chanh.png';
+          assetPath = 'assets/images/tinh_dau/sa_chanh.png';
           break;
         case 'gung':
         case 'gừng':
-          assetPath = 'assets/images/tinh dau/gung.png';
+          assetPath = 'assets/images/tinh_dau/gung.png';
           break;
         case 'ngoc lan tay':
         case 'ngọc lan tây':
-          assetPath = 'assets/images/tinh dau/ngoc lan tay.png';
+          assetPath = 'assets/images/tinh_dau/ngoc_lan_tay.png';
           break;
         case 'hoa nhai':
         case 'hoa nhài':
-          assetPath = 'assets/images/tinh dau/hoa nhai.png';
+          assetPath = 'assets/images/tinh_dau/hoa_nhai.png';
           break;
         case 'chanh':
-          assetPath = 'assets/images/tinh dau/chanh.png';
+          assetPath = 'assets/images/tinh_dau/chanh.png';
           break;
       }
 

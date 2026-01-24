@@ -51,6 +51,10 @@ dependencies:
   firebase_storage: ^12.4.10
   url_launcher: ^6.3.2
   clipboard: ^3.0.8
+  tflite_flutter: ^0.12.1
+  google_mlkit_face_detection: ^0.11.0
+  archive: ^3.6.1
+  image: ^4.1.7
 
 dev_dependencies:
   flutter_test:
@@ -77,7 +81,8 @@ flutter:
   assets:
     - assets/sounds/
     - assets/images/
-    - assets/images/tinh dau/
+    - assets/images/tinh_dau/
+    - assets/ai_models/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

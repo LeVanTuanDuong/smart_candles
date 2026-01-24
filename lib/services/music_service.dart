@@ -9,7 +9,7 @@ class MusicService {
   // Get SharedPreferences instance
   static Future<SharedPreferences?> _getPreferences() async {
     if (_prefs != null) return _prefs;
-    
+
     try {
       await Future.delayed(const Duration(milliseconds: 100));
       _prefs = await SharedPreferences.getInstance();
@@ -39,45 +39,45 @@ class MusicService {
   // Map audio file names to categories
   static Map<String, String> _getAudioFileCategories() {
     return {
-      'Thiên nhiên - Ocean Waves.mp3': 'Thiên nhiên',
-      'Thiên nhiên - Tiếng mưa trong rừng.mp3': 'Thiên nhiên',
-      'Nhạc Piano - Relaxing.mp3': 'Nhạc Piano',
-      'Nhạc Piano - Peaceful.mp3': 'Nhạc Piano',
-      'Nhạc thiền tịnh tâm.mp3': 'Thiền',
-      'Nhạc Thiền Vô Ưu.mp3': 'Thiền',
-      'Meditation Music.mp3': 'Thiền',
-      'Ambient - Calm.mp3': 'Ambient',
-      'Ambient - Space.mp3': 'Ambient',
+      'Nature_Ocean_Waves.mp3': 'Thiên nhiên',
+      'Nature_Tieng_mua_trong_rung.mp3': 'Thiên nhiên',
+      'Piano_Relaxing.mp3': 'Nhạc Piano',
+      'Piano_Peaceful.mp3': 'Nhạc Piano',
+      'Meditation_tinh_tam.mp3': 'Thiền',
+      'Meditation_Vo_uu.mp3': 'Thiền',
+      'Meditation_Music.mp3': 'Thiền',
+      'Ambient_Calm.mp3': 'Ambient',
+      'Ambient_Space.mp3': 'Ambient',
     };
   }
 
   // Map audio file names to image file names
   static Map<String, String> _getAudioToImageMapping() {
     return {
-      'Thiên nhiên - Ocean Waves.mp3': 'Alaskan Lake.jpg',
-      'Thiên nhiên - Tiếng mưa trong rừng.mp3': 'Amazon Rainforest.jpg',
-      'Nhạc Piano - Relaxing.mp3': 'Alaskan Dawn.jpg',
-      'Nhạc Piano - Peaceful.mp3': 'Autumn Forest.jpg',
-      'Nhạc thiền tịnh tâm.mp3': 'Cloudforest Africa.jpg',
-      'Nhạc Thiền Vô Ưu.mp3': 'Alpine Cow Bells.jpg',
-      'Meditation Music.mp3': 'Ambient India.jpg',
-      'Ambient - Calm.mp3': 'Evening Marsh.jpg',
-      'Ambient - Space.mp3': 'Desert Evening.jpg',
+      'Nature_Ocean_Waves.mp3': 'Alaskan Lake.jpg',
+      'Nature_Tieng_mua_trong_rung.mp3': 'Amazon Rainforest.jpg',
+      'Piano_Relaxing.mp3': 'Alaskan Dawn.jpg',
+      'Piano_Peaceful.mp3': 'Autumn Forest.jpg',
+      'Meditation_tinh_tam.mp3': 'Cloudforest Africa.jpg',
+      'Meditation_Vo_uu.mp3': 'Alpine Cow Bells.jpg',
+      'Meditation_Music.mp3': 'Ambient India.jpg',
+      'Ambient_Calm.mp3': 'Evening Marsh.jpg',
+      'Ambient_Space.mp3': 'Desert Evening.jpg',
     };
   }
 
   // Map audio file names to descriptions
   static Map<String, String> _getAudioDescriptions() {
     return {
-      'Thiên nhiên - Ocean Waves.mp3': 'Sóng biển êm đềm',
-      'Thiên nhiên - Tiếng mưa trong rừng.mp3': 'Âm thanh mưa thư giãn',
-      'Nhạc Piano - Relaxing.mp3': 'Nhạc piano nhẹ nhàng',
-      'Nhạc Piano - Peaceful.mp3': 'Piano thanh bình',
-      'Nhạc thiền tịnh tâm.mp3': 'Nhạc thiền định tâm',
-      'Nhạc Thiền Vô Ưu.mp3': 'Nhạc thiền vô ưu',
-      'Meditation Music.mp3': 'Nhạc thiền sâu lắng',
-      'Ambient - Calm.mp3': 'Nhạc ambient nhẹ nhàng',
-      'Ambient - Space.mp3': 'Nhạc ambient không gian',
+      'Nature_Ocean_Waves.mp3': 'Sóng biển êm đềm',
+      'Nature_Tieng_mua_trong_rung.mp3': 'Âm thanh mưa thư giãn',
+      'Piano_Relaxing.mp3': 'Nhạc piano nhẹ nhàng',
+      'Piano_Peaceful.mp3': 'Piano thanh bình',
+      'Meditation_tinh_tam.mp3': 'Nhạc thiền định tâm',
+      'Meditation_Vo_uu.mp3': 'Nhạc thiền vô ưu',
+      'Meditation_Music.mp3': 'Nhạc thiền sâu lắng',
+      'Ambient_Calm.mp3': 'Nhạc ambient nhẹ nhàng',
+      'Ambient_Space.mp3': 'Nhạc ambient không gian',
     };
   }
 
@@ -89,26 +89,26 @@ class MusicService {
 
     // Find all audio files for this category
     final List<MusicTrack> tracks = [];
-    
+
     audioCategories.forEach((audioFile, audioCategory) {
       if (audioCategory == category) {
         // Extract track name from file name (remove .mp3 extension)
         String trackName = audioFile.replaceAll('.mp3', '');
-        
+
         // Get image file name
         final imageFileName = audioToImage[audioFile] ?? '';
-        final imagePath = imageFileName.isNotEmpty 
-            ? 'assets/images/$imageFileName'
-            : null;
-        
+        final imagePath =
+            imageFileName.isNotEmpty ? 'assets/images/$imageFileName' : null;
+
         // Get description
         final description = audioDescriptions[audioFile] ?? '';
-        
+
         // Create track with asset path
         tracks.add(MusicTrack(
           id: 'asset_${audioFile.hashCode}',
           name: trackName,
-          description: description.isNotEmpty ? description : 'Nhạc từ thư viện',
+          description:
+              description.isNotEmpty ? description : 'Nhạc từ thư viện',
           category: category,
           audioPath: 'assets/sounds/$audioFile', // Use asset path, not URL
           imagePath: imagePath,

@@ -67,50 +67,50 @@ class EssentialOilSuggestionCard extends StatelessWidget {
 
     switch (imageTypeLower) {
       case 'lavender':
-        return 'assets/images/tinh dau/lavender.png';
+        return 'assets/images/tinh_dau/lavender.png';
       case 'huong tram':
       case 'huongtram':
       case 'frankincense':
-        return 'assets/images/tinh dau/huong tram.png';
+        return 'assets/images/tinh_dau/huong_tram.png';
       case 'bac ha':
       case 'bacha':
       case 'peppermint':
-        return 'assets/images/tinh dau/bac ha.png';
+        return 'assets/images/tinh_dau/bac_ha.png';
       case 'khuynh diep':
       case 'khuynhdiep':
       case 'eucalyptus':
-        return 'assets/images/tinh dau/khuynh diep.png';
+        return 'assets/images/tinh_dau/khuynh_diep.png';
       case 'tram tra':
       case 'tramtra':
       case 'tea tree':
-        return 'assets/images/tinh dau/tram tra.png';
+        return 'assets/images/tinh_dau/tram_tra.png';
       case 'buoi':
       case 'grapefruit':
-        return 'assets/images/tinh dau/buoi.png';
+        return 'assets/images/tinh_dau/buoi.png';
       case 'cam ngot':
       case 'camngot':
       case 'orange':
       case 'sweet orange':
-        return 'assets/images/tinh dau/cam ngot.png';
+        return 'assets/images/tinh_dau/cam_ngot.png';
       case 'sa chanh':
       case 'sachanh':
       case 'lemongrass':
-        return 'assets/images/tinh dau/sa chanh.png';
+        return 'assets/images/tinh_dau/sa_chanh.png';
       case 'gung':
       case 'ginger':
-        return 'assets/images/tinh dau/gung.png';
+        return 'assets/images/tinh_dau/gung.png';
       case 'ngoc lan tay':
       case 'ngoclantay':
       case 'ylang-ylang':
       case 'ylang ylang':
-        return 'assets/images/tinh dau/ngoc lan tay.png';
+        return 'assets/images/tinh_dau/ngoc_lan_tay.png';
       case 'hoa nhai':
       case 'hoanhai':
       case 'jasmine':
-        return 'assets/images/tinh dau/hoa nhai.png';
+        return 'assets/images/tinh_dau/hoa_nhai.png';
       case 'chanh':
       case 'lemon':
-        return 'assets/images/tinh dau/chanh.png';
+        return 'assets/images/tinh_dau/chanh.png';
       default:
         return null;
     }

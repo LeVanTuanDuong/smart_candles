@@ -1,193 +1,83 @@
-import '../models/message.dart';
-import '../models/mood_type.dart';
-import 'chatbot_flow_service.dart';
+import 'ai_inference_service.dart';
 
 class ChatbotService {
-  static List<String> getMusicSuggestions(MoodType mood) {
-    switch (mood) {
-      case MoodType.stressed:
-        return ['Piano chậm', 'Nature sound', 'Meditation music'];
-      case MoodType.sad:
-        return ['Ambient', 'Piano chậm', 'Nature sound'];
-      case MoodType.tired:
-        return ['Ambient', 'Nature sound'];
-      case MoodType.insomnia:
-        return ['Meditation music', 'Nature sound', 'Ambient'];
-      case MoodType.normal:
-        return ['Ambient', 'Piano chậm'];
-    }
-  }
+  /// Main entry point for processing user messages
+  static Future<Map<String, dynamic>> processUserMessage(String input) async {
+    // 1. Determine Intent (Control)
+    final intent = await AiInferenceService().determineIntent(input);
 
-  static String getLightSuggestion(MoodType mood) {
-    switch (mood) {
-      case MoodType.stressed:
-        return 'warm';
-      case MoodType.sad:
-        return 'amber';
-      case MoodType.tired:
-        return 'amber';
-      case MoodType.insomnia:
-        return 'blue';
-      case MoodType.normal:
-        return 'warm';
-    }
-  }
-
-  static String getLightLabel(String mode) {
-    switch (mode) {
-      case 'warm':
-        return 'Warm white - Thư giãn';
-      case 'amber':
-        return 'Amber - Hỗ trợ giấc ngủ';
-      case 'blue':
-        return 'Soft blue - Bình tĩnh, thiền';
-      default:
-        return 'Warm white';
-    }
-  }
-
-  static List<ChatMessage> analyzeMoodAndSuggest(MoodType mood) {
-    final messages = <ChatMessage>[];
-
-    // Message phân tích tâm trạng
-    String analysis = '';
-    switch (mood) {
-      case MoodType.stressed:
-        analysis =
-            'Mình thấy bạn đang khá căng thẳng. Điều này hoàn toàn bình thường sau một ngày dài. Hãy hít thở sâu cùng mình nhé.';
-        break;
-      case MoodType.sad:
-        analysis =
-            'Mình hiểu bạn đang cảm thấy buồn. Những cảm xúc này là điều tự nhiên. Hãy để mình giúp bạn cảm thấy tốt hơn.';
-        break;
-      case MoodType.tired:
-        analysis =
-            'Bạn trông mệt mỏi rồi. Hãy thư giãn và để cơ thể được nghỉ ngơi nhé.';
-        break;
-      case MoodType.insomnia:
-        analysis =
-            'Khó ngủ có thể khiến bạn căng thẳng. Hãy để mình giúp bạn thư giãn và chuẩn bị cho giấc ngủ ngon.';
-        break;
-      case MoodType.normal:
-        analysis =
-            'Thật tuyệt khi bạn đang cảm thấy tốt! Hãy duy trì cảm xúc tích cực này nhé.';
-        break;
+    if (intent != null) {
+      // If intent found, return Action
+      return {
+        'type': 'action',
+        'intent': intent,
+        'message': _getIntentConfirmationMessage(intent),
+      };
     }
 
-    messages.add(ChatMessage(
-      text: analysis,
-      isBot: true,
-      timestamp: DateTime.now(),
-    ));
+    // 2. Analyze Emotion (for context)
+    // We assume timeOfDay is 'afternoon' for now or pass it in.
+    // Ideally ChatbotService/Screen handles this context.
+    // For simplicity, we just use the text.
+    final emotionAnalysis =
+        await AiInferenceService().analyzeTextEmotion(input);
+    final topEmotion = _getTopEmotion(emotionAnalysis);
 
-    // Gợi ý tinh dầu
-    messages.add(ChatMessage(
-      text:
-          'Mình đề xuất bạn dùng tinh dầu ${mood.essentialOil} để ${mood.effect.toLowerCase()}. Hãy thắp nến trong 20–30 phút.',
-      isBot: true,
-      timestamp: DateTime.now(),
-      suggestionType: 'essential_oil',
-    ));
+    // 3. Generate Conversational Response (Gemma)
+    String response;
+    try {
+      // Build prompt with context
+      String prompt = "User says: \"$input\". ";
+      if (topEmotion != null) {
+        prompt += "User seems $topEmotion. ";
+      }
+      prompt += "Respond kindly and briefly in Vietnamese.";
 
-    // Gợi ý nhạc
-    final music = getMusicSuggestions(mood).first;
-    messages.add(ChatMessage(
-      text: 'Mình sẽ bật nhạc $music nhẹ nhàng giúp bạn bình tĩnh hơn nhé.',
-      isBot: true,
-      timestamp: DateTime.now(),
-      suggestionType: 'music',
-    ));
+      response = await AiInferenceService().generateGemmaResponse(prompt);
 
-    // Gợi ý ánh sáng
-    final lightMode = getLightSuggestion(mood);
-    messages.add(ChatMessage(
-      text:
-          'Mình sẽ điều chỉnh ánh sáng ${getLightLabel(lightMode)} để tạo không gian thư giãn cho bạn.',
-      isBot: true,
-      timestamp: DateTime.now(),
-      suggestionType: 'light',
-    ));
-
-    return messages;
-  }
-
-  static ChatMessage getGreetingMessage() {
-    return ChatMessage(
-      text:
-          'Xin chào! Hôm nay bạn cảm thấy thế nào? Bạn đang mệt, buồn hay căng thẳng?',
-      isBot: true,
-      timestamp: DateTime.now(),
-    );
-  }
-
-  // Get fallback response based on user message (replaces DialogflowService)
-  static String getFallbackResponse(String userMessage) {
-    final userLower = userMessage.toLowerCase();
-
-    // Use ChatbotFlowService for mood detection and responses
-    MoodType? detectedMood;
-
-    // Check for stress/anxiety
-    if (userLower.contains('căng thẳng') ||
-        userLower.contains('stressed') ||
-        userLower.contains('lo âu') ||
-        userLower.contains('lo lắng') ||
-        userLower.contains('anxiety') ||
-        userLower.contains('bực bội') ||
-        userLower.contains('cáu')) {
-      detectedMood = MoodType.stressed;
-    } else if (userLower.contains('buồn') ||
-        userLower.contains('sad') ||
-        userLower.contains('trầm') ||
-        userLower.contains('chán nản') ||
-        userLower.contains('trống rỗng')) {
-      detectedMood = MoodType.sad;
-    } else if (userLower.contains('mệt') ||
-        userLower.contains('tired') ||
-        userLower.contains('mệt mỏi') ||
-        userLower.contains('kiệt sức')) {
-      detectedMood = MoodType.tired;
-    } else if (userLower.contains('khó ngủ') ||
-        userLower.contains('mất ngủ') ||
-        userLower.contains('insomnia') ||
-        userLower.contains('không ngủ được')) {
-      detectedMood = MoodType.insomnia;
-    } else if (userLower.contains('tốt') ||
-        userLower.contains('bình thường') ||
-        userLower.contains('ok') ||
-        userLower.contains('good') ||
-        userLower.contains('vui') ||
-        userLower.contains('ổn')) {
-      detectedMood = MoodType.normal;
+      // Fallback if model not ready
+      if (response == "Model chưa sẵn sàng.") {
+        response =
+            "Mình đang tải dữ liệu để nói chuyện với bạn. Bạn chờ chút nhé.";
+      }
+    } catch (e) {
+      response =
+          "Xin lỗi, mình đang gặp chút trục trặc. Bạn nói lại được không?";
     }
-
-    if (detectedMood != null) {
-      // Use ChatbotFlowService for mood-specific responses
-      return ChatbotFlowService.getMoodResponse(detectedMood, null);
-    }
-
-    return 'Mình hiểu bạn. Hãy cho mình biết thêm về cảm xúc của bạn nhé. Bạn đang cảm thấy thế nào?';
-  }
-
-  // Get suggestions map (replaces DialogflowService.getSuggestions)
-  static Future<Map<String, String>> getSuggestions(MoodType mood) async {
-    final essentialOilSuggestions =
-        ChatbotFlowService.getEssentialOilSuggestions(mood);
-    final primaryOil =
-        essentialOilSuggestions['primary']?.first ?? mood.essentialOil;
-
-    final musicSuggestions = ChatbotFlowService.getMusicSuggestions(mood);
-    final primaryMusic = musicSuggestions.isNotEmpty
-        ? musicSuggestions.first['type'] ?? 'Thiền'
-        : 'Thiền';
-
-    final lightSuggestion = ChatbotFlowService.getLightSuggestion(mood, null);
-    final lightMode = lightSuggestion['mode'] as String? ?? 'warm';
 
     return {
-      'essential_oil': primaryOil,
-      'music': primaryMusic,
-      'light': lightMode,
+      'type': 'text',
+      'message': response,
     };
+  }
+
+  static String? _getTopEmotion(Map<String, double> scores) {
+    if (scores.isEmpty) return null;
+    var sorted = scores.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sorted.first.key;
+  }
+
+  static String _getIntentConfirmationMessage(String intent) {
+    switch (intent) {
+      case 'LIGHT_ON':
+        return "Ok, mình bật đèn cho bạn ngay.";
+      case 'LIGHT_OFF':
+        return "Được rồi, mình tắt đèn nhé.";
+      case 'LIGHT_COLOR':
+        return "Ok, mình sẽ đổi màu đèn.";
+      case 'MUSIC_ON':
+        return "Mình bật nhạc ngay đây.";
+      case 'MUSIC_OFF':
+        return "Ok, mình tắt nhạc nhé.";
+      case 'MUSIC_CHANGE':
+        return "Mình đổi bài khác nhé.";
+      default:
+        return "Được rồi.";
+    }
+  }
+
+  static String getCheckInGreeting() {
+    return "Chào bạn! Hôm nay bạn cảm thấy thế nào? Mình ở đây để lắng nghe và hỗ trợ bạn.";
   }
 }

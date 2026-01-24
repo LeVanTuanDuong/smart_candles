@@ -16,7 +16,7 @@ import '../screens/mood_journal_screen.dart';
 import '../screens/safety_history_screen.dart';
 import '../screens/meditation_guide_screen.dart';
 import '../screens/music_library_screen.dart';
-import '../services/chatbot_service.dart' show ChatbotService;
+
 import '../services/temperature_history_service.dart';
 import '../models/temperature_history_entry.dart';
 import '../services/global_music_player_service.dart';
@@ -167,6 +167,38 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     _updateSuggestedEssentialOil();
   }
 
+  // Helper method to get default music suggestion
+  String _getDefaultMusicSuggestion(MoodType mood) {
+    switch (mood) {
+      case MoodType.stressed:
+        return 'Nhạc Thiền';
+      case MoodType.sad:
+        return 'Nhạc Piano';
+      case MoodType.tired:
+        return 'Nhạc Thiên nhiên';
+      case MoodType.insomnia:
+        return 'Nhạc Mưa';
+      default:
+        return 'Nhạc Thư giãn';
+    }
+  }
+
+  // Helper method to get default light suggestion
+  String _getDefaultLightSuggestion(MoodType mood) {
+    switch (mood) {
+      case MoodType.stressed:
+        return 'warm';
+      case MoodType.sad:
+        return 'warm';
+      case MoodType.tired:
+        return 'white';
+      case MoodType.insomnia:
+        return 'amber';
+      default:
+        return 'warm';
+    }
+  }
+
   Future<void> _updateSuggestedMusicTrack() async {
     try {
       // Use the current detected mood from SuggestionService (most up-to-date)
@@ -175,7 +207,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
       // Get the suggested music type from chatbot (prioritize from SuggestionService)
       final musicType = _suggestionService.musicSuggestion ??
-          ChatbotService.getMusicSuggestions(currentMood).first;
+          _getDefaultMusicSuggestion(currentMood);
 
       // Map music type to category (handle both Vietnamese and English, and exact matches)
       String category = 'Thiền'; // default
@@ -185,7 +217,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       if (musicLower == 'nhạc piano' ||
           musicLower == 'piano chậm' ||
           musicLower == 'piano ấm' ||
-          musicLower.contains('piano') && !musicLower.contains('ambient')) {
+          (musicLower.contains('piano') && !musicLower.contains('ambient'))) {
         category = 'Nhạc Piano';
       } else if (musicLower == 'ambient' ||
           musicLower == 'ambient nhẹ' ||
@@ -463,9 +495,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       _selectedMood = mood;
       _suggestedMood = mood;
 
-      final lightMode = ChatbotService.getLightSuggestion(mood);
+      final lightMode = _getDefaultLightSuggestion(mood);
       final suggestedMusic = _suggestionService.musicSuggestion ??
-          ChatbotService.getMusicSuggestions(mood).first;
+          _getDefaultMusicSuggestion(mood);
       _deviceStatus = _deviceStatus.copyWith(
         isLightOn: true,
         lightMode: lightMode,
@@ -597,9 +629,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                     _globalMusicPlayer.currentTrack, // Pass the track for image
                 musicTitle: _globalMusicPlayer.currentTrack?.name ??
                     _deviceStatus.currentMusic ??
-                    ChatbotService.getMusicSuggestions(
+                    _getDefaultMusicSuggestion(
                       _suggestedMood ?? MoodType.normal,
-                    ).first,
+                    ),
                 musicSubtitle: _globalMusicPlayer.currentTrack?.category ??
                     (_deviceStatus.currentMusic != null &&
                             _suggestedMood != null
@@ -638,8 +670,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                         // No suggested track, try to find and play a default track based on mood
                         final currentMood = _suggestedMood ?? MoodType.normal;
                         final musicType = _suggestionService.musicSuggestion ??
-                            ChatbotService.getMusicSuggestions(currentMood)
-                                .first;
+                            _getDefaultMusicSuggestion(currentMood);
 
                         // Map music type to category and get a track
                         String category = 'Thiền';
@@ -749,11 +780,11 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
               MusicSuggestionCard(
                 suggestedTrack: _suggestedMusicTrack,
                 musicType: _suggestionService.musicSuggestion ??
-                    ChatbotService.getMusicSuggestions(
+                    _getDefaultMusicSuggestion(
                       _suggestionService.detectedMood ??
                           _suggestedMood ??
                           MoodType.normal,
-                    ).first,
+                    ),
                 onPlayPressed: () async {
                   // Use the suggested track if available
                   if (_suggestedMusicTrack != null) {
@@ -785,9 +816,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                   } else {
                     // Try to get a track from library
                     final musicType = _suggestionService.musicSuggestion ??
-                        ChatbotService.getMusicSuggestions(
+                        _getDefaultMusicSuggestion(
                           _suggestedMood ?? MoodType.normal,
-                        ).first;
+                        );
 
                     // Map music type to category
                     String category = 'Thiền'; // default

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/bluetooth_service.dart';
-import '../services/emotion_analysis_service.dart';
+
 import '../models/mood_type.dart';
 
 class VoiceMonitorWidget extends StatelessWidget {
@@ -23,7 +23,7 @@ class VoiceMonitorWidget extends StatelessWidget {
         final emotionKey = bluetoothService.lastDetectedEmotion;
 
         if (userText.isEmpty && aiText.isEmpty) {
-            return const SizedBox.shrink();
+          return const SizedBox.shrink();
         }
 
         return Container(
@@ -59,8 +59,7 @@ class VoiceMonitorWidget extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  if (emotionKey.isNotEmpty)
-                    _buildEmotionBadge(emotionKey),
+                  if (emotionKey.isNotEmpty) _buildEmotionBadge(emotionKey),
                 ],
               ),
               const Divider(height: 24),
@@ -109,7 +108,7 @@ class VoiceMonitorWidget extends StatelessWidget {
   }
 
   Widget _buildEmotionBadge(String emotionKey) {
-    final mood = EmotionAnalysisService.mapEmotionKeyToMoodType(emotionKey);
+    final mood = _mapEmotionKeyToMoodType(emotionKey);
     Color color;
     IconData icon;
     String label;
@@ -136,7 +135,6 @@ class VoiceMonitorWidget extends StatelessWidget {
         label = 'Mất ngủ';
         break;
       case MoodType.normal:
-      default:
         color = Colors.green;
         icon = Icons.sentiment_satisfied;
         label = 'Ổn định';
@@ -166,5 +164,21 @@ class VoiceMonitorWidget extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  MoodType _mapEmotionKeyToMoodType(String emotionKey) {
+    // Map keys from AiInferenceService
+    // 'buồn', 'vui', 'hạnh phúc', 'tức_giận', 'lo_âu', 'ngạc_nhiên'
+
+    final key = emotionKey.toLowerCase().trim();
+    if (key.contains('buồn')) return MoodType.sad;
+    if (key.contains('tức_giận') ||
+        key.contains('lo_âu') ||
+        key.contains('căng thẳng')) return MoodType.stressed;
+    if (key.contains('mệt')) return MoodType.tired;
+    if (key.contains('khó ngủ')) return MoodType.insomnia;
+
+    // Default to normal for happy/surprise/etc
+    return MoodType.normal;
   }
 }
