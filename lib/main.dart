@@ -1,11 +1,36 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'screens/auth_gate.dart';
 import 'screens/splash_screen.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  // Set up global error handlers first (before any Flutter initialization)
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('═══════════════════════════════════════');
+    debugPrint('Flutter Error Caught:');
+    debugPrint('${details.exception}');
+    debugPrint('Stack trace:');
+    debugPrint('${details.stack}');
+    debugPrint('═══════════════════════════════════════');
+  };
 
-  runApp(const MyApp());
+  // Run app in error zone to catch async errors
+  runZonedGuarded(
+    () async {
+      // Ensure Flutter is initialized INSIDE the zone
+      WidgetsFlutterBinding.ensureInitialized();
+      runApp(const MyApp());
+    },
+    (error, stackTrace) {
+      debugPrint('═══════════════════════════════════════');
+      debugPrint('Uncaught Error:');
+      debugPrint('$error');
+      debugPrint('Stack trace:');
+      debugPrint('$stackTrace');
+      debugPrint('═══════════════════════════════════════');
+    },
+  );
 }
 
 class MyApp extends StatelessWidget {

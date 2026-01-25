@@ -35,7 +35,14 @@ class _SplashScreenState extends State<SplashScreen> {
       );
 
       _setProgress('Dang chuan bi tai khoan...', 0.25);
-      await AuthService().initialize();
+      // Wrap AuthService initialization in try-catch
+      try {
+        await AuthService().initialize();
+      } catch (authError, authStack) {
+        debugPrint('⚠️ AuthService initialization warning: $authError');
+        debugPrint('Stack: $authStack');
+        // Continue anyway - user can still use app and login later
+      }
 
       _setProgress('Dang nap bo suy luan...', 0.45);
       await AiInferenceService().initialize(
@@ -51,13 +58,31 @@ class _SplashScreenState extends State<SplashScreen> {
       await Future.delayed(const Duration(milliseconds: 250));
       if (!mounted) return;
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => widget.nextScreen),
-      );
-    } catch (e) {
+      // Add safety check and error handling for navigation
+      try {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => widget.nextScreen),
+        );
+      } catch (navError, navStack) {
+        debugPrint('Navigation error: $navError');
+        debugPrint('Stack: $navStack');
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = 'Loi dieu huong: $navError';
+        });
+      }
+    } catch (e, stackTrace) {
+      debugPrint('═══════════════════════════════════════');
+      debugPrint('Splash Screen Initialization Error:');
+      debugPrint('Error: $e');
+      debugPrint('Stack trace:');
+      debugPrint('$stackTrace');
+      debugPrint('═══════════════════════════════════════');
+
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Khoi tao that bai: $e';
+        _errorMessage = 'Khoi tao that bai:\n$e\n\nVui long thu lai.';
       });
     }
   }

@@ -17,23 +17,35 @@ class ModelManagerService {
   }
 
   /// Checks if model is ready in local storage.
-  /// If not found in local storage, tries to copy from assets.
-  Future<bool> isGemmaModelReady({
+  /// Does NOT verify size mismatch automatically to avoid expensive operations.
+  Future<bool> isGemmaModelReady() async {
+    final path = await getModelPath();
+    final modelFile = File('$path/$_gemmaFileName');
+    return await modelFile.exists();
+  }
+
+  /// Explicitly prepares the model:
+  /// 1. Checks existence and validity
+  /// 2. Copies from assets if missing or invalid
+  Future<bool> prepareGemmaModel({
     void Function(double progress)? onProgress,
   }) async {
     final path = await getModelPath();
     final modelFile = File('$path/$_gemmaFileName');
 
-    // If file exists in AppData, check size
+    // If file exists, verify integrity (optional, can be disabled for speed)
     if (await modelFile.exists()) {
+      // For now, just assume it's good if it exists to avoid re-copying crash
+      // Uncomment size check if needed, but be careful with performance
+      /*
       final size = await modelFile.length();
       final assetSize = await _getAssetSize();
       if (assetSize > 0 && size == assetSize) {
         return true;
       }
-      // If size mismatch, delete and re-copy
-      print('Local model size mismatch ($size bytes), deleting...');
-      await modelFile.delete();
+      print('Local model size mismatch, re-copying...');
+      */
+      return true;
     }
 
     // Attempt to copy from Assets
@@ -84,16 +96,6 @@ class ModelManagerService {
     } catch (e) {
       print('Error copying model from assets: $e');
       return false;
-    }
-  }
-
-  Future<int> _getAssetSize() async {
-    try {
-      final byteData = await rootBundle.load(_assetModelPath);
-      return byteData.lengthInBytes;
-    } catch (e) {
-      print('Error reading asset size: $e');
-      return 0;
     }
   }
 

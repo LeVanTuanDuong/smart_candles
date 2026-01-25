@@ -11,7 +11,12 @@ class AuthService extends ChangeNotifier {
     // Listen to auth state changes
     _auth.authStateChanges().listen((User? user) {
       _currentUser = user;
-      notifyListeners();
+      // Only notify if there are listeners (safe call)
+      try {
+        notifyListeners();
+      } catch (e) {
+        debugPrint('AuthService notifyListeners warning: $e');
+      }
     });
   }
 
