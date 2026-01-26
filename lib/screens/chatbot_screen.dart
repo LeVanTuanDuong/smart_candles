@@ -355,19 +355,16 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           timestamp: DateTime.now(),
         ),
       );
-      _isLoading = true;
+      // Removed manual _isLoading = true here to let _handleUserInput manage it
     });
 
     _hasSelectedMood = true;
     widget.onMoodSelected?.call(mood);
 
     // Skip encouragement, go straight to suggestions
-    _handleUserInput('Tôi đang cảm thấy ${mood.label}');
+    await _handleUserInput('Tôi đang cảm thấy ${mood.label}');
 
     if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
       _scrollToBottom();
     }
   }

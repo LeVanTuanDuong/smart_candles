@@ -1,11 +1,10 @@
-import 'dart:async';
-import 'dart:math';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
+import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'bert_tokenizer.dart';
-import 'gemma_tokenizer.dart';
 import 'package:image/image.dart' as img;
 
 class AiInferenceService {
@@ -16,10 +15,13 @@ class AiInferenceService {
   Interpreter? _emotionInterpreter;
   Interpreter? _faceInterpreter;
   Interpreter? _minilmInterpreter;
-  Interpreter? _gemmaInterpreter; // Normal Interpreter for loading
-  IsolateInterpreter? _gemmaIsolateInterpreter; // Background Execution
   BertTokenizer? _tokenizer;
-  GemmaTokenizer? _gemmaTokenizer;
+
+  // Hugging Face Config
+  // Generate a token at: https://huggingface.co/settings/tokens
+  static const String _hfToken = '';
+  static const String _modelUrl =
+      'https://router.huggingface.co/v1/chat/completions';
 
   bool _isInitialized = false;
 
@@ -80,6 +82,11 @@ class AiInferenceService {
         tokenizerFuture,
       ]);
 
+      // Pre-load Gemma (Background Isolate)
+      // disabled due to OOM on device
+      debugPrint('Skipping Gemma model load (Device Resource Limit)...');
+      // await _initializeGemma();
+
       _isInitialized = true;
       debugPrint('✓ Chatbot AI models ready!');
     } catch (e, stackTrace) {
@@ -112,6 +119,7 @@ class AiInferenceService {
     }
   }
 
+  // Method needed for Face Emotion (used by other services)
   Future<Map<String, double>> analyzeFaceEmotion(File imageFile) async {
     // 1. Lazy load model
     await initializeFaceModel();
@@ -184,6 +192,7 @@ class AiInferenceService {
     }
   }
 
+  // Method needed for Text Emotion
   Future<Map<String, double>> analyzeTextEmotion(String text) async {
     if (!_isInitialized || _emotionInterpreter == null || _tokenizer == null) {
       return {};
@@ -231,6 +240,7 @@ class AiInferenceService {
     }
   }
 
+  // Method needed for Intent Recognition
   Future<List<double>> getRecommendationEmbedding(String text) async {
     if (!_isInitialized || _minilmInterpreter == null || _tokenizer == null) {
       return [];
@@ -260,186 +270,81 @@ class AiInferenceService {
   }
 
   Future<String> generateGemmaResponse(String prompt) async {
+    if (_hfToken == 'hf_your_token_here') {
+      return "⚠️ Bạn chưa nhập Hugging Face Token.\nHãy vào file `ai_inference_service.dart` để điền token.";
+    }
+
     try {
-      // 1. Initialize Tokenizer (One-time) if needed
-      if (_gemmaTokenizer == null) {
-        _gemmaTokenizer = GemmaTokenizer();
-        await _gemmaTokenizer!.loadFromAsset('assets/ai_models/tokenizer.json');
-      }
+      final response = await http.post(
+        Uri.parse(_modelUrl),
+        headers: {
+          'Authorization': 'Bearer $_hfToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'Qwen/Qwen2.5-7B-Instruct',
+          'messages': [
+            {'role': 'user', 'content': prompt}
+          ],
+          'max_tokens': 200,
+          'temperature': 0.7,
+        }),
+      );
 
-      // 2. Initialize Model (Main Thread - efficient asset access)
-      if (_gemmaInterpreter == null) {
-        debugPrint('Loading Gemma model...');
-        final options = InterpreterOptions();
-        // GPU/Procesing Delegates might conflict with IsolateInterpreter if not compatible
-        // Safe bet: XNNPack on CPU
-        try {
-          options.addDelegate(XNNPackDelegate());
-        } catch (e) {}
-
-        _gemmaInterpreter = await Interpreter.fromAsset(
-            'assets/ai_models/chatbot_gemma.bin',
-            options: options);
-
-        // Create Isolate Interpreter from the loaded interpreter's address
-        _gemmaIsolateInterpreter = await IsolateInterpreter.create(
-            address: _gemmaInterpreter!.address);
-        debugPrint('✓ Gemma Isolate Interpreter Ready');
-      }
-
-      // 3. Tokenize
-      final fullPrompt =
-          "<start_of_turn>user\n$prompt<end_of_turn>\n<start_of_turn>model\n";
-      var inputIds = _gemmaTokenizer!.tokenize(fullPrompt);
-
-      // 4. Generation Loop (Async on Isolate)
-      const int maxTokens = 64;
-      const int eosId = 1;
-      String resultText = "";
-
-      for (int i = 0; i < maxTokens; i++) {
-        var inputTensor = [inputIds];
-
-        // Resize MUST happen on the main interpreter before Isolate usage usually,
-        // BUT IsolateInterpreter mirrors the state?
-        // Actually, TFLite Dynamic shaped inputs are tricky with Isolates.
-        // We might need to resize the underlying interpreter.
-        _gemmaInterpreter!.resizeInputTensor(0, [1, inputIds.length]);
-        _gemmaInterpreter!.allocateTensors();
-
-        // Output buffers
-        final outTensor = _gemmaInterpreter!.getOutputTensor(0);
-        final vocabSize = outTensor.shape[2];
-
-        final outputFormatted =
-            List.filled(1 * inputIds.length * vocabSize, 0.0)
-                .reshape([1, inputIds.length, vocabSize]);
-
-        // Run on BACKGROUND THREAD
-        // await _gemmaIsolateInterpreter!.run(inputTensor, outputFormatted);
-        // Note: run() might be synchronous in API but executed on background if using IsolateInterpreter?
-        // Actually the API is: await isolateInterpreter.run(...)
-
-        await _gemmaIsolateInterpreter!.run(inputTensor, outputFormatted);
-
-        final lastTokenLogits =
-            outputFormatted[0][inputIds.length - 1] as List<double>;
-
-        int nextTokenId = 0;
-        double maxLogit = -999999;
-        for (int v = 0; v < lastTokenLogits.length; v++) {
-          if (lastTokenLogits[v] > maxLogit) {
-            maxLogit = lastTokenLogits[v];
-            nextTokenId = v;
-          }
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse =
+            jsonDecode(utf8.decode(response.bodyBytes));
+        if (jsonResponse.containsKey('choices') &&
+            jsonResponse['choices'].isNotEmpty) {
+          return jsonResponse['choices'][0]['message']['content'] ??
+              "Tớ không biết trả lời sao nữa...";
         }
-
-        if (nextTokenId == eosId) break;
-
-        inputIds.add(nextTokenId);
-        final word = _gemmaTokenizer!.decode([nextTokenId]);
-        resultText += word;
-
-        // Yield to allow UI updates (streaming text effect)
-        await Future.delayed(Duration(milliseconds: 1));
+      } else {
+        print("HF API Error: ${response.statusCode} - ${response.body}");
+        if (response.statusCode == 503) {
+          return "Model đang khởi động trên server, đợi xíu nhé...";
+        }
+        return "Kết nối tới AI Gemma bị gián đoạn.";
       }
-
-      return resultText;
+      return "Tớ không biết trả lời sao nữa...";
     } catch (e) {
-      debugPrint('Gemma Inference Error: $e');
-      if (e.toString().contains('current state is') ||
-          e.toString().contains('initialized')) {
-        // Fallback advice if binding fails again (unlikely with this approach)
-        return "Lỗi khởi tạo AI background: $e";
-      }
-      return "Lỗi: $e";
+      debugPrint('Gemma API Exception: $e');
+      return "Lỗi kết nối mạng: Hãy kiểm tra Internet của bạn.";
     }
   }
-
-  // Command Prototypes for Intent Recognition
-  final Map<String, String> _commandPrototypes = {
-    'bật đèn': 'LIGHT_ON',
-    'mở đèn': 'LIGHT_ON',
-    'tắt đèn': 'LIGHT_OFF',
-    'đổi màu đèn': 'LIGHT_COLOR',
-    'chỉnh đèn': 'LIGHT_COLOR',
-    'bật nhạc': 'MUSIC_ON',
-    'mở nhạc': 'MUSIC_ON',
-    'tắt nhạc': 'MUSIC_OFF',
-    'dừng nhạc': 'MUSIC_OFF',
-    'đổi nhạc': 'MUSIC_CHANGE',
-  };
 
   Future<String?> determineIntent(String text) async {
-    if (!_isInitialized || _minilmInterpreter == null) return null;
-
-    try {
-      final inputEmbedding = await getRecommendationEmbedding(text);
-      if (inputEmbedding.isEmpty) return null;
-
-      String? bestIntent;
-      double maxSim = -1.0;
-
-      // We should cache prototype embeddings ideally.
-      // For now, calculating on fly for simplicity (or cache in Initialize).
-      // Optimization: Calculate these once in initialize()
-
-      for (final entry in _commandPrototypes.entries) {
-        final prototypeText = entry.key;
-        final intent = entry.value;
-
-        final protoEmbedding = await getRecommendationEmbedding(prototypeText);
-        if (protoEmbedding.isEmpty) continue;
-
-        final sim = _cosineSimilarity(inputEmbedding, protoEmbedding);
-        debugPrint(
-            'Comparing "$text" with "$prototypeText" ($intent) -> Score: $sim');
-
-        if (sim > maxSim) {
-          maxSim = sim;
-          bestIntent = intent;
-        }
-      }
-
-      debugPrint(
-          'Best Match: "$bestIntent" with Score: $maxSim (Threshold: 0.85)');
-
-      // Ignore very short inputs for intent (e.g. "lo", "hi")
-      if (text.length < 4) return null;
-
-      // Threshold increased to 0.85 to avoid false positives
-      if (maxSim > 0.85 && bestIntent != null) {
-        // Hybrid Check: Keyword Validation
-        // Prevent "buồn" matching "LIGHT_COLOR" via embedding noise
-        if (_validateIntentKeywords(text, bestIntent)) {
-          return bestIntent;
-        }
-      }
-      return null;
-    } catch (e) {
-      debugPrint('Intent determination error: $e');
-      return null;
-    }
-  }
-
-  bool _validateIntentKeywords(String text, String intent) {
     final lower = text.toLowerCase();
 
-    if (intent.startsWith('LIGHT')) {
-      return lower.contains('đèn') ||
-          lower.contains('light') ||
-          lower.contains('sáng') ||
-          lower.contains('tối');
+    // 1. Light Commands
+    if (lower.contains('đèn')) {
+      if (lower.contains('bật') ||
+          lower.contains('mở') ||
+          lower.contains('sáng')) return 'LIGHT_ON';
+      if (lower.contains('tắt') || lower.contains('tối')) return 'LIGHT_OFF';
+      if (lower.contains('đổi') ||
+          lower.contains('màu') ||
+          lower.contains('chỉnh')) return 'LIGHT_COLOR';
     }
 
-    if (intent.startsWith('MUSIC')) {
-      return lower.contains('nhạc') ||
-          lower.contains('music') ||
-          lower.contains('bài') ||
-          lower.contains('hát');
+    // 2. Music Commands
+    if (lower.contains('nhạc') ||
+        lower.contains('bài hát') ||
+        lower.contains('hát')) {
+      if (lower.contains('bật') ||
+          lower.contains('mở') ||
+          lower.contains('chơi')) return 'MUSIC_ON';
+      if (lower.contains('tắt') || lower.contains('dừng')) return 'MUSIC_OFF';
+      if (lower.contains('đổi') ||
+          lower.contains('qua') ||
+          lower.contains('bài tiếp')) return 'MUSIC_CHANGE';
     }
 
-    return true; // Other intents might not need strict validation or have distinct keywords
+    // 3. Simple standalone keywords
+    if (lower == 'bật đèn' || lower == 'mở đèn') return 'LIGHT_ON';
+    if (lower == 'tắt đèn') return 'LIGHT_OFF';
+
+    return null;
   }
 
   List<double> _softmax(List<double> logits) {
@@ -448,16 +353,5 @@ class AiInferenceService {
     List<double> expValues = logits.map((x) => exp(x - maxLogit)).toList();
     double sumExp = expValues.reduce((a, b) => a + b);
     return expValues.map((x) => x / sumExp).toList();
-  }
-
-  double _cosineSimilarity(List<double> a, List<double> b) {
-    if (a.length != b.length) return 0.0;
-    double dot = 0.0, normA = 0.0, normB = 0.0;
-    for (int i = 0; i < a.length; i++) {
-      dot += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
-    }
-    return (normA == 0 || normB == 0) ? 0.0 : dot / (sqrt(normA) * sqrt(normB));
   }
 }

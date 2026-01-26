@@ -26,9 +26,25 @@ class ChatbotService {
     }
 
     // 3. Analyze Emotion for Recommendations (Implicit Needs)
-    final emotionAnalysis =
-        await AiInferenceService().analyzeTextEmotion(input);
-    final topTextEmotion = _getTopEmotion(emotionAnalysis);
+    String? topTextEmotion;
+    bool wasExplicitEmotion = false;
+
+    // Explicit keyword overrides for common moods
+    if (lowerInput.contains('căng thẳng') || lowerInput.contains('stress')) {
+      topTextEmotion = 'căng_thẳng';
+      wasExplicitEmotion = true;
+    } else if (lowerInput.contains('hạnh phúc') || lowerInput.contains('vui')) {
+      topTextEmotion = 'vui';
+      wasExplicitEmotion = true;
+    } else if (lowerInput.contains('buồn') || lowerInput.contains('tệ')) {
+      topTextEmotion = 'buồn';
+      wasExplicitEmotion = true;
+    } else {
+      final emotionAnalysis =
+          await AiInferenceService().analyzeTextEmotion(input);
+      // For general detection, we use a slightly higher threshold or different triggers
+      topTextEmotion = _getTopEmotion(emotionAnalysis);
+    }
 
     // 3.1 Consistency Check (Face vs Text)
     // If face is Sad/Stressed but Text is Normal/Happy -> Hiding emotion
@@ -38,29 +54,26 @@ class ChatbotService {
         // Detected Hiding Emotion
         return {
           'type': 'text',
-          // Or maybe 'suggestion' type but with a probing message
           'message':
               "Mình nghe bạn nói vậy, nhưng nhìn gương mặt bạn có vẻ hơi $faceEmotion. Bạn có tâm sự gì muốn chia sẻ không? Mình luôn ở đây lắng nghe mà.",
         };
       }
     }
 
-    // If emotion is strong enough (e.g., > 0.4 score), offer suggestion
-    // Note: 'binh_thuong' or neutral might not need suggestion
-    final effectiveEmotion =
-        topTextEmotion; // Prioritize text unless mismatch handled above checking?
-    // Actually, maybe we should prioritize Face if Text is neutral?
-    // For now, keep using text emotion for suggestion, but if Face is detected, maybe combine?
+    final effectiveEmotion = topTextEmotion;
 
-    if (effectiveEmotion != null && effectiveEmotion != 'binh_thuong') {
+    // SUGGESTION TRIGGER: Only if explicitly mentioned or very strong signal
+    if (effectiveEmotion != null &&
+        effectiveEmotion != 'binh_thuong' &&
+        wasExplicitEmotion) {
       final suggestion = _getSuggestionForEmotion(effectiveEmotion);
       if (suggestion != null) {
         return {
           'type': 'suggestion',
           'message':
-              "Mình cảm thấy bạn đang ${suggestion['label']}. Bạn có muốn mình ${suggestion['action_desc']} để bạn thoải mái hơn không?",
+              "Mình cảm thấy bạn đang ${suggestion['label']}. Bạn có muốn mình ${suggestion['action_desc']} không?",
           'needsConfirmation': true,
-          'suggestedActions': suggestion, // Contains light, music, scent config
+          'suggestedActions': suggestion,
         };
       }
     }
@@ -220,17 +233,15 @@ RESPONSE GUIDELINES:
   }
 
   static Map<String, dynamic>? _getSuggestionForEmotion(String emotion) {
-    // Map detected emotion to MoodType-like configuration
-    // MUST Suggest Scent, Music, Light explicitly
     switch (emotion) {
       case 'buồn':
       case 'trầm':
         return {
           'label': 'buồn',
           'action_desc':
-              'bật chút nhạc Ballad nhẹ nhàng, chỉnh đèn tông ấm và xông hương Cam Ngọt (Sweet Orange) để vực dậy tinh thần',
+              'nghe bài "Piano Relaxing" này nhé, giai điệu nhẹ nhàng sẽ giúp bạn thấy lòng bình yên hơn',
           'light': {'color': 'warm', 'brightness': 60},
-          'music': 'ballad', // or 'lofi'
+          'music': 'Piano_Relaxing',
           'scent': 'Sweet Orange'
         };
       case 'căng_thẳng':
@@ -239,22 +250,30 @@ RESPONSE GUIDELINES:
         return {
           'label': 'căng thẳng',
           'action_desc':
-              'bật nhạc thiền (Meditation), chuyển đèn dịu mát và lan tỏa hương Oải Hương (Lavender) giúp an thần',
+              'dành ít phút nghe "Nhạc thiền tĩnh tâm" này nhé, nó sẽ giúp bạn lấy lại sự cân bằng',
           'light': {'color': 'cool', 'brightness': 40},
-          'music': 'meditation',
+          'music': 'Meditation_tinh_tam',
           'scent': 'Lavender'
+        };
+      case 'vui':
+        return {
+          'label': 'vui vẻ',
+          'action_desc':
+              'nghe tiếng "Sóng biển" tuyệt vời này để nhân đôi niềm vui nhé',
+          'light': {'color': 'warm', 'brightness': 80},
+          'music': 'Nature_Ocean_Waves',
+          'scent': 'Sweet Orange'
         };
       case 'mệt_mỏi':
       case 'chán':
         return {
           'label': 'mệt mỏi',
           'action_desc':
-              'phát playlist Thư Giãn, chỉnh đèn vàng nhẹ và dùng hương Bạc Hà (Peppermint) cho sảng khoái',
+              'nghe bài "Ambient Calm" này và chợp mắt một chút để nạp lại năng lượng nhé',
           'light': {'color': 'warm', 'brightness': 50},
-          'music': 'relax',
+          'music': 'Ambient_Calm',
           'scent': 'Peppermint'
         };
-      // Add more as needed
       default:
         return null;
     }

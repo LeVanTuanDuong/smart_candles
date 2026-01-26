@@ -133,91 +133,63 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Automatically play music when chatbot suggests it
     try {
+      debugPrint('--- Chatbot Suggested Music: $music ---');
       final globalPlayer = GlobalMusicPlayerService();
+      final allTracksMap = await MusicService.getAllTracksByCategory();
 
-      // Map music suggestion to category
-      String category = 'Thiền'; // default
-      if (music.toLowerCase().contains('piano')) {
-        category = 'Nhạc Piano';
-      } else if (music.toLowerCase().contains('ambient')) {
-        category = 'Ambient';
-      } else if (music.toLowerCase().contains('nature') ||
-          music.toLowerCase().contains('mưa') ||
-          music.toLowerCase().contains('thiên nhiên')) {
-        category = 'Thiên nhiên';
-      } else if (music.toLowerCase().contains('lofi') ||
-          music.toLowerCase().contains('lo-fi')) {
-        category = 'Thiền'; // fallback to meditation
-      } else if (music.toLowerCase().contains('thiền') ||
-          music.toLowerCase().contains('meditation')) {
-        category = 'Thiền';
-      }
-
-      // Get tracks for this category (static method)
-      final tracks = MusicService.getDefaultTracksForCategory(category);
-
-      // Find a track with valid audio source (assets or local file)
       MusicTrack? playableTrack;
-      for (final track in tracks) {
-        // Check if track has valid audio source (assets or local file)
-        if (track.audioPath != null && track.audioPath!.isNotEmpty) {
-          // Assets path (starts with "assets/") are always valid
-          if (track.audioPath!.startsWith('assets/')) {
+
+      // 1. Try to find the exact track by name or path matching
+      for (var categoryList in allTracksMap.values) {
+        for (var track in categoryList) {
+          final nameMatch = track.name.toLowerCase() == music.toLowerCase();
+          final pathMatch = track.audioPath != null &&
+              track.audioPath!.toLowerCase().contains(music.toLowerCase());
+
+          if (nameMatch || pathMatch) {
             playableTrack = track;
+            debugPrint(
+                'Found matching track: ${track.name} (${track.audioPath})');
             break;
           }
-          // Check local file
-          try {
-            final file = File(track.audioPath!);
-            if (file.existsSync()) {
-              playableTrack = track;
-              break;
-            }
-          } catch (e) {
-            // File doesn't exist or can't be accessed, continue to next track
-          }
         }
+        if (playableTrack != null) break;
       }
 
       if (playableTrack != null) {
-        // Play the track automatically
-        try {
-          await globalPlayer.playTrack(playableTrack);
+        debugPrint('Attempting to play track: ${playableTrack.name}');
+        await globalPlayer.playTrack(playableTrack);
 
+        if (mounted) {
           setState(() {
             _deviceStatus = _deviceStatus.copyWith(
               isMusicPlaying: true,
               currentMusic: playableTrack!.name,
             );
           });
-          // Removed print statement: '✅ Auto-playing music: ${playableTrack.name}');
-        } catch (e) {
-          // Removed print statement: '❌ Error auto-playing music: $e');
-          // Don't update status if playback failed
-          // User can manually play from music library
-          // Don't throw - just log the error and continue
         }
+        debugPrint('Music play command sent.');
       } else {
-        // No playable tracks found
-        // Removed print statement: '⚠️ No playable tracks found for category: $category');
-        // Removed print statement: '💡 User should upload music files or check network connection');
-        // Don't update status - let user know they need to upload music
+        debugPrint('Could not find a playable track for: $music');
+        if (mounted) {
+          setState(() {
+            _deviceStatus = _deviceStatus.copyWith(
+              isMusicPlaying: false,
+              currentMusic: music,
+            );
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error in _handleMusicSuggested: $e');
+      if (mounted) {
         setState(() {
           _deviceStatus = _deviceStatus.copyWith(
             isMusicPlaying: false,
-            currentMusic: music, // Just store the suggestion name
+            currentMusic: music,
           );
         });
       }
-    } catch (e) {
-      // Removed print statement: '❌ Error in _handleMusicSuggested: $e');
-      // Don't update status on error
-      setState(() {
-        _deviceStatus = _deviceStatus.copyWith(
-          isMusicPlaying: false,
-          currentMusic: music,
-        );
-      });
     }
   }
 }
