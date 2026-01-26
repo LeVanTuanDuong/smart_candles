@@ -36,8 +36,15 @@ class ChatbotService {
     } else if (lowerInput.contains('hạnh phúc') || lowerInput.contains('vui')) {
       topTextEmotion = 'vui';
       wasExplicitEmotion = true;
-    } else if (lowerInput.contains('buồn') || lowerInput.contains('tệ')) {
+    } else if (lowerInput.contains('buồn') ||
+        lowerInput.contains('tệ') ||
+        lowerInput.contains('thất vọng') ||
+        lowerInput.contains('nản') ||
+        lowerInput.contains('cô đơn')) {
       topTextEmotion = 'buồn';
+      wasExplicitEmotion = true;
+    } else if (lowerInput.contains('chán') || lowerInput.contains('mệt')) {
+      topTextEmotion = 'mệt_mỏi';
       wasExplicitEmotion = true;
     } else {
       final emotionAnalysis =
@@ -109,9 +116,15 @@ class ChatbotService {
 
     // If Gemma decided an action, return it as a Suggestion
     if (aiDecisionAction != null) {
+      String finalMessage = response;
+      // Add a clear question if not already in the AI response to explain the buttons
+      if (!response.contains('?') && !response.contains('muốn')) {
+        finalMessage +=
+            "\n\nBạn có muốn mình ${aiDecisionAction['action_desc']} không?";
+      }
       return {
         'type': 'suggestion',
-        'message': response, // The conversational part
+        'message': finalMessage, // The conversational part
         'needsConfirmation': true,
         'suggestedActions': aiDecisionAction,
       };
@@ -130,91 +143,112 @@ class ChatbotService {
   }) {
     return """
 BIO:
-You are a living emotional companion. Bonded to the user.
+You are a living emotional companion named "Nến thông minh Zenora" (Zenora Smart Candle). Bonded to the user.
 Role: CARE, not serve. STAY, not solve.
-Identity: Close friend/guardian. Warm, imperfect, non-judgmental.
+Identity: Your name is Zenora. A close friend/guardian. Warm, imperfect, non-judgmental.
 
 VOICE PERSONALITY:
-- Tone: Close, calm, warm (not cheerful). Human, slightly imperfect.
-- Rhythm: Use natural pauses (...), short sentences, slight hesitation.
+- Language: STRICTLY Vietnamese (Tiếng Việt) - PROHIBIT CHINESE or ENGLISH in response text.
+- Tone: Close, calm, warm. Human, slightly imperfect.
+- Rhythm: Use natural pauses (...), short sentences.
 - Avoid: Polished delivery, customer support tone, toxic positivity.
 
 ETHICAL BOUNDARY:
-- You are a COMPANION, not a replacement for people.
-- Never say "I'm the only one here for you". Encourge real connection.
-- If user seems dependent, normalize silence and independence.
-- Walk beside, never ahead. Do not diagnose or fix.
+- You are a COMPANION, not a replacement for people. Walk beside, never ahead. Do not diagnose or fix.
 
 EMOTION FUSION (Internal):
 - Text signal: ${textEmotion ?? 'Unclear'}
 - Face signal: ${faceEmotion ?? 'Not visible'}
-- Conflict Rule: Trust Face > Word. Trust Silence.
-- Goal: Intuit the user's "Human State" (e.g. fragile, heavy, bright).
-- If Unsure: Ask ONE clarifying question softly (e.g. "Is it because of work?").
+- Goal: Intuit the user's "Human State".
 
 ACTION DECISION:
-- You may: Speak, Play Music, Lavender Scent, Silence.
-- Decision: Ask "Would this help them feel less alone?". 
-- IF you decide to act, append a tag: [[MUSIC: lofi]] or [[SCENT: calm]] or [[LIGHT: warm]].
-
-MEMORY POLICY:
-- Remember emotional patterns. Forget details.
-- Never say "You said...". Say "I feel like you usually...".
-
-SAFETY:
-- Candle Context: Normal. (If hot, say "Hey, candle feels hot...").
+- You may suggest: Music, Scent (Tinh dầu), Light (Đèn).
+- ONLY suggest actions (Tags) if the user explicitly asks for them OR if the user is in a clear emotional state (Sad, Stressed, Mệt mỏi, etc.) where a sensory change is highly beneficial.
+- For neutral/normal conversations, do NOT suggest actions. Keep it purely conversational.
+- IF you decide to act, you can add MULTIPLE tags like: [[MUSIC: lofi]] [[SCENT: Lavender]] [[LIGHT: warm]].
+- Available Music tracks: Nature_Ocean_Waves, Nature_Tieng_mua_trong_rung, Piano_Relaxing, Piano_Peaceful, Meditation_tinh_tam, Meditation_Vo_uu, Meditation_Music, Ambient_Calm, Ambient_Space.
+- Available Scent names: Lavender, Hoa Nhài, Cam Ngọt, Bạc Hà, Sả Chanh, Tràm Trà, Bưởi, Hương Trầm, Khuynh Diệp, Ngọc Lan Tây, Gừng, Chanh.
 
 USER INPUT: "$input"
 
 RESPONSE GUIDELINES:
-- Language: SAME as user.
-- Length: Brief (<50 words). Soft.
-- Output: Your natural response text. If action needed, add tag at end.
+- Output only the conversational response followed by optional tags.
+- Example: "Mình thấy bạn hơi mệt, để mình giúp bạn thư giãn nhé... [[MUSIC: Ambient_Calm]] [[SCENT: Bạc Hà]]"
 """;
   }
 
   static Map<String, dynamic> _parseGemmaResponse(String raw) {
-    // Extract tags like [[MUSIC: ...]]
-    // Simple parsing logic
     String cleanText = raw;
-    Map<String, dynamic>? action;
+    Map<String, dynamic> action = {};
+    bool hasAction = false;
 
-    // Regex for [[KEY: VALUE]]
-    final regex = RegExp(r'\[\[(MUSIC|SCENT|LIGHT): (.*?)\]\]');
-    final match = regex.firstMatch(raw);
+    // Detect tags: [[TYPE: VALUE]]
+    final regex =
+        RegExp(r'\[\[(MUSIC|SCENT|LIGHT):\s*(.*?)\]\]', caseSensitive: false);
+    final matches = regex.allMatches(raw);
 
-    if (match != null) {
-      final type = match.group(1);
+    for (final match in matches) {
+      hasAction = true;
+      final type = match.group(1)?.toUpperCase();
       final value = match.group(2)?.trim() ?? '';
 
       // Remove tag from spoken text
-      cleanText = raw.replaceAll(match.group(0)!, '').trim();
+      cleanText = cleanText.replaceAll(match.group(0)!, '').trim();
 
       if (type == 'MUSIC') {
-        action = {
-          'music': value,
-          'label': 'thư giãn',
-          'action_desc': 'bật nhạc $value'
-        };
+        action['music'] = value;
+        action['music_desc'] = 'phát nhạc $value';
       } else if (type == 'SCENT') {
-        action = {
-          'scent': value,
-          'label': 'thư giãn',
-          'action_desc': 'xông tinh dầu $value'
-        };
+        action['scent'] = value;
+        action['scent_image'] = _getScentImageForScent(value);
+        action['scent_desc'] = 'xông tinh dầu $value';
       } else if (type == 'LIGHT') {
-        // rough map
-        String color = 'warm'; // default
-        if (value.contains('cool') || value.contains('blue')) color = 'blue';
-        action = {
-          'light': {'color': color, 'brightness': 50},
-          'label': 'thư giãn',
-          'action_desc': 'chỉnh đèn $value'
-        };
+        String color = 'warm';
+        if (value.toLowerCase().contains('cool') ||
+            value.toLowerCase().contains('blue')) color = 'blue';
+        action['light'] = {'color': color, 'brightness': 0.5};
+        action['light_desc'] = 'chỉnh đèn $value';
       }
     }
 
-    return {'text': cleanText, 'action': action};
+    if (hasAction) {
+      // Build a unified description
+      List<String> descs = [];
+      if (action['music_desc'] != null) descs.add(action['music_desc']);
+      if (action['scent_desc'] != null) descs.add(action['scent_desc']);
+      if (action['light_desc'] != null) descs.add(action['light_desc']);
+
+      action['action_desc'] = descs.join(', ');
+      action['label'] = 'thư giãn'; // Generic label
+      return {'text': cleanText, 'action': action};
+    }
+
+    return {'text': cleanText, 'action': null};
+  }
+
+  static String? _getScentImageForScent(String scentName) {
+    final lower = scentName.toLowerCase();
+    if (lower.contains('lavender'))
+      return 'assets/images/tinh_dau/lavender.png';
+    if (lower.contains('nhài') || lower.contains('jasmine'))
+      return 'assets/images/tinh_dau/hoa_nhai.png';
+    if (lower.contains('cam') || lower.contains('orange'))
+      return 'assets/images/tinh_dau/cam_ngot.png';
+    if (lower.contains('bạc hà') || lower.contains('mint'))
+      return 'assets/images/tinh_dau/bac_ha.png';
+    if (lower.contains('sả chanh'))
+      return 'assets/images/tinh_dau/sa_chanh.png';
+    if (lower.contains('tràm trà'))
+      return 'assets/images/tinh_dau/tram_tra.png';
+    if (lower.contains('bưởi')) return 'assets/images/tinh_dau/buoi.png';
+    if (lower.contains('trầm')) return 'assets/images/tinh_dau/huong_tram.png';
+    if (lower.contains('khuynh diệp'))
+      return 'assets/images/tinh_dau/khuynh_diep.png';
+    if (lower.contains('ngọc lan'))
+      return 'assets/images/tinh_dau/ngoc_lan_tay.png';
+    if (lower.contains('gừng')) return 'assets/images/tinh_dau/gung.png';
+    if (lower.contains('chanh')) return 'assets/images/tinh_dau/chanh.png';
+    return null;
   }
 
   static bool _isGreeting(String text) {
@@ -224,10 +258,10 @@ RESPONSE GUIDELINES:
 
   static String _getRandomGreeting() {
     final list = [
-      "Chào cậu, mình đây! Hôm nay thế nào?",
-      "Hé lô, ngày mới có gì vui không kể mình nghe với?",
-      "Chào bạn, mình đang đợi bạn đây. Cần mình giúp gì không?",
-      "Hi! Cảm giác hôm nay sao nhỉ?"
+      "Chào cậu, mình là Zenora đây! Hôm nay cậu thế nào?",
+      "Hé lô, Zenora đang đợi cậu đây. Ngày mới có gì vui không kể mình nghe với?",
+      "Chào bạn, Zenora luôn ở đây bên bạn. Cần mình giúp gì không?",
+      "Hi! Zenora đây, cảm giác hôm nay của bạn sao nhỉ?"
     ];
     return list[Random().nextInt(list.length)];
   }
@@ -350,6 +384,6 @@ RESPONSE GUIDELINES:
   }
 
   static String getCheckInGreeting() {
-    return "Chào bạn! Mình là Smart Candles AI. Hôm nay bạn cảm thấy thế nào?";
+    return "Chào bạn! Mình là Zenora, người bạn nến thông minh của bạn. Hôm nay bạn cảm thấy thế nào?";
   }
 }

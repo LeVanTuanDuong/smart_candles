@@ -251,13 +251,13 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
   void _handleSuggestionConfirmation(
       ChatMessage message, bool confirmed) async {
-    // Remove confirmation buttons from the message (update specific message in list)
-    // Actually, we can't mutate the 'message' object since it's final fields.
-    // We should replace it in the list or just disable buttons?
-    // For simplicity, we assume the Bubble handles "disabled" state or we just append new messages.
-    // But ideally, we should update the UI to show decision was made.
-
-    // For now, simple interaction:
+    // Hide confirmation buttons after selection
+    setState(() {
+      final index = _messages.indexOf(message);
+      if (index != -1) {
+        _messages[index] = message.copyWith(needsConfirmation: false);
+      }
+    });
 
     if (confirmed) {
       // YES Logic

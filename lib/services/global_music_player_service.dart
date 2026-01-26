@@ -7,7 +7,8 @@ import '../models/music_track.dart';
 /// Global service to manage music playback across the entire app
 /// This allows music played in MusicLibraryScreen to be controlled from Home screen
 class GlobalMusicPlayerService extends ChangeNotifier {
-  static final GlobalMusicPlayerService _instance = GlobalMusicPlayerService._internal();
+  static final GlobalMusicPlayerService _instance =
+      GlobalMusicPlayerService._internal();
   factory GlobalMusicPlayerService() => _instance;
   GlobalMusicPlayerService._internal();
 
@@ -15,7 +16,7 @@ class GlobalMusicPlayerService extends ChangeNotifier {
   StreamSubscription<PlayerState>? _playerStateSubscription;
   StreamSubscription<Duration?>? _durationSubscription;
   StreamSubscription<Duration>? _positionSubscription;
-  
+
   MusicTrack? _currentTrack;
   List<MusicTrack> _currentPlaylist = []; // Current playlist for navigation
   int _currentTrackIndex = -1; // Index of current track in playlist
@@ -49,18 +50,17 @@ class GlobalMusicPlayerService extends ChangeNotifier {
 
     // Listen to player state
     _playerStateSubscription?.cancel();
-    _playerStateSubscription = _audioPlayer!.playerStateStream
-        .distinct()
-        .listen((state) {
+    _playerStateSubscription =
+        _audioPlayer!.playerStateStream.distinct().listen((state) {
       final wasPlaying = _isPlaying;
       _isPlaying = state.playing;
       _isLoading = state.processingState == ProcessingState.loading ||
-                   state.processingState == ProcessingState.buffering;
-      
+          state.processingState == ProcessingState.buffering;
+
       if (wasPlaying != _isPlaying) {
         notifyListeners();
       }
-      
+
       if (state.processingState == ProcessingState.completed) {
         _isPlaying = false;
         notifyListeners();
@@ -80,7 +80,7 @@ class GlobalMusicPlayerService extends ChangeNotifier {
     _positionSubscription = _audioPlayer!.positionStream.listen((position) {
       // Only update UI every 200ms to reduce rebuilds
       final now = DateTime.now();
-      if (_lastPositionUpdate == null || 
+      if (_lastPositionUpdate == null ||
           now.difference(_lastPositionUpdate!).inMilliseconds >= 200) {
         _position = position;
         _lastPositionUpdate = now;
@@ -101,63 +101,72 @@ class GlobalMusicPlayerService extends ChangeNotifier {
       await _initializePlayer();
       if (_audioPlayer == null) return;
 
-      // Stop current playback
+      // Stop current playback more gracefully
       try {
+        if (_audioPlayer!.playing) {
+          await _audioPlayer!.pause();
+        }
         await _audioPlayer!.stop();
+        // Small delay to let the OS release audio resources
+        await Future.delayed(const Duration(milliseconds: 200));
       } catch (e) {
-        // Removed print statement: 'Error stopping previous track: $e');
+        debugPrint('Error stopping previous track: $e');
       }
 
       // Set the new track and playlist
       _currentTrack = track;
-      
-      // Update playlist if provided, otherwise try to find track in current playlist
+
+      // Update playlist if provided
       if (playlist != null && playlist.isNotEmpty) {
         _currentPlaylist = playlist;
         _currentTrackIndex = playlist.indexWhere((t) => t.id == track.id);
-        if (_currentTrackIndex == -1) {
-          _currentTrackIndex = 0; // Default to first track if not found
-        }
-      } else if (_currentPlaylist.isNotEmpty) {
-        // Try to find track in existing playlist
-        _currentTrackIndex = _currentPlaylist.indexWhere((t) => t.id == track.id);
-        if (_currentTrackIndex == -1) {
-          // Track not in playlist, add it or create new playlist
-          _currentPlaylist = [track];
-          _currentTrackIndex = 0;
-        }
-      } else {
-        // No playlist, create new one with just this track
+      } else if (_currentPlaylist.isEmpty ||
+          !_currentPlaylist.any((t) => t.id == track.id)) {
         _currentPlaylist = [track];
         _currentTrackIndex = 0;
+      } else {
+        _currentTrackIndex =
+            _currentPlaylist.indexWhere((t) => t.id == track.id);
       }
-      
-      // Check if it's an asset path (starts with "assets/")
-      if (track.audioPath != null && track.audioPath!.isNotEmpty) {
-        if (track.audioPath!.startsWith('assets/')) {
-          // Play from assets
-          await _audioPlayer!.setAsset(track.audioPath!);
-          // Playing from assets
-        } else {
-          // Play from local file (user uploaded tracks)
-          try {
-            final file = File(track.audioPath!);
-            if (file.existsSync()) {
-              await _audioPlayer!.setFilePath(track.audioPath!);
-              // Playing from local file
+
+      // Load and play with retry for error -11849
+      int retryCount = 0;
+      bool loaded = false;
+      String? lastError;
+
+      while (retryCount < 2 && !loaded) {
+        try {
+          if (track.audioPath != null && track.audioPath!.isNotEmpty) {
+            if (track.audioPath!.startsWith('assets/')) {
+              await _audioPlayer!.setAsset(track.audioPath!);
+              loaded = true;
             } else {
-              throw Exception('File nhạc không tồn tại. Vui lòng tải lại file nhạc từ thư viện.');
+              final file = File(track.audioPath!);
+              if (file.existsSync()) {
+                await _audioPlayer!.setFilePath(track.audioPath!);
+                loaded = true;
+              } else {
+                throw Exception('File nhạc không tồn tại trong máy.');
+              }
             }
-          } catch (e) {
-            if (e.toString().contains('File nhạc không tồn tại')) {
-              rethrow;
-            }
-            throw Exception('Không thể phát file nhạc: $e');
+          } else {
+            throw Exception('Đường dẫn file nhạc trống.');
+          }
+        } catch (e) {
+          lastError = e.toString();
+          debugPrint('Playback load attempt ${retryCount + 1} failed: $e');
+          if (lastError.contains('-11849') || lastError.contains('Stopped')) {
+            retryCount++;
+            await Future.delayed(Duration(milliseconds: 500 * retryCount));
+          } else {
+            rethrow; // Don't retry for other errors
           }
         }
-      } else {
-        // No audio source available
-        throw Exception('File nhạc không tồn tại. Vui lòng tải lại file nhạc từ thư viện.');
+      }
+
+      if (!loaded) {
+        throw Exception(
+            'Không thể nạp file nhạc sau nhiều lần thử: $lastError');
       }
 
       // Start playing
@@ -165,14 +174,11 @@ class GlobalMusicPlayerService extends ChangeNotifier {
       _isPlaying = true;
       _isLoading = false;
       notifyListeners();
-      
-      // Track started playing successfully
     } catch (e) {
       _isLoading = false;
       _isPlaying = false;
-      // Error handled by caller
-      
       notifyListeners();
+      debugPrint('GlobalMusicPlayer error: $e');
       rethrow;
     }
   }
@@ -180,12 +186,12 @@ class GlobalMusicPlayerService extends ChangeNotifier {
   /// Toggle play/pause
   Future<void> togglePlayPause() async {
     if (_audioPlayer == null) return;
-    
+
     try {
       // Update state immediately for instant UI feedback (optimistic update)
       _isPlaying = !_isPlaying;
       notifyListeners();
-      
+
       // Then perform the actual play/pause operation based on the NEW state
       if (_isPlaying) {
         await _audioPlayer!.play();
@@ -205,7 +211,7 @@ class GlobalMusicPlayerService extends ChangeNotifier {
   /// Stop playback
   Future<void> stop() async {
     if (_audioPlayer == null) return;
-    
+
     try {
       await _audioPlayer!.stop();
       _isPlaying = false;
@@ -252,7 +258,8 @@ class GlobalMusicPlayerService extends ChangeNotifier {
 
   /// Play next track in playlist
   Future<void> playNextTrack() async {
-    if (_currentPlaylist.isEmpty || _currentTrackIndex >= _currentPlaylist.length - 1) {
+    if (_currentPlaylist.isEmpty ||
+        _currentTrackIndex >= _currentPlaylist.length - 1) {
       return; // No next track available
     }
 
@@ -262,15 +269,18 @@ class GlobalMusicPlayerService extends ChangeNotifier {
   }
 
   /// Check if previous track is available
-  bool get hasPreviousTrack => _currentPlaylist.isNotEmpty && _currentTrackIndex > 0;
+  bool get hasPreviousTrack =>
+      _currentPlaylist.isNotEmpty && _currentTrackIndex > 0;
 
   /// Check if next track is available
-  bool get hasNextTrack => _currentPlaylist.isNotEmpty && _currentTrackIndex < _currentPlaylist.length - 1;
+  bool get hasNextTrack =>
+      _currentPlaylist.isNotEmpty &&
+      _currentTrackIndex < _currentPlaylist.length - 1;
 
   /// Seek to position
   Future<void> seek(Duration position) async {
     if (_audioPlayer == null) return;
-    
+
     try {
       await _audioPlayer!.seek(position);
     } catch (e) {
@@ -289,4 +299,3 @@ class GlobalMusicPlayerService extends ChangeNotifier {
     super.dispose();
   }
 }
-

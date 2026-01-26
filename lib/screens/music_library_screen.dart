@@ -189,72 +189,37 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                   ),
                 ],
                 const SizedBox(height: 16),
-                // Audio file selection - only allow file upload
+                // Audio file selection
                 const Text(
                   'Chọn file nhạc:',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
-                StatefulBuilder(
-                  builder: (context, setButtonState) {
-                    bool isPickingFile = false;
-                    return OutlinedButton.icon(
-                      icon: isPickingFile
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Icon(Icons.upload_file),
-                      label: Text(
-                        isPickingFile
-                            ? 'Đang chọn...'
-                            : 'Chọn file nhạc từ thư viện',
-                      ),
-                      onPressed: isPickingFile
-                          ? null
-                          : () async {
-                              setButtonState(() => isPickingFile = true);
-                              try {
-                                FilePickerResult? result = await FilePicker
-                                    .platform
-                                    .pickFiles(type: FileType.audio);
-                                if (result != null &&
-                                    result.files.single.path != null) {
-                                  setDialogState(() {
-                                    selectedAudio = result.files.single;
-                                  });
-                                }
-                              } catch (e) {
-                                // Handle multiple_request exception gracefully
-                                if (e.toString().contains(
-                                      'multiple_request',
-                                    )) {
-                                  // User cancelled or another request started - ignore silently
-                                } else {
-                                  // Show error for other exceptions
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(
-                                      context,
-                                    ).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Lỗi khi chọn file: ${e.toString()}',
-                                        ),
-                                        duration: const Duration(
-                                          seconds: 2,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
-                              } finally {
-                                setButtonState(() => isPickingFile = false);
-                              }
-                            },
-                    );
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Chọn file nhạc từ thư viện'),
+                  onPressed: () async {
+                    try {
+                      FilePickerResult? result = await FilePicker.platform
+                          .pickFiles(type: FileType.audio);
+                      if (result != null && result.files.single.path != null) {
+                        setDialogState(() {
+                          selectedAudio = result.files.single;
+                        });
+                      }
+                    } catch (e) {
+                      if (e.toString().contains('multiple_request')) {
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content:
+                                    Text('Lỗi khi chọn file: ${e.toString()}'),
+                                duration: const Duration(seconds: 2)),
+                          );
+                        }
+                      }
+                    }
                   },
                 ),
                 if (selectedAudio != null) ...[
@@ -569,66 +534,31 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen>
                   ),
                   const SizedBox(height: 8),
                 ],
-                StatefulBuilder(
-                  builder: (context, setButtonState) {
-                    bool isPickingFile = false;
-                    return OutlinedButton.icon(
-                      icon: isPickingFile
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Icon(Icons.upload_file),
-                      label: Text(
-                        isPickingFile
-                            ? 'Đang chọn...'
-                            : 'Chọn file nhạc mới từ thư viện',
-                      ),
-                      onPressed: isPickingFile
-                          ? null
-                          : () async {
-                              setButtonState(() => isPickingFile = true);
-                              try {
-                                FilePickerResult? result = await FilePicker
-                                    .platform
-                                    .pickFiles(type: FileType.audio);
-                                if (result != null &&
-                                    result.files.single.path != null) {
-                                  setDialogState(() {
-                                    selectedAudio = result.files.single;
-                                  });
-                                }
-                              } catch (e) {
-                                // Handle multiple_request exception gracefully
-                                if (e.toString().contains(
-                                      'multiple_request',
-                                    )) {
-                                  // User cancelled or another request started - ignore silently
-                                } else {
-                                  // Show error for other exceptions
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(
-                                      context,
-                                    ).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Lỗi khi chọn file: ${e.toString()}',
-                                        ),
-                                        duration: const Duration(
-                                          seconds: 2,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
-                              } finally {
-                                setButtonState(() => isPickingFile = false);
-                              }
-                            },
-                    );
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Chọn file nhạc mới từ thư viện'),
+                  onPressed: () async {
+                    try {
+                      FilePickerResult? result = await FilePicker.platform
+                          .pickFiles(type: FileType.audio);
+                      if (result != null && result.files.single.path != null) {
+                        setDialogState(() {
+                          selectedAudio = result.files.single;
+                        });
+                      }
+                    } catch (e) {
+                      if (e.toString().contains('multiple_request')) {
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content:
+                                    Text('Lỗi khi chọn file: ${e.toString()}'),
+                                duration: const Duration(seconds: 2)),
+                          );
+                        }
+                      }
+                    }
                   },
                 ),
                 if (selectedAudio != null) ...[
