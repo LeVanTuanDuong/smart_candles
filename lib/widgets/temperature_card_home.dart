@@ -3,10 +3,12 @@ import '../models/device_status.dart';
 
 class TemperatureCardHome extends StatelessWidget {
   final DeviceStatus deviceStatus;
+  final VoidCallback? onConnect;
 
   const TemperatureCardHome({
     super.key,
     required this.deviceStatus,
+    this.onConnect,
   });
 
   @override
@@ -68,12 +70,36 @@ class TemperatureCardHome extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  deviceStatus.status.ledStatus,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[700],
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      deviceStatus.isBluetoothConnected
+                          ? 'Đã kết nối Bluetooth'
+                          : 'Bluetooth chưa kết nối',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: deviceStatus.isBluetoothConnected
+                            ? Colors.green[700]
+                            : Colors.orange[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (!deviceStatus.isBluetoothConnected && onConnect != null)
+                      TextButton.icon(
+                        onPressed: onConnect,
+                        icon: const Icon(Icons.bluetooth_searching, size: 16),
+                        label: const Text('Kết nối'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          backgroundColor: Colors.blue[50],
+                          foregroundColor: Colors.blue[700],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -83,4 +109,3 @@ class TemperatureCardHome extends StatelessWidget {
     );
   }
 }
-

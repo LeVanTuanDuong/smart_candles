@@ -1,0 +1,143 @@
+import 'package:flutter/material.dart';
+import '../services/bluetooth_service.dart';
+
+class BluetoothDeviceDialog extends StatefulWidget {
+  const BluetoothDeviceDialog({super.key});
+
+  @override
+  State<BluetoothDeviceDialog> createState() => _BluetoothDeviceDialogState();
+
+  static Future<bool?> show(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => const BluetoothDeviceDialog(),
+    );
+  }
+}
+
+class _BluetoothDeviceDialogState extends State<BluetoothDeviceDialog> {
+  final BluetoothService _bluetoothService = BluetoothService();
+  bool _isScanning = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startScan();
+    _bluetoothService.addListener(_onServiceUpdate);
+  }
+
+  @override
+  void dispose() {
+    _bluetoothService.removeListener(_onServiceUpdate);
+    // Don't stop scan here, it might be used by others,
+    // but usually it's fine to stop if this dialog is the only one scanning.
+    _bluetoothService.stopScan();
+    super.dispose();
+  }
+
+  void _onServiceUpdate() {
+    if (mounted) {
+      setState(() {
+        _isScanning = _bluetoothService.isScanning;
+      });
+
+      // If connected, close dialog
+      if (_bluetoothService.isConnected) {
+        Navigator.of(context).pop(true);
+      }
+    }
+  }
+
+  Future<void> _startScan() async {
+    try {
+      await _bluetoothService.startScan(timeout: const Duration(seconds: 15));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Tìm thiết bị nến'),
+          if (_isScanning)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _startScan,
+            ),
+        ],
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 300,
+        child: _bluetoothService.scanResults.isEmpty
+            ? Center(
+                child: Text(
+                  _isScanning
+                      ? 'Đang tìm kiếm...'
+                      : 'Không tìm thấy thiết bị nào',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              )
+            : ListView.builder(
+                shrinkWrap: true,
+                itemCount: _bluetoothService.scanResults.length,
+                itemBuilder: (context, index) {
+                  final result = _bluetoothService.scanResults[index];
+                  final device = result.device;
+                  final name = device.platformName.isNotEmpty
+                      ? device.platformName
+                      : 'Thiết bị không tên';
+                  final isCandle = name.contains(deviceNamePattern);
+
+                  return ListTile(
+                    leading: Icon(
+                      Icons.bluetooth,
+                      color: isCandle ? Colors.blue : Colors.grey,
+                    ),
+                    title: Text(name),
+                    subtitle: Text(device.remoteId.toString()),
+                    trailing: isCandle
+                        ? const Chip(
+                            label: Text(
+                              'Nến',
+                              style:
+                                  TextStyle(fontSize: 10, color: Colors.white),
+                            ),
+                            backgroundColor: Colors.blueAccent,
+                          )
+                        : null,
+                    onTap: () {
+                      _bluetoothService.stopScan();
+                      _bluetoothService.connectToDevice(device);
+                      // Showing connection feedback
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Đang kết nối tới $name...')),
+                      );
+                    },
+                  );
+                },
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Hủy'),
+        ),
+      ],
+    );
+  }
+}

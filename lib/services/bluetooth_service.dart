@@ -63,6 +63,8 @@ class BluetoothService extends ChangeNotifier {
   StreamSubscription<List<int>>? _temperatureSubscription;
   StreamSubscription<List<int>>? _voiceDataSubscription;
 
+  List<ble.ScanResult> _scanResults = [];
+
   // Getters
   bool get isConnected => _isConnected;
   ble.BluetoothDevice? get connectedDevice => _connectedDevice;
@@ -71,6 +73,7 @@ class BluetoothService extends ChangeNotifier {
   String get lastAiResponse => _lastAiResponse;
   String get lastDetectedEmotion => _lastDetectedEmotion;
   bool get isScanning => _isScanning;
+  List<ble.ScanResult> get scanResults => _scanResults;
 
   bool get hasWifiConnection => _hasWifiConnection;
   String? get deviceIp => _deviceIp;
@@ -143,13 +146,19 @@ class BluetoothService extends ChangeNotifier {
 
       // Listen to scan results
       _scanSubscription = ble.FlutterBluePlus.scanResults.listen((results) {
+        _scanResults = results;
+        notifyListeners();
+
         for (ble.ScanResult result in results) {
           final device = result.device;
           final deviceName =
               device.platformName.isNotEmpty ? device.platformName : 'Unknown';
 
-          // Check if device name matches Smart Candle pattern
-          if (deviceName.contains(deviceNamePattern)) {
+          // Auto-connect ONLY if we haven't found a device yet and it matches the pattern
+          // or if we want to support manual selection, we can just update the list
+          if (deviceName.contains(deviceNamePattern) &&
+              !isConnected &&
+              _connectedDevice == null) {
             // Removed print statement: '✅ Tìm thấy Smart Candle: ${device.platformName} (${device.remoteId})');
             stopScan();
             connectToDevice(device);

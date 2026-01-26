@@ -27,6 +27,7 @@ import '../services/bluetooth_service.dart';
 import '../services/essential_oil_service.dart';
 import '../models/music_track.dart';
 import '../models/essential_oil.dart';
+import '../widgets/bluetooth_device_dialog.dart';
 
 class DashboardHomeScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -516,6 +517,16 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     }
   }
 
+  void _showBluetoothDialog() async {
+    final result = await BluetoothDeviceDialog.show(context);
+    if (result == true && mounted) {
+      // Background auto-connection will handle the rest
+      setState(() {
+        _deviceStatus = _deviceStatus.copyWith(isBluetoothConnected: true);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -607,7 +618,10 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Temperature Card
-              TemperatureCardHome(deviceStatus: _deviceStatus),
+              TemperatureCardHome(
+                deviceStatus: _deviceStatus,
+                onConnect: _showBluetoothDialog,
+              ),
 
               // Voice Monitor Widget (shows only when connected & active)
               VoiceMonitorWidget(bluetoothService: _bluetoothService),

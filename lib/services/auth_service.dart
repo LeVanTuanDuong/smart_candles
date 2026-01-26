@@ -229,6 +229,8 @@ class AuthService extends ChangeNotifier {
       case 'operation-not-allowed':
         return 'Thao tác không được phép. Vui lòng liên hệ hỗ trợ.';
       case 'network-request-failed':
+        debugPrint('❌ Firebase Network Error Details: ${e.message}');
+        debugPrint('❌ Error Code: ${e.code}');
         return 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet.';
       default:
         return e.message ?? 'Đã xảy ra lỗi: ${e.code}';

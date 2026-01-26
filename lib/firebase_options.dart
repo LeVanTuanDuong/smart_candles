@@ -26,10 +26,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for windows - '
@@ -72,5 +69,13 @@ class DefaultFirebaseOptions {
     authDomain: 'pnfood-merchant.firebaseapp.com',
     storageBucket: 'pnfood-merchant.firebasestorage.app',
     measurementId: 'G-D7K4NEHETD',
+  );
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyD8Zbi26KMedwu99fKKZsnnX5yA5kiydY4',
+    appId: '1:427990378688:ios:4be089be34a741f5432525',
+    messagingSenderId: '427990378688',
+    projectId: 'pnfood-merchant',
+    storageBucket: 'pnfood-merchant.firebasestorage.app',
+    iosBundleId: 'com.phinam.smart',
   );
 }
