@@ -19,6 +19,7 @@
     <application
         android:label="smart_candles"
         android:name="${applicationName}"
+        android:largeHeap="true"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

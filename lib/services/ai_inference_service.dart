@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'bert_tokenizer.dart';
+import 'gemma_tokenizer.dart';
 import 'package:image/image.dart' as img;
 
 class AiInferenceService {
@@ -14,7 +16,10 @@ class AiInferenceService {
   Interpreter? _emotionInterpreter;
   Interpreter? _faceInterpreter;
   Interpreter? _minilmInterpreter;
+  Interpreter? _gemmaInterpreter; // Normal Interpreter for loading
+  IsolateInterpreter? _gemmaIsolateInterpreter; // Background Execution
   BertTokenizer? _tokenizer;
+  GemmaTokenizer? _gemmaTokenizer;
 
   bool _isInitialized = false;
 
@@ -255,35 +260,99 @@ class AiInferenceService {
   }
 
   Future<String> generateGemmaResponse(String prompt) async {
-    // No need to check ModelManagerService since we load from assets
-
     try {
-      final options = InterpreterOptions();
-      // Try using GPU/NPU delegates for Gemma (crucial for performance)
-      try {
-        options.addDelegate(XNNPackDelegate());
-      } catch (e) {
-        debugPrint('Delegate handling error: $e');
+      // 1. Initialize Tokenizer (One-time) if needed
+      if (_gemmaTokenizer == null) {
+        _gemmaTokenizer = GemmaTokenizer();
+        await _gemmaTokenizer!.loadFromAsset('assets/ai_models/tokenizer.json');
       }
 
-      // Load directly from Asset - bypasses the memory crash
-      debugPrint('Loading Gemma from assets...');
-      final interpreter = await Interpreter.fromAsset(
-        'assets/ai_models/chatbot_gemma.bin',
-        options: options,
-      );
-      debugPrint('✓ Gemma model loaded directly from assets');
+      // 2. Initialize Model (Main Thread - efficient asset access)
+      if (_gemmaInterpreter == null) {
+        debugPrint('Loading Gemma model...');
+        final options = InterpreterOptions();
+        // GPU/Procesing Delegates might conflict with IsolateInterpreter if not compatible
+        // Safe bet: XNNPack on CPU
+        try {
+          options.addDelegate(XNNPackDelegate());
+        } catch (e) {}
 
-      // TODO: Implement actual Gemma inference here
-      // This requires a Gemma Tokenizer which is currently missing.
-      // We load the model to prove it works without crashing,
-      // but return a placeholder message for now.
-      interpreter.close();
+        _gemmaInterpreter = await Interpreter.fromAsset(
+            'assets/ai_models/chatbot_gemma.bin',
+            options: options);
 
-      return "Gemma Model Loaded! (Inference logic pending implementation from real models)";
+        // Create Isolate Interpreter from the loaded interpreter's address
+        _gemmaIsolateInterpreter = await IsolateInterpreter.create(
+            address: _gemmaInterpreter!.address);
+        debugPrint('✓ Gemma Isolate Interpreter Ready');
+      }
+
+      // 3. Tokenize
+      final fullPrompt =
+          "<start_of_turn>user\n$prompt<end_of_turn>\n<start_of_turn>model\n";
+      var inputIds = _gemmaTokenizer!.tokenize(fullPrompt);
+
+      // 4. Generation Loop (Async on Isolate)
+      const int maxTokens = 64;
+      const int eosId = 1;
+      String resultText = "";
+
+      for (int i = 0; i < maxTokens; i++) {
+        var inputTensor = [inputIds];
+
+        // Resize MUST happen on the main interpreter before Isolate usage usually,
+        // BUT IsolateInterpreter mirrors the state?
+        // Actually, TFLite Dynamic shaped inputs are tricky with Isolates.
+        // We might need to resize the underlying interpreter.
+        _gemmaInterpreter!.resizeInputTensor(0, [1, inputIds.length]);
+        _gemmaInterpreter!.allocateTensors();
+
+        // Output buffers
+        final outTensor = _gemmaInterpreter!.getOutputTensor(0);
+        final vocabSize = outTensor.shape[2];
+
+        final outputFormatted =
+            List.filled(1 * inputIds.length * vocabSize, 0.0)
+                .reshape([1, inputIds.length, vocabSize]);
+
+        // Run on BACKGROUND THREAD
+        // await _gemmaIsolateInterpreter!.run(inputTensor, outputFormatted);
+        // Note: run() might be synchronous in API but executed on background if using IsolateInterpreter?
+        // Actually the API is: await isolateInterpreter.run(...)
+
+        await _gemmaIsolateInterpreter!.run(inputTensor, outputFormatted);
+
+        final lastTokenLogits =
+            outputFormatted[0][inputIds.length - 1] as List<double>;
+
+        int nextTokenId = 0;
+        double maxLogit = -999999;
+        for (int v = 0; v < lastTokenLogits.length; v++) {
+          if (lastTokenLogits[v] > maxLogit) {
+            maxLogit = lastTokenLogits[v];
+            nextTokenId = v;
+          }
+        }
+
+        if (nextTokenId == eosId) break;
+
+        inputIds.add(nextTokenId);
+        final word = _gemmaTokenizer!.decode([nextTokenId]);
+        resultText += word;
+
+        // Yield to allow UI updates (streaming text effect)
+        await Future.delayed(Duration(milliseconds: 1));
+      }
+
+      return resultText;
     } catch (e) {
-      debugPrint('Gemma Load Error: $e');
-      return "Lỗi khi chạy Gemma: $e";
+      debugPrint('Gemma Inference Error: $e');
+      if (e.toString().contains('current state is') ||
+          e.toString().contains('initialized')) {
+        // Fallback advice if binding fails again (unlikely with this approach)
+        return "Lỗi khởi tạo AI background: $e";
+      }
+      return "Lỗi: $e";
     }
   }
 
