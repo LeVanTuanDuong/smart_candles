@@ -14,7 +14,7 @@ import '../widgets/mood_buttons_chat.dart';
 class ChatbotScreen extends StatefulWidget {
   final Function(MoodType)? onMoodSelected;
   final Function(String)? onMusicSuggested;
-  final Function(String)? onLightSuggested;
+  final Function(String, {double? brightness})? onLightSuggested;
   final Function(String)? onEssentialOilSuggested;
   final String? initialMessage;
 
@@ -266,9 +266,10 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       // 1. Light
       if (data['light'] != null) {
         String color = data['light']['color'];
+        double brightness = (data['light']['brightness'] as num).toDouble();
         if (color == 'cool') color = 'blue'; // Map to valid mode
         if (color == 'neutral') color = 'warm'; // Map to valid mode
-        widget.onLightSuggested?.call(color);
+        widget.onLightSuggested?.call(color, brightness: brightness);
       }
 
       // 2. Music

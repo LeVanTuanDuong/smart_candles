@@ -85,6 +85,7 @@ flutter:
     - assets/ai_models/vocab.txt
     - assets/sounds/
     - assets/images/
+    - assets/images/tinh_dau/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

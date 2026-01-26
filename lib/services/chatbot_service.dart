@@ -239,10 +239,11 @@ RESPONSE GUIDELINES:
         return {
           'label': 'buồn',
           'action_desc':
-              'nghe bài "Piano Relaxing" này nhé, giai điệu nhẹ nhàng sẽ giúp bạn thấy lòng bình yên hơn',
-          'light': {'color': 'warm', 'brightness': 60},
+              'nghe bài "Piano Relaxing", xông hương Hoa Nhài và chỉnh đèn dịu 40%',
+          'light': {'color': 'warm', 'brightness': 0.4},
           'music': 'Piano_Relaxing',
-          'scent': 'Sweet Orange'
+          'scent': 'Hoa Nhài',
+          'scent_image': 'assets/images/tinh_dau/hoa_nhai.png'
         };
       case 'căng_thẳng':
       case 'lo_âu':
@@ -250,29 +251,32 @@ RESPONSE GUIDELINES:
         return {
           'label': 'căng thẳng',
           'action_desc':
-              'dành ít phút nghe "Nhạc thiền tĩnh tâm" này nhé, nó sẽ giúp bạn lấy lại sự cân bằng',
-          'light': {'color': 'cool', 'brightness': 40},
+              'nghe "Nhạc thiền tĩnh tâm", xông tinh dầu Lavender và hạ đèn xuống 30%',
+          'light': {'color': 'cool', 'brightness': 0.3},
           'music': 'Meditation_tinh_tam',
-          'scent': 'Lavender'
+          'scent': 'Lavender',
+          'scent_image': 'assets/images/tinh_dau/lavender.png'
         };
       case 'vui':
         return {
           'label': 'vui vẻ',
           'action_desc':
-              'nghe tiếng "Sóng biển" tuyệt vời này để nhân đôi niềm vui nhé',
-          'light': {'color': 'warm', 'brightness': 80},
+              'nghe tiếng "Sóng biển", xông hương Cam Ngọt và bật đèn sáng 80% để nhân đôi niềm vui',
+          'light': {'color': 'warm', 'brightness': 0.8},
           'music': 'Nature_Ocean_Waves',
-          'scent': 'Sweet Orange'
+          'scent': 'Cam Ngọt',
+          'scent_image': 'assets/images/tinh_dau/cam_ngot.png'
         };
       case 'mệt_mỏi':
       case 'chán':
         return {
           'label': 'mệt mỏi',
           'action_desc':
-              'nghe bài "Ambient Calm" này và chợp mắt một chút để nạp lại năng lượng nhé',
-          'light': {'color': 'warm', 'brightness': 50},
+              'nghe bài "Ambient Calm", dùng hương Bạc Hà sảng khoái và chỉnh đèn 50%',
+          'light': {'color': 'warm', 'brightness': 0.5},
           'music': 'Ambient_Calm',
-          'scent': 'Peppermint'
+          'scent': 'Bạc Hà',
+          'scent_image': 'assets/images/tinh_dau/bac_ha.png'
         };
       default:
         return null;

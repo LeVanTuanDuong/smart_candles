@@ -24,7 +24,8 @@ class ChatBubble extends StatelessWidget {
             const SizedBox(width: 8),
             Flexible(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: Colors.lightBlue[100],
                   borderRadius: BorderRadius.circular(20),
@@ -33,13 +34,25 @@ class ChatBubble extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                  message.text,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 15,
-                  ),
+                      message.text,
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontSize: 15,
+                      ),
                     ),
                     if (message.needsConfirmation == true) ...[
+                      if (message.suggestionData?['scent_image'] != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.asset(
+                              message.suggestionData!['scent_image'],
+                              height: 100,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 12),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -88,7 +101,8 @@ class ChatBubble extends StatelessWidget {
           children: [
             Flexible(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 constraints: BoxConstraints(
                   maxWidth: MediaQuery.of(context).size.width * 0.75,
                 ),

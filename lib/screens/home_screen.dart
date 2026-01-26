@@ -100,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {});
   }
 
-  void _handleLightSuggested(String lightMode) async {
+  void _handleLightSuggested(String lightMode, {double? brightness}) async {
     final autoLightEnabled = await SettingsService.getAutoLightEnabled();
     if (!autoLightEnabled) {
       return;
@@ -109,18 +109,24 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_bluetoothService.isConnected) {
       await _bluetoothService.setLightOn(true);
       await _bluetoothService.setLightMode(lightMode);
+      if (brightness != null) {
+        await _bluetoothService.setLightBrightness(brightness);
+      }
     }
 
     setState(() {
       _deviceStatus = _deviceStatus.copyWith(
         isLightOn: true,
         lightMode: lightMode,
+        lightBrightness: brightness ?? _deviceStatus.lightBrightness,
       );
     });
   }
 
   void _handleEssentialOilSuggested(String essentialOil) {
-    // Update will be handled by SuggestionService
+    // Currently we just update status to indicate active scent
+    // In a real device, this would send a command to the diffuser
+    debugPrint('Scent suggested and accepted: $essentialOil');
   }
 
   void _handleMusicSuggested(String music) async {
