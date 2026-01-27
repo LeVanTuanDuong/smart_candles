@@ -70,13 +70,14 @@ class TemperatureCardHome extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       deviceStatus.isBluetoothConnected
                           ? 'Đã kết nối Bluetooth'
-                          : 'Bluetooth chưa kết nối',
+                          : 'Chưa kết nối',
                       style: TextStyle(
                         fontSize: 14,
                         color: deviceStatus.isBluetoothConnected

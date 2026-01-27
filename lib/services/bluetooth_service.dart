@@ -1,738 +1,228 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart' as ble;
+import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'esp_api_service.dart';
 
-/// Service UUID for Smart Candle ESP32
-const String candleServiceUuid =
-    '0000180f-0000-1000-8000-00805f9b34fb'; // Battery Service (example, should match ESP32)
-
-/// Characteristic UUIDs for Smart Candle
-const String temperatureCharUuid =
-    '00002a19-0000-1000-8000-00805f9b34fb'; // Temperature reading
-const String lightControlCharUuid =
-    '00002a1a-0000-1000-8000-00805f9b34fb'; // Light on/off
-const String lightColorCharUuid =
-    '00002a1b-0000-1000-8000-00805f9b34fb'; // Light color (RGB)
-const String lightBrightnessCharUuid =
-    '00002a1c-0000-1000-8000-00805f9b34fb'; // Light brightness (0-255)
-const String musicControlCharUuid =
-    '00002a1d-0000-1000-8000-00805f9b34fb'; // Music play/pause/stop
-const String voiceDataCharUuid =
-    '00002a1e-0000-1000-8000-00805f9b34fb'; // Voice interaction data (JSON)
-const String wifiConfigCharUuid =
-    '00002a1f-0000-1000-8000-00805f9b34fb'; // WiFi credentials (JSON)
-
-/// Device name pattern for Smart Candle
-const String deviceNamePattern =
-    'CandleHub'; // ESP32 should advertise with this name
-
-/// Bluetooth Service for Smart Candle ESP32
+/// Bluetooth Service for Smart Candle ESP32 (Classic Bluetooth)
 class BluetoothService extends ChangeNotifier {
   static final BluetoothService _instance = BluetoothService._internal();
   factory BluetoothService() => _instance;
-  BluetoothService._internal() {
-    _loadSavedIp();
-  }
+  BluetoothService._internal();
 
-  final EspApiService _espApiService = EspApiService();
-  String? _deviceIp;
-  ble.BluetoothDevice? _connectedDevice;
-  ble.BluetoothCharacteristic? _temperatureChar;
-  ble.BluetoothCharacteristic? _lightControlChar;
-  ble.BluetoothCharacteristic? _lightColorChar;
-  ble.BluetoothCharacteristic? _lightBrightnessChar;
-  ble.BluetoothCharacteristic? _musicControlChar;
-  ble.BluetoothCharacteristic? _voiceDataChar;
-  ble.BluetoothCharacteristic? _wifiConfigChar;
-
+  BluetoothConnection? _connection;
   bool _isConnected = false;
-  bool _isScanning = false;
-  double _currentTemperature = 25.0;
+  bool _isConnecting = false;
 
-  // Voice Data State
-  String _lastUserText = '';
-  String _lastAiResponse = '';
-  String _lastDetectedEmotion = '';
+  // Data State
+  double _currentTemperature = 0.0;
+  double _currentHumidity = 0.0;
+  bool _isOverheat = false;
+  String _deviceIp = "";
 
-  StreamSubscription<List<ble.ScanResult>>? _scanSubscription;
-  StreamSubscription<ble.BluetoothConnectionState>? _connectionSubscription;
-  StreamSubscription<List<int>>? _temperatureSubscription;
-  StreamSubscription<List<int>>? _voiceDataSubscription;
-
-  List<ble.ScanResult> _scanResults = [];
+  // Voice Data State (Simplified for now)
+  String _lastUserText = "";
+  String _lastAiResponse = "";
+  String _lastDetectedEmotion = "";
 
   // Getters
   bool get isConnected => _isConnected;
-  ble.BluetoothDevice? get connectedDevice => _connectedDevice;
+  bool get isConnecting => _isConnecting;
   double get currentTemperature => _currentTemperature;
+  double get currentHumidity => _currentHumidity;
+  bool get isOverheat => _isOverheat;
+  String get deviceIp => _deviceIp;
+  bool get hasWifiConnection => _deviceIp.isNotEmpty;
+
   String get lastUserText => _lastUserText;
   String get lastAiResponse => _lastAiResponse;
   String get lastDetectedEmotion => _lastDetectedEmotion;
-  bool get isScanning => _isScanning;
-  List<ble.ScanResult> get scanResults => _scanResults;
 
-  bool get hasWifiConnection => _hasWifiConnection;
-  String? get deviceIp => _deviceIp;
+  // Stream for raw data (optional)
+  final StreamController<String> _dataStreamController =
+      StreamController<String>.broadcast();
+  Stream<String> get dataStream => _dataStreamController.stream;
 
-  /// Initialize Bluetooth adapter
+  // Init method to match old API if needed (can be empty)
   Future<bool> initialize() async {
-    try {
-      // Check if Bluetooth is available
-      if (await ble.FlutterBluePlus.isSupported == false) {
-        // Removed print statement: '❌ Bluetooth không được hỗ trợ trên thiết bị này');
-        return false;
-      }
-
-      // Check if Bluetooth is on
-      ble.BluetoothAdapterState adapterState =
-          await ble.FlutterBluePlus.adapterState.first;
-      if (adapterState != ble.BluetoothAdapterState.on) {
-        // Removed print statement: '⚠️ Bluetooth chưa được bật. Vui lòng bật Bluetooth.');
-        return false;
-      }
-
-      // Removed print statement: '✅ Bluetooth adapter đã sẵn sàng');
-      return true;
-    } catch (e) {
-      // Removed print statement: '❌ Lỗi khởi tạo Bluetooth: $e');
-      return false;
-    }
+    return true;
   }
 
-  /// Check if Bluetooth is ready for scanning
   Future<bool> isBluetoothReady() async {
-    try {
-      // Check if Bluetooth is available
-      if (await ble.FlutterBluePlus.isSupported == false) {
-        return false;
-      }
-
-      // Check if Bluetooth is on
-      ble.BluetoothAdapterState adapterState =
-          await ble.FlutterBluePlus.adapterState.first;
-      return adapterState == ble.BluetoothAdapterState.on;
-    } catch (e) {
-      // Removed print statement: '❌ Lỗi kiểm tra trạng thái Bluetooth: $e');
-      return false;
-    }
+    return (await FlutterBluetoothSerial.instance.state) ==
+        BluetoothState.STATE_ON;
   }
 
-  /// Start scanning for Smart Candle devices
   Future<void> startScan(
       {Duration timeout = const Duration(seconds: 10)}) async {
-    if (_isScanning) {
-      // Removed print statement: '⚠️ Đang quét, vui lòng đợi...');
-      return;
-    }
-
-    try {
-      // Check if Bluetooth is ready before scanning
-      final isReady = await isBluetoothReady();
-      if (!isReady) {
-        // Removed print statement: '❌ Bluetooth chưa sẵn sàng. Vui lòng bật Bluetooth và thử lại.');
-        _isScanning = false;
-        notifyListeners();
-        throw Exception('Bluetooth chưa được bật hoặc không được hỗ trợ');
-      }
-
-      _isScanning = true;
-      notifyListeners();
-
-      // Removed print statement: '🔵 Bắt đầu quét thiết bị Smart Candle...');
-
-      // Listen to scan results
-      _scanSubscription = ble.FlutterBluePlus.scanResults.listen((results) {
-        _scanResults = results;
-        notifyListeners();
-
-        for (ble.ScanResult result in results) {
-          final device = result.device;
-          final deviceName =
-              device.platformName.isNotEmpty ? device.platformName : 'Unknown';
-
-          // Auto-connect ONLY if we haven't found a device yet and it matches the pattern
-          // or if we want to support manual selection, we can just update the list
-          if (deviceName.contains(deviceNamePattern) &&
-              !isConnected &&
-              _connectedDevice == null) {
-            // Removed print statement: '✅ Tìm thấy Smart Candle: ${device.platformName} (${device.remoteId})');
-            stopScan();
-            connectToDevice(device);
-            return;
-          }
-        }
-      }, onError: (error) {
-        // Removed print statement: '❌ Lỗi khi quét: $error');
-        _isScanning = false;
-        notifyListeners();
-      });
-
-      // Start scan with error handling
-      try {
-        await ble.FlutterBluePlus.startScan(
-          timeout: timeout,
-          withServices: [],
-        );
-      } catch (scanError) {
-        // Handle specific scan errors
-        final errorStr = scanError.toString().toLowerCase();
-        if (errorStr.contains('bluetooth must be turned on') ||
-            errorStr.contains('cbmanagerstate') ||
-            errorStr.contains('unsupported')) {
-          // Removed print statement: '❌ Bluetooth chưa được bật hoặc không được hỗ trợ');
-          _isScanning = false;
-          notifyListeners();
-          throw Exception('Vui lòng bật Bluetooth trong Cài đặt và thử lại');
-        }
-        rethrow;
-      }
-
-      // Auto stop after timeout
-      Future.delayed(timeout, () {
-        if (_isScanning) {
-          stopScan();
-          // Removed print statement: '⏱️ Hết thời gian quét. Không tìm thấy thiết bị.');
-        }
-      });
-    } catch (e) {
-      // Removed print statement: '❌ Lỗi khi bắt đầu quét: $e');
-      _isScanning = false;
-      notifyListeners();
-      rethrow; // Re-throw để caller có thể xử lý
-    }
+    // This method was for BLE. For classic, we use DiscoveryPage directly.
+    // Keeping empty or throwing unsupported if called.
   }
 
-  /// Stop scanning
-  Future<void> stopScan() async {
+  /// Connect to device by address
+  Future<bool> connect(String address) async {
+    if (_isConnected) return true;
+    if (_isConnecting) return false;
+
+    _isConnecting = true;
+    notifyListeners();
+
     try {
-      await ble.FlutterBluePlus.stopScan();
-      await _scanSubscription?.cancel();
-      _scanSubscription = null;
-      _isScanning = false;
+      print('🔵 Connecting to $address...');
+      _connection = await BluetoothConnection.toAddress(address);
+      print('✅ Connected to $address');
+
+      _isConnected = true;
+      _isConnecting = false;
       notifyListeners();
-      // Removed print statement: '🛑 Đã dừng quét');
-    } catch (e) {
-      // Removed print statement: '❌ Lỗi khi dừng quét: $e');
-    }
-  }
 
-  /// Connect to a Bluetooth device
-  Future<bool> connectToDevice(ble.BluetoothDevice device) async {
-    try {
-      // Removed print statement: '🔵 Đang kết nối với ${device.platformName}...');
-
-      _connectedDevice = device;
-
-      // Listen to connection state
-      _connectionSubscription = device.connectionState.listen((state) async {
-        if (state == ble.BluetoothConnectionState.connected) {
-          _isConnected = true;
-          // Removed print statement: '✅ Đã kết nối với ${device.platformName}');
-
-          // Discover services and characteristics
-          await _discoverServices();
-
-          // Notify listeners about connection
-          notifyListeners();
-
-          // Read initial temperature after a short delay to ensure services are discovered
-          await Future.delayed(const Duration(milliseconds: 1000));
-          if (_isConnected && _temperatureChar != null) {
-            await readTemperature();
-            // Removed print statement: '🌡️ Đã đọc nhiệt độ ban đầu: ${_currentTemperature.toStringAsFixed(1)}°C');
-          }
-        } else if (state == ble.BluetoothConnectionState.disconnected) {
-          _isConnected = false;
-          // Removed print statement: '❌ Đã ngắt kết nối với ${device.platformName}');
-          _clearCharacteristics();
-          notifyListeners();
-        }
+      // Listen to incoming data
+      _connection!.input!.listen(_onDataReceived).onDone(() {
+        _isConnected = false;
+        notifyListeners();
+        print('❌ Disconnected remotely');
       });
 
-      // Connect to device
-      await device.connect(
-        timeout: const Duration(seconds: 15),
-        autoConnect: false,
-      );
-
-      return _isConnected;
+      return true;
     } catch (e) {
-      // Removed print statement: '❌ Lỗi khi kết nối: $e');
+      print('❌ Connection failed: $e');
       _isConnected = false;
+      _isConnecting = false;
       notifyListeners();
       return false;
     }
   }
 
-  /// Discover services and characteristics
-  Future<void> _discoverServices() async {
-    if (_connectedDevice == null) return;
-
-    try {
-      // Removed print statement: '🔍 Đang tìm kiếm services và characteristics...');
-
-      List<ble.BluetoothService> services =
-          await _connectedDevice!.discoverServices();
-
-      for (ble.BluetoothService service in services) {
-        // Find characteristics
-        for (ble.BluetoothCharacteristic characteristic
-            in service.characteristics) {
-          final uuid = characteristic.uuid.toString().toLowerCase();
-
-          // Temperature characteristic
-          if (uuid.contains('temperature') ||
-              uuid.contains('temp') ||
-              uuid == temperatureCharUuid.toLowerCase()) {
-            _temperatureChar = characteristic;
-            // Removed print statement: '✅ Tìm thấy Temperature characteristic');
-            _subscribeToTemperature();
-          }
-
-          // Light control characteristic
-          if (uuid.contains('light') && uuid.contains('control') ||
-              uuid == lightControlCharUuid.toLowerCase()) {
-            _lightControlChar = characteristic;
-            // Removed print statement: '✅ Tìm thấy Light Control characteristic');
-          }
-
-          // Light color characteristic
-          if (uuid.contains('color') ||
-              uuid == lightColorCharUuid.toLowerCase()) {
-            _lightColorChar = characteristic;
-            // Removed print statement: '✅ Tìm thấy Light Color characteristic');
-          }
-
-          // Light brightness characteristic
-          if (uuid.contains('brightness') ||
-              uuid == lightBrightnessCharUuid.toLowerCase()) {
-            _lightBrightnessChar = characteristic;
-            // Removed print statement: '✅ Tìm thấy Light Brightness characteristic');
-          }
-
-          // Music control characteristic
-          if (uuid.contains('music') ||
-              uuid == musicControlCharUuid.toLowerCase()) {
-            _musicControlChar = characteristic;
-            // Removed print statement: '✅ Tìm thấy Music Control characteristic');
-          }
-
-          // Voice Data characteristic
-          if (uuid.contains('voice') ||
-              uuid == voiceDataCharUuid.toLowerCase()) {
-            _voiceDataChar = characteristic;
-            _subscribeToVoiceData();
-          }
-
-          // WiFi Config characteristic
-          if (uuid.contains('wifi') ||
-              uuid == wifiConfigCharUuid.toLowerCase()) {
-            _wifiConfigChar = characteristic;
-          }
-        }
-      }
-
-      // Removed print statement: '✅ Đã tìm thấy ${services.length} services');
-    } catch (e) {
-      // Removed print statement: '❌ Lỗi khi tìm kiếm services: $e');
-    }
-  }
-
-  /// Subscribe to temperature updates
-  Future<void> _subscribeToTemperature() async {
-    if (_temperatureChar == null) return;
-
-    try {
-      // Cancel existing subscription if any
-      await _temperatureSubscription?.cancel();
-      _temperatureSubscription = null;
-
-      // Enable notifications
-      await _temperatureChar!.setNotifyValue(true);
-      // Removed print statement: '✅ Đã bật notifications cho Temperature characteristic');
-
-      // Listen to temperature updates
-      _temperatureSubscription =
-          _temperatureChar!.onValueReceived.listen((value) {
-        if (value.isNotEmpty) {
-          _parseTemperatureValue(value);
-        }
-      }, onError: (error) {
-        // Removed print statement: '❌ Lỗi khi nhận dữ liệu nhiệt độ: $error');
-      });
-
-      // Read initial temperature immediately after subscribing
-      await Future.delayed(const Duration(milliseconds: 500));
-      await readTemperature();
-
-      // Removed print statement: '✅ Đã đăng ký nhận cập nhật nhiệt độ');
-    } catch (e) {
-      // Removed print statement: '❌ Lỗi khi đăng ký nhiệt độ: $e');
-    }
-  }
-
-  /// Subscribe to Voice Data updates
-  Future<void> _subscribeToVoiceData() async {
-    if (_voiceDataChar == null) return;
-
-    try {
-      await _voiceDataSubscription?.cancel();
-      _voiceDataSubscription = null;
-
-      await _voiceDataChar!.setNotifyValue(true);
-
-      _voiceDataSubscription = _voiceDataChar!.onValueReceived.listen((value) {
-        if (value.isNotEmpty) {
-          _parseVoiceData(value);
-        }
-      });
-    } catch (e) {
-      debugPrint('❌ Error subscribing to voice data: $e');
-    }
-  }
-
-  /// Parse Voice Data packet (JSON)
-  void _parseVoiceData(List<int> value) {
-    try {
-      final str = utf8.decode(value);
-      final json = jsonDecode(str);
-
-      bool changed = false;
-
-      if (json['user_text'] != null) {
-        _lastUserText = json['user_text'];
-        changed = true;
-      }
-
-      if (json['ai_text'] != null) {
-        _lastAiResponse = json['ai_text'];
-        changed = true;
-      }
-
-      if (json['emotion'] != null) {
-        _lastDetectedEmotion = json['emotion'];
-        changed = true;
-      }
-
-      if (changed) {
-        notifyListeners();
-      }
-    } catch (e) {
-      debugPrint('⚠️ Error parsing voice data: $e');
-    }
-  }
-
-  /// Send WiFi Credentials
-  Future<bool> sendWifiCredentials(String jsonPayload) async {
-    if (_wifiConfigChar == null || !_isConnected) {
-      return false;
-    }
-
-    try {
-      List<int> bytes = utf8.encode(jsonPayload);
-      await _wifiConfigChar!.write(bytes, withoutResponse: false);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Parse temperature value from different formats
-  void _parseTemperatureValue(List<int> value) {
-    try {
-      double? temperature;
-
-      // Try parsing as float (4 bytes) - most common for ESP32
-      if (value.length >= 4) {
-        try {
-          final buffer = Uint8List.fromList(value).buffer.asByteData();
-          temperature = buffer.getFloat32(0, Endian.little);
-          // Removed print statement: '🌡️ Nhiệt độ (float): ${temperature.toStringAsFixed(1)}°C');
-        } catch (e) {
-          // Not a float, try other formats
-        }
-      }
-
-      // Try parsing as JSON string
-      if (temperature == null) {
-        try {
-          final str = utf8.decode(value);
-          final json = jsonDecode(str);
-          if (json['temperature'] != null) {
-            temperature = (json['temperature'] as num).toDouble();
-            // Removed print statement: '🌡️ Nhiệt độ (JSON): ${temperature.toStringAsFixed(1)}°C');
-          } else if (json['temp'] != null) {
-            temperature = (json['temp'] as num).toDouble();
-            // Removed print statement: '🌡️ Nhiệt độ (JSON temp): ${temperature.toStringAsFixed(1)}°C');
-          }
-        } catch (e) {
-          // Not JSON, try plain string
-        }
-      }
-
-      // Try parsing as plain string number
-      if (temperature == null) {
-        try {
-          final str = utf8.decode(value).trim();
-          temperature = double.tryParse(str);
-          if (temperature != null) {
-            // Removed print statement: '🌡️ Nhiệt độ (string): ${temperature.toStringAsFixed(1)}°C');
-          }
-        } catch (e) {
-          // Not a parseable string
-        }
-      }
-
-      // Try parsing as 2-byte integer (temperature * 10, e.g., 350 = 35.0°C)
-      if (temperature == null && value.length >= 2) {
-        try {
-          final buffer = Uint8List.fromList(value).buffer.asByteData();
-          final tempInt = buffer.getUint16(0, Endian.little);
-          temperature = tempInt / 10.0;
-          // Removed print statement: '🌡️ Nhiệt độ (int*10): ${temperature.toStringAsFixed(1)}°C');
-        } catch (e) {
-          // Not a 2-byte integer
-        }
-      }
-
-      // Update temperature if successfully parsed
-      if (temperature != null && temperature >= -50 && temperature <= 150) {
-        // Validate temperature range (reasonable for candle)
-        if (_currentTemperature != temperature) {
-          _currentTemperature = temperature;
-          // Removed print statement: '🌡️ ✅ Cập nhật nhiệt độ: ${temperature.toStringAsFixed(1)}°C');
-          notifyListeners();
-        }
-      } else {
-        // Removed print statement: '⚠️ Nhiệt độ không hợp lệ: $temperature');
-      }
-    } catch (e) {
-      // Removed print statement: '⚠️ Lỗi khi parse nhiệt độ: $e, Raw data: $value');
-    }
-  }
-
-  /// Turn light on/off
-  Future<bool> setLightOn(bool on) async {
-    // 1. Try WiFi first
-    if (_hasWifiConnection) {
-      final success = await _espApiService.setLightOn(on);
-      if (success) return true;
-    }
-
-    // 2. Fallback to BLE
-    if (_lightControlChar == null || !_isConnected) {
-      return false;
-    }
-
-    try {
-      final command = on ? [0x01] : [0x00]; // 1 = on, 0 = off
-      await _lightControlChar!.write(command, withoutResponse: false);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Set light color (RGB)
-  Future<bool> setLightColor(int red, int green, int blue) async {
-    // 1. Try WiFi first
-    if (_hasWifiConnection) {
-      final success = await _espApiService.setLightColor(red, green, blue);
-      if (success) return true;
-    }
-
-    if (_lightColorChar == null || !_isConnected) {
-      return false;
-    }
-
-    try {
-      // Clamp values to 0-255
-      red = red.clamp(0, 255);
-      green = green.clamp(0, 255);
-      blue = blue.clamp(0, 255);
-
-      final command = [red, green, blue];
-      await _lightColorChar!.write(command, withoutResponse: false);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Set light color by mode (warm, amber, blue)
-  Future<bool> setLightMode(String mode) async {
-    switch (mode.toLowerCase()) {
-      case 'warm':
-        // Warm white: RGB(255, 200, 150)
-        return await setLightColor(255, 200, 150);
-      case 'amber':
-        // Amber: RGB(255, 191, 0)
-        return await setLightColor(255, 191, 0);
-      case 'blue':
-        // Soft blue: RGB(135, 206, 250)
-        return await setLightColor(135, 206, 250);
-      default:
-        return await setLightColor(255, 200, 150); // Default to warm
-    }
-  }
-
-  /// Set light brightness (0.0 - 1.0)
-  Future<bool> setLightBrightness(double brightness) async {
-    // 1. Try WiFi first
-    if (_hasWifiConnection) {
-      final success = await _espApiService.setLightBrightness(brightness);
-      if (success) return true;
-    }
-
-    if (_lightBrightnessChar == null || !_isConnected) {
-      return false;
-    }
-
-    try {
-      // Clamp brightness to 0.0-1.0 and convert to 0-255
-      brightness = brightness.clamp(0.0, 1.0);
-      final brightnessValue = (brightness * 255).round();
-
-      final command = [brightnessValue];
-      await _lightBrightnessChar!.write(command, withoutResponse: false);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Request temperature reading (manual read)
-  Future<double?> readTemperature() async {
-    if (_temperatureChar == null || !_isConnected) {
-      // Removed print statement: '⚠️ Không thể đọc nhiệt độ: chưa kết nối hoặc characteristic không tồn tại');
-      return null;
-    }
-
-    try {
-      // Removed print statement: '📖 Đang đọc nhiệt độ từ ESP32...');
-      final value = await _temperatureChar!.read();
-      if (value.isNotEmpty) {
-        _parseTemperatureValue(value);
-        return _currentTemperature;
-      } else {
-        // Removed print statement: '⚠️ Không nhận được dữ liệu nhiệt độ');
-        return null;
-      }
-    } catch (e) {
-      // Removed print statement: '❌ Lỗi khi đọc nhiệt độ: $e');
-      return null;
-    }
-  }
-
-  /// Control music playback
-  Future<bool> setMusicControl(String command) async {
-    // 1. Try WiFi first
-    if (_hasWifiConnection) {
-      final success = await _espApiService.setMusicControl(command);
-      if (success) return true;
-    }
-
-    if (_musicControlChar == null || !_isConnected) {
-      return false;
-    }
-
-    try {
-      List<int> cmd;
-      switch (command.toLowerCase()) {
-        case 'play':
-          cmd = [0x01];
-          break;
-        case 'pause':
-          cmd = [0x02];
-          break;
-        case 'stop':
-          cmd = [0x00];
-          break;
-        default:
-          return false;
-      }
-
-      await _musicControlChar!.write(cmd, withoutResponse: false);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Disconnect from device
+  /// Disconnect
   Future<void> disconnect() async {
     try {
-      await _connectionSubscription?.cancel();
-      _connectionSubscription = null;
-
-      if (_connectedDevice != null) {
-        await _connectedDevice!.disconnect();
-        // Removed print statement: '🔌 Đã ngắt kết nối');
-      }
-
-      _clearCharacteristics();
+      await _connection?.close();
+      _connection = null;
       _isConnected = false;
-      _connectedDevice = null;
       notifyListeners();
+      print('🔌 Disconnected locally');
     } catch (e) {
-      // Removed print statement: '❌ Lỗi khi ngắt kết nối: $e');
+      print('❌ Error disconnecting: $e');
     }
   }
 
-  /// Clear all characteristics
-  void _clearCharacteristics() {
-    // Cancel temperature subscription
-    _temperatureSubscription?.cancel();
-    _temperatureSubscription = null;
-
-    _temperatureChar = null;
-    _lightControlChar = null;
-    _lightColorChar = null;
-    _lightBrightnessChar = null;
-    _musicControlChar = null;
-    _voiceDataChar = null;
-    _wifiConfigChar = null;
-
-    // Removed print statement: '🧹 Đã xóa tất cả characteristics và subscriptions');
-  }
-
-  /// Dispose resources
-  @override
-  void dispose() {
-    stopScan();
-    disconnect();
-    _temperatureSubscription?.cancel();
-    _temperatureSubscription = null;
-    _voiceDataSubscription?.cancel();
-    _voiceDataSubscription = null;
-    super.dispose();
-  }
-
-  // --- Hybrid WiFi/BLE Logic ---
-
-  bool get _hasWifiConnection => _deviceIp != null && _deviceIp!.isNotEmpty;
-
-  /// Load device IP from shared preferences
-  Future<void> _loadSavedIp() async {
-    final prefs = await SharedPreferences.getInstance();
-    final ip = prefs.getString('candle_device_ip');
-    if (ip != null && ip.isNotEmpty) {
-      setDeviceIp(ip);
+  /// Send command to ESP32
+  Future<bool> sendCommand(String command) async {
+    if (!_isConnected || _connection == null) return false;
+    try {
+      _connection!.output.add(ascii.encode(command + "\n"));
+      await _connection!.output.allSent;
+      print('📤 Sent: $command');
+      return true;
+    } catch (e) {
+      print('❌ Error sending command: $e');
+      return false;
     }
   }
 
-  /// Set and Save Device IP
+  // Buffer for data handling
+  String _buffer = "";
+
+  /// Handle incoming data
+  void _onDataReceived(Uint8List data) {
+    try {
+      String message = ascii.decode(data);
+      _buffer += message;
+
+      if (_buffer.contains('\n')) {
+        List<String> parts = _buffer.split('\n');
+        if (_buffer.endsWith('\n')) {
+          _buffer = "";
+        } else {
+          _buffer = parts.removeLast();
+        }
+
+        for (String part in parts) {
+          if (part.trim().isNotEmpty) {
+            _processMessage(part.trim());
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ Error processing data: $e');
+    }
+  }
+
+  /// Process individual message (JSON or Text)
+  void _processMessage(String message) {
+    print('📥 Received: $message');
+    _dataStreamController.add(message);
+
+    try {
+      // Parse JSON: {"temp": 25.0, "humi": 60.0, "alert": 0}
+      if (message.startsWith('{') && message.endsWith('}')) {
+        final Map<String, dynamic> json = jsonDecode(message);
+
+        // Sensor Data
+        if (json.containsKey('temp')) {
+          _currentTemperature = json['temp']?.toDouble() ?? _currentTemperature;
+        }
+        if (json.containsKey('humi')) {
+          _currentHumidity = json['humi']?.toDouble() ?? _currentHumidity;
+        }
+        if (json.containsKey('alert')) {
+          _isOverheat = (json['alert'] == 1);
+        }
+
+        // Voice/AI Data
+        if (json.containsKey('user_text')) {
+          _lastUserText = json['user_text'];
+        }
+        if (json.containsKey('ai_text')) {
+          _lastAiResponse = json['ai_text'];
+        }
+        if (json.containsKey('emotion')) {
+          _lastDetectedEmotion = json['emotion'];
+        }
+
+        notifyListeners();
+      } else if (message.contains("EMERGENCY")) {
+        _isOverheat = true;
+        notifyListeners();
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+  }
+
+  // --- Convenience Methods Mapping for Compatibility ---
+
+  Future<bool> setLightOn(bool on) =>
+      sendCommand(on ? "LIGHT_ON" : "LIGHT_OFF");
+
+  Future<bool> setLightBrightness(double value) {
+    // 0.0 - 1.0
+    int val = (value * 255).round().clamp(0, 255);
+    return sendCommand("BRIGHT:$val");
+  }
+
+  Future<bool> setLightMode(String mode) {
+    return sendCommand("MODE:$mode");
+  }
+
+  Future<bool> setMusicControl(String command) {
+    String cmd = "MUSIC_STOP";
+    if (command.toLowerCase() == 'play') cmd = "MUSIC_PLAY";
+    if (command.toLowerCase() == 'pause') cmd = "MUSIC_PAUSE"; // If supported
+    return sendCommand(cmd);
+  }
+
+  // WiFi Methods
   Future<void> setDeviceIp(String ip) async {
     _deviceIp = ip;
-    _espApiService.setBaseUrl(ip);
-
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('candle_device_ip', ip);
-
     notifyListeners();
+  }
+
+  Future<bool> sendWifiCredentials(String jsonString) async {
+    await sendCommand("WIFI:$jsonString"); // Custom protocol adaptation
+    return true;
   }
 }

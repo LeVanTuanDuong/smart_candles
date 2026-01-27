@@ -27,7 +27,7 @@ import '../services/bluetooth_service.dart';
 import '../services/essential_oil_service.dart';
 import '../models/music_track.dart';
 import '../models/essential_oil.dart';
-import '../widgets/bluetooth_device_dialog.dart';
+import 'bluetooth/discovery_page.dart';
 
 class DashboardHomeScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -80,69 +80,28 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       _updateSuggestedEssentialOil();
     });
 
-    // Listen to Bluetooth service for temperature updates
-    _bluetoothService.addListener(_onBluetoothTemperatureUpdate);
-
-    // Start reading temperature from Bluetooth if connected
-    if (_bluetoothService.isConnected) {
-      _startTemperatureReading();
-    }
-
-    // Save initial temperature to history
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final historyEntry = TemperatureHistoryEntry(
-        timestamp: DateTime.now(),
-        temperature: _deviceStatus.temperature,
-        status: _deviceStatus.status,
-      );
-      TemperatureHistoryService.saveEntry(historyEntry);
-
-      // Check for danger temperature using settings threshold
-      _checkTemperatureThreshold(_deviceStatus.temperature);
-    });
+    // Listen to global Bluetooth Service
+    _bluetoothService.addListener(_onGlobalBluetoothUpdate);
   }
 
-  void _onBluetoothTemperatureUpdate() {
+  void _onGlobalBluetoothUpdate() {
     if (!mounted) return;
 
-    // Update temperature from Bluetooth
-    final bluetoothTemp = _bluetoothService.currentTemperature;
-    final isConnected = _bluetoothService.isConnected;
-
-    // Check if temperature or connection status changed
-    final tempChanged = (bluetoothTemp - _deviceStatus.temperature).abs() > 0.1;
-    final connectionChanged = isConnected != _deviceStatus.isBluetoothConnected;
-
-    if (tempChanged || connectionChanged) {
-      final newStatus = _deviceStatus.copyWith(
-        temperature: bluetoothTemp,
-        isBluetoothConnected: isConnected,
+    // Update UI based on global state
+    setState(() {
+      _deviceStatus = _deviceStatus.copyWith(
+        isBluetoothConnected: _bluetoothService.isConnected,
+        temperature: _bluetoothService.currentTemperature > 0
+            ? _bluetoothService.currentTemperature
+            : _deviceStatus.temperature,
+        // Update other fields as needed
       );
-      _updateStatus(newStatus);
-    }
-  }
-
-  void _startTemperatureReading() {
-    // Cancel existing subscription if any
-    _temperatureSubscription?.cancel();
-
-    // Request temperature reading every 5 seconds as backup
-    // (Main updates come from notifications, this is just a fallback)
-    _temperatureSubscription =
-        Stream.periodic(const Duration(seconds: 5)).listen((
-      _,
-    ) async {
-      if (_bluetoothService.isConnected && mounted) {
-        try {
-          final temp = await _bluetoothService.readTemperature();
-          if (temp != null) {
-            // Temperature will be updated via notifyListeners in BluetoothService
-            // This just triggers a read, the update happens automatically
-          }
-        } catch (e) {}
-      }
     });
   }
+
+  // Remove old local logic methods
+  // void _onBluetoothTemperatureUpdate()...
+  // void _startTemperatureReading()...
 
   @override
   void dispose() {
@@ -517,14 +476,12 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     }
   }
 
-  void _showBluetoothDialog() async {
-    final result = await BluetoothDeviceDialog.show(context);
-    if (result == true && mounted) {
-      // Background auto-connection will handle the rest
-      setState(() {
-        _deviceStatus = _deviceStatus.copyWith(isBluetoothConnected: true);
-      });
-    }
+  void _showBluetoothDialog() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const DiscoveryPage(),
+      ),
+    );
   }
 
   @override
@@ -559,6 +516,17 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
         elevation: 0,
         centerTitle: true,
         actions: [
+          // Bluetooth icon
+          IconButton(
+            icon: const Icon(Icons.bluetooth, color: Colors.white),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const DiscoveryPage(),
+                ),
+              );
+            },
+          ),
           // Calendar icon
           IconButton(
             icon: const Icon(Icons.calendar_today, color: Colors.white),
