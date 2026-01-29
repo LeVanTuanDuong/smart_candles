@@ -4,6 +4,7 @@ import '../services/settings_service.dart';
 import '../services/bluetooth_service.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class SettingsScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -27,6 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   double _temperatureThreshold = 50.0;
   final BluetoothService _bluetoothService = BluetoothService();
   bool _isConnecting = false;
+  bool _isManualScan = false;
 
   @override
   void initState() {
@@ -78,6 +80,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     setState(() {
       _isConnecting = true;
+      _isManualScan = false;
     });
 
     try {
@@ -99,7 +102,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
 
       // Start scanning for devices
-      await _bluetoothService.startScan(timeout: const Duration(seconds: 10));
+      await _bluetoothService.startScan(
+        timeout: const Duration(seconds: 10),
+        autoConnect: true,
+      );
 
       // Show scanning message
       if (mounted) {
@@ -124,14 +130,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         );
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              '❌ Không tìm thấy thiết bị. Vui lòng đảm bảo nến đã bật và ở gần.',
+        if (_bluetoothService.lastScanError.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ ${_bluetoothService.lastScanError}'),
+              duration: const Duration(seconds: 3),
             ),
-            duration: Duration(seconds: 3),
-          ),
-        );
+          );
+        }
+        await _showDevicePicker();
+        if (!_bluetoothService.isConnected) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                '❌ Không tìm thấy thiết bị. Vui lòng đảm bảo nến đã bật và ở gần.',
+              ),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -163,6 +180,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         );
+
+        if (errorStr.contains('permission') || errorStr.contains('quyền')) {
+          _showPermissionSettingsSnack();
+        }
       }
     } finally {
       if (mounted) {
@@ -171,6 +192,151 @@ class _SettingsScreenState extends State<SettingsScreen> {
         });
       }
     }
+  }
+
+  Future<void> _scanDevicesOnly() async {
+    if (_isConnecting) return;
+
+    setState(() {
+      _isConnecting = true;
+      _isManualScan = true;
+    });
+
+    try {
+      final isReady = await _bluetoothService.isBluetoothReady();
+      if (!isReady) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                '⚠️ Vui lòng bật Bluetooth trong Cài đặt và thử lại',
+              ),
+              duration: Duration(seconds: 4),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      await _bluetoothService.startScan(
+        timeout: const Duration(seconds: 10),
+        autoConnect: false,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đang quét thiết bị BLE thực tế...'),
+            duration: Duration(seconds: 10),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        final errorStr = e.toString().toLowerCase();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi quét: $e'),
+            duration: const Duration(seconds: 4),
+            backgroundColor: Colors.red,
+          ),
+        );
+        if (errorStr.contains('permission') || errorStr.contains('quyền')) {
+          _showPermissionSettingsSnack();
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isConnecting = false;
+        });
+      }
+    }
+  }
+
+  void _showPermissionSettingsSnack() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'Cần cấp quyền Bluetooth để quét thiết bị',
+        ),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Mở Cài đặt',
+          onPressed: () {
+            openAppSettings();
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showDevicePicker() async {
+    final devices = _bluetoothService.discoveredDevices;
+    if (devices.isEmpty || !mounted) return;
+
+    await showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  'Chọn thiết bị BLE',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              SizedBox(
+                height: 320,
+                child: ListView.separated(
+                  itemCount: devices.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final result = devices[index];
+                    final name = result.device.platformName.isNotEmpty
+                        ? result.device.platformName
+                        : 'Unknown';
+                    return ListTile(
+                      leading: Icon(Icons.bluetooth, color: Colors.blue[600]),
+                      title: Text(name),
+                      subtitle: Text(result.device.remoteId.str),
+                      trailing: Text('${result.rssi} dBm'),
+                      onTap: () async {
+                        Navigator.pop(context);
+                        final connected =
+                            await _bluetoothService.connectToDevice(
+                          result.device,
+                        );
+                        if (connected && mounted) {
+                          _updateStatus(
+                            _deviceStatus.copyWith(isBluetoothConnected: true),
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('✅ Đã kết nối với thiết bị'),
+                              backgroundColor: Colors.green,
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _loadSettings() async {
@@ -262,7 +428,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ? 'Đã kết nối với ESP32'
                         : 'Chưa kết nối',
                   ),
-                  trailing: _isConnecting
+                  trailing: _isConnecting && !_isManualScan
                       ? const SizedBox(
                           width: 20,
                           height: 20,
@@ -288,6 +454,85 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           activeColor: Colors.blue[600],
                         ),
                 ),
+                if (_bluetoothService.isScanning || _isManualScan) ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: LinearProgressIndicator(minHeight: 2),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Thiết bị quét được (BLE thực tế)',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: _scanDevicesOnly,
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Quét'),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_bluetoothService.lastScanError.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    child: Text(
+                      'Lỗi quét: ${_bluetoothService.lastScanError}',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                if (_bluetoothService.discoveredDevices.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    child: Text(
+                      'Chưa có thiết bị nào. Hãy bấm Quét.',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                  )
+                else
+                  Column(
+                    children: _bluetoothService.discoveredDevices.map((result) {
+                      final name = result.device.platformName.isNotEmpty
+                          ? result.device.platformName
+                          : 'Unknown';
+                      return ListTile(
+                        leading: Icon(Icons.bluetooth, color: Colors.blue[600]),
+                        title: Text(name),
+                        subtitle: Text(result.device.remoteId.str),
+                        trailing: Text('${result.rssi} dBm'),
+                        onTap: () async {
+                          final connected =
+                              await _bluetoothService.connectToDevice(
+                            result.device,
+                          );
+                          if (connected && mounted) {
+                            _updateStatus(
+                              _deviceStatus.copyWith(isBluetoothConnected: true),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('✅ Đã kết nối với thiết bị'),
+                                backgroundColor: Colors.green,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
               ],
             ),
 
@@ -299,8 +544,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   secondary: Icon(Icons.lightbulb, color: Colors.amber[700]),
                   title: const Text('Bật/Tắt đèn'),
                   value: _deviceStatus.isLightOn,
-                  onChanged: (value) {
+                  onChanged: (value) async {
+                    final previous = _deviceStatus.isLightOn;
                     _updateStatus(_deviceStatus.copyWith(isLightOn: value));
+
+                    if (!_bluetoothService.isConnected) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              '⚠️ Chưa kết nối Bluetooth. Vui lòng kết nối trước.',
+                            ),
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                      _updateStatus(
+                        _deviceStatus.copyWith(isLightOn: previous),
+                      );
+                      return;
+                    }
+
+                    final ok = await _bluetoothService.setLightOn(value);
+                    if (ok && value) {
+                      await _bluetoothService.setLightMode(
+                        _deviceStatus.lightMode,
+                      );
+                      await _bluetoothService.setLightBrightness(
+                        _deviceStatus.lightBrightness,
+                      );
+                    }
+
+                    if (!ok) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              '❌ Gửi lệnh bật/tắt đèn thất bại',
+                            ),
+                            duration: Duration(seconds: 3),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                      _updateStatus(
+                        _deviceStatus.copyWith(isLightOn: previous),
+                      );
+                    }
                   },
                   activeColor: Colors.amber[600],
                 ),
