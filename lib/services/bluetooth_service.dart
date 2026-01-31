@@ -268,6 +268,27 @@ class BluetoothService extends ChangeNotifier {
     }
   }
 
+  /// Helper to compare UUIDs (handles 16-bit vs 128-bit)
+  bool _uuidsMatch(String uuid1, String uuid2) {
+    // Normalize to lowercase
+    String u1 = uuid1.toLowerCase();
+    String u2 = uuid2.toLowerCase();
+
+    // If exact match
+    if (u1 == u2) return true;
+
+    // Handle 16-bit short UUIDs (e.g. "180f" vs "0000180f-0000-1000-8000-00805f9b34fb")
+    // Standard Base UUID: 0000xxxx-0000-1000-8000-00805f9b34fb
+    String toFullUuid(String uuid) {
+      if (uuid.length == 4) {
+        return "0000$uuid-0000-1000-8000-00805f9b34fb";
+      }
+      return uuid;
+    }
+
+    return toFullUuid(u1) == toFullUuid(u2);
+  }
+
   /// Discover services and characteristics
   Future<void> _discoverServices() async {
     if (_connectedDevice == null) return;
@@ -285,52 +306,44 @@ class BluetoothService extends ChangeNotifier {
           final uuid = characteristic.uuid.toString().toLowerCase();
 
           // Temperature characteristic
-          if (uuid.contains('temperature') ||
-              uuid.contains('temp') ||
-              uuid == temperatureCharUuid.toLowerCase()) {
+          if (_uuidsMatch(uuid, temperatureCharUuid)) {
             _temperatureChar = characteristic;
             // Removed print statement: '✅ Tìm thấy Temperature characteristic');
             _subscribeToTemperature();
           }
 
-          // Light control characteristic
-          if (uuid.contains('light') && uuid.contains('control') ||
-              uuid == lightControlCharUuid.toLowerCase()) {
+          // Light control characteristic (Relay)
+          if (_uuidsMatch(uuid, lightControlCharUuid)) {
             _lightControlChar = characteristic;
             // Removed print statement: '✅ Tìm thấy Light Control characteristic');
           }
 
           // Light color characteristic
-          if (uuid.contains('color') ||
-              uuid == lightColorCharUuid.toLowerCase()) {
+          if (_uuidsMatch(uuid, lightColorCharUuid)) {
             _lightColorChar = characteristic;
             // Removed print statement: '✅ Tìm thấy Light Color characteristic');
           }
 
           // Light brightness characteristic
-          if (uuid.contains('brightness') ||
-              uuid == lightBrightnessCharUuid.toLowerCase()) {
+          if (_uuidsMatch(uuid, lightBrightnessCharUuid)) {
             _lightBrightnessChar = characteristic;
             // Removed print statement: '✅ Tìm thấy Light Brightness characteristic');
           }
 
           // Music control characteristic
-          if (uuid.contains('music') ||
-              uuid == musicControlCharUuid.toLowerCase()) {
+          if (_uuidsMatch(uuid, musicControlCharUuid)) {
             _musicControlChar = characteristic;
             // Removed print statement: '✅ Tìm thấy Music Control characteristic');
           }
 
           // Voice Data characteristic
-          if (uuid.contains('voice') ||
-              uuid == voiceDataCharUuid.toLowerCase()) {
+          if (_uuidsMatch(uuid, voiceDataCharUuid)) {
             _voiceDataChar = characteristic;
             _subscribeToVoiceData();
           }
 
           // WiFi Config characteristic
-          if (uuid.contains('wifi') ||
-              uuid == wifiConfigCharUuid.toLowerCase()) {
+          if (_uuidsMatch(uuid, wifiConfigCharUuid)) {
             _wifiConfigChar = characteristic;
           }
         }

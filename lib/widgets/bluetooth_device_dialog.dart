@@ -94,13 +94,16 @@ class _BluetoothDeviceDialogState extends State<BluetoothDeviceDialog> {
               )
             : ListView.builder(
                 shrinkWrap: true,
-                itemCount: _bluetoothService.scanResults.length,
+                itemCount: _bluetoothService.scanResults
+                    .where((r) => r.device.platformName.isNotEmpty)
+                    .length,
                 itemBuilder: (context, index) {
-                  final result = _bluetoothService.scanResults[index];
+                  final results = _bluetoothService.scanResults
+                      .where((r) => r.device.platformName.isNotEmpty)
+                      .toList();
+                  final result = results[index];
                   final device = result.device;
-                  final name = device.platformName.isNotEmpty
-                      ? device.platformName
-                      : 'Thiết bị không tên';
+                  final name = device.platformName;
                   final isCandle = name.contains(deviceNamePattern);
 
                   return ListTile(

@@ -5,6 +5,7 @@ import '../services/bluetooth_service.dart';
 import '../services/auth_service.dart';
 import '../services/wifi_service.dart';
 import 'login_screen.dart';
+import '../widgets/bluetooth_device_dialog.dart';
 
 class SettingsScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -74,102 +75,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _connectToDevice() async {
-    if (_isConnecting) return;
-
-    setState(() {
-      _isConnecting = true;
-    });
-
-    try {
-      // First, check if Bluetooth is ready
-      final isReady = await _bluetoothService.isBluetoothReady();
-      if (!isReady) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                '⚠️ Vui lòng bật Bluetooth trong Cài đặt và thử lại',
-              ),
-              duration: Duration(seconds: 4),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        return;
-      }
-
-      // Start scanning for devices
-      await _bluetoothService.startScan(timeout: const Duration(seconds: 10));
-
-      // Show scanning message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đang tìm kiếm thiết bị Smart Candle...'),
-            duration: Duration(seconds: 10),
-          ),
-        );
-      }
-
-      // Wait a bit for connection
-      await Future.delayed(const Duration(seconds: 12));
-
-      if (_bluetoothService.isConnected && mounted) {
-        _updateStatus(_deviceStatus.copyWith(isBluetoothConnected: true));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Đã kết nối với Smart Candle'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              '❌ Không tìm thấy thiết bị. Vui lòng đảm bảo nến đã bật và ở gần.',
-            ),
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        String errorMessage = 'Lỗi kết nối: $e';
-
-        // Provide user-friendly error messages
-        final errorStr = e.toString().toLowerCase();
-        if (errorStr.contains('bluetooth must be turned on') ||
-            errorStr.contains('cbmanagerstate') ||
-            errorStr.contains('unsupported') ||
-            errorStr.contains('bluetooth chưa được bật')) {
-          errorMessage =
-              'Vui lòng bật Bluetooth trong Cài đặt của thiết bị và thử lại';
-        } else if (errorStr.contains('permission') ||
-            errorStr.contains('quyền')) {
-          errorMessage =
-              'Vui lòng cấp quyền Bluetooth cho ứng dụng trong Cài đặt';
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            duration: const Duration(seconds: 4),
-            backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: 'Đóng',
-              textColor: Colors.white,
-              onPressed: () {},
-            ),
-          ),
-        );
-      }
-    } finally {
+  Future<void> _showBluetoothDialog() async {
+    final result = await BluetoothDeviceDialog.show(context);
+    if (result == true && mounted) {
       if (mounted) {
         setState(() {
-          _isConnecting = false;
+          _deviceStatus = _deviceStatus.copyWith(isBluetoothConnected: true);
         });
+      }
+      widget.onStatusChanged(_deviceStatus);
+    } else {
+      // If cancelled or failed, ensure switch reflects disconnected state if we were trying to connect
+      if (mounted && !_bluetoothService.isConnected) {
+        setState(() {
+          _deviceStatus = _deviceStatus.copyWith(isBluetoothConnected: false);
+        });
+        widget.onStatusChanged(_deviceStatus);
       }
     }
   }
@@ -426,7 +347,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             await SettingsService.setBluetoothEnabled(value);
                             if (value) {
                               // Connect to ESP32
-                              await _connectToDevice();
+                              await _showBluetoothDialog();
                             } else {
                               // Disconnect
                               await _bluetoothService.disconnect();
