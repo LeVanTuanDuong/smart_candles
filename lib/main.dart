@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'screens/auth_gate.dart';
-import 'screens/splash_screen.dart';
+import 'package:smart_candles/core/core.dart';
+import 'package:smart_candles/features/auth/auth.dart';
 
 void main() {
   // Set up global error handlers first (before any Flutter initialization)
