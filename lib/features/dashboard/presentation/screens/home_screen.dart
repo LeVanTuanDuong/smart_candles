@@ -21,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   DeviceStatus _deviceStatus = DeviceStatus(
     temperature: 35.0,
+    humidity: 52.0,
     isBluetoothConnected: false,
   );
   final BluetoothService _bluetoothService = BluetoothService();

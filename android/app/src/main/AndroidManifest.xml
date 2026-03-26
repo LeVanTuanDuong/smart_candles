@@ -2,6 +2,9 @@
     <!-- Internet permission for Google Sign-In -->
     <uses-permission android:name="android.permission.INTERNET" />
     
+    <!-- Speech-to-text -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- Permissions for image picker -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />

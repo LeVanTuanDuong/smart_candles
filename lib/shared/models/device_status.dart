@@ -14,6 +14,9 @@ enum TemperatureStatus {
 
 class DeviceStatus {
   final double temperature;
+
+  /// Độ ẩm không khí (%), 0–100.
+  final double humidity;
   final TemperatureStatus status;
   final bool isLightOn;
   final String lightMode; // 'warm', 'amber', 'blue'
@@ -25,6 +28,7 @@ class DeviceStatus {
 
   DeviceStatus({
     this.temperature = 25.0,
+    this.humidity = 55.0,
     TemperatureStatus? status,
     this.isLightOn = false,
     this.lightMode = 'warm',
@@ -42,6 +46,7 @@ class DeviceStatus {
 
   DeviceStatus copyWith({
     double? temperature,
+    double? humidity,
     bool? isLightOn,
     String? lightMode,
     double? lightBrightness,
@@ -52,6 +57,7 @@ class DeviceStatus {
   }) {
     return DeviceStatus(
       temperature: temperature ?? this.temperature,
+      humidity: humidity ?? this.humidity,
       isLightOn: isLightOn ?? this.isLightOn,
       lightMode: lightMode ?? this.lightMode,
       lightBrightness: lightBrightness ?? this.lightBrightness,

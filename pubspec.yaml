@@ -55,6 +55,8 @@ dependencies:
   google_mlkit_face_detection: ^0.13.1
   archive: ^3.6.1
   image: ^4.1.7
+  fl_chart: ^1.2.0
+  speech_to_text: ^7.3.0
 
 dev_dependencies:
   flutter_test:
@@ -79,7 +81,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/ai_models/vocab.txt
+    - assets/ai_models/
     - assets/sounds/
     - assets/images/
     - assets/images/tinh_dau/

@@ -19,7 +19,8 @@ class AiInferenceService {
 
   // Hugging Face Config
   // Generate a token at: https://huggingface.co/settings/tokens
-  static const String _hfToken = '';
+  static const String _hfToken =
+      String.fromEnvironment('HF_TOKEN', defaultValue: '');
   static const String _modelUrl =
       'https://router.huggingface.co/v1/chat/completions';
 
@@ -41,54 +42,54 @@ class AiInferenceService {
       }
 
       int completed = 0;
-      // Only 3 models now (removed Face model to reduce memory pressure)
       const totalSteps = 3;
       void markDone() {
         completed += 1;
         onProgress?.call(completed / totalSteps);
       }
 
-      // Load only essential models for chatbot functionality
-      final emotionFuture = Interpreter.fromAsset(
-        'assets/ai_models/emotion_text.tflite',
-        options: options,
-      ).then((value) {
-        _emotionInterpreter = value;
+      try {
+        _emotionInterpreter = await Interpreter.fromAsset(
+          'assets/ai_models/emotion_text.tflite',
+          options: options,
+        );
         debugPrint('✓ Emotion model loaded.');
-        markDone();
-      });
+      } catch (e) {
+        debugPrint(
+          '⚠️ emotion_text.tflite missing or invalid — text emotion uses empty scores. Add file under assets/ai_models/.',
+        );
+        debugPrint('   ($e)');
+      }
+      markDone();
 
-      final minilmFuture = Interpreter.fromAsset(
-        'assets/ai_models/minilm.tflite',
-        options: options,
-      ).then((value) {
-        _minilmInterpreter = value;
+      try {
+        _minilmInterpreter = await Interpreter.fromAsset(
+          'assets/ai_models/minilm.tflite',
+          options: options,
+        );
         debugPrint('✓ MiniLM model loaded.');
-        markDone();
-      });
+      } catch (e) {
+        debugPrint(
+          '⚠️ minilm.tflite missing or invalid — embeddings disabled. Add file under assets/ai_models/.',
+        );
+        debugPrint('   ($e)');
+      }
+      markDone();
 
-      final tokenizerFuture =
-          BertTokenizer.fromAsset('assets/ai_models/vocab.txt').then((value) {
-        _tokenizer = value;
-        debugPrint('✓ Tokenizer loaded.');
-        markDone();
-      });
+      _tokenizer = await BertTokenizer.fromAsset('assets/ai_models/vocab.txt');
+      debugPrint('✓ Tokenizer loaded.');
+      markDone();
 
-      // Load only chatbot models (Emotion + MiniLM + Tokenizer)
-      // Face model removed to prevent memory crash
-      await Future.wait([
-        emotionFuture,
-        minilmFuture,
-        tokenizerFuture,
-      ]);
-
-      // Pre-load Gemma (Background Isolate)
-      // disabled due to OOM on device
       debugPrint('Skipping Gemma model load (Device Resource Limit)...');
-      // await _initializeGemma();
 
       _isInitialized = true;
-      debugPrint('✓ Chatbot AI models ready!');
+      if (_emotionInterpreter != null && _minilmInterpreter != null) {
+        debugPrint('✓ Chatbot AI models ready!');
+      } else {
+        debugPrint(
+          '✓ Chatbot ready (limited local AI — place emotion_text.tflite and minilm.tflite in assets/ai_models/).',
+        );
+      }
     } catch (e, stackTrace) {
       debugPrint('Error initializing AI models: $e');
       debugPrint('Stack: $stackTrace');
@@ -270,8 +271,9 @@ class AiInferenceService {
   }
 
   Future<String> generateGemmaResponse(String prompt) async {
-    if (_hfToken == 'hf_your_token_here') {
-      return "⚠️ Bạn chưa nhập Hugging Face Token.\nHãy vào file `ai_inference_service.dart` để điền token.";
+    if (_hfToken.trim().isEmpty) {
+      return "⚠️ Chưa cấu hình Hugging Face Token.\n"
+          "Chạy app với `--dart-define=HF_TOKEN=hf_...` rồi thử lại.";
     }
 
     try {

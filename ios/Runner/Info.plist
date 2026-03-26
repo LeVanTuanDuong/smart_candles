@@ -45,10 +45,35 @@
 	<string>App cần Bluetooth để kết nối với nến thông minh ESP32</string>
 	<key>NSCameraUsageDescription</key>
 	<string>App cần truy cập camera để chụp ảnh tinh dầu</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>App cần micro để chuyển giọng nói thành văn bản trong chatbot</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>App cần lưu ảnh vào thư viện</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>App cần truy cập thư viện ảnh để thêm hình ảnh tinh dầu</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>App dùng nhận dạng giọng nói để nhập tin nhắn cho chatbot</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>FlutterSceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
