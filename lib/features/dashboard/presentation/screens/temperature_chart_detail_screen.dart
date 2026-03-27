@@ -450,8 +450,8 @@ class _TimeSeriesLineChart extends StatelessWidget {
                   return touchedSpots.map((s) {
                     return LineTooltipItem(
                       '${s.y.toStringAsFixed(1)}$tooltipSuffix',
-                      TextStyle(
-                        color: lineColor,
+                      const TextStyle(
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
                     );

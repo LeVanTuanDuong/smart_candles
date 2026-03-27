@@ -32,23 +32,59 @@ class TemperatureCardHome extends StatelessWidget {
         child: InkWell(
           onTap: () async {
             final entries = await TemperatureHistoryService.loadEntries();
-            final orderedEntries = entries.reversed.toList(); // Oldest -> newest
-            final tempSamples = orderedEntries
-                .map((e) => e.temperature)
-                .toList(growable: false);
-            final humiditySamples = orderedEntries
-                .map((e) => e.humidity)
-                .toList(growable: false);
+            List<double>? tempSamples;
+            List<double>? humiditySamples;
+
+            if (entries.isNotEmpty) {
+              // Build exactly 24 hourly points for the last 24 hours.
+              final now = DateTime.now();
+              final newestFirst = [...entries]
+                ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+              final tempByHour = List<double?>.filled(24, null);
+              final humidityByHour = List<double?>.filled(24, null);
+
+              for (final entry in newestFirst) {
+                final diffHours = now.difference(entry.timestamp).inHours;
+                if (diffHours < 0 || diffHours > 23) continue;
+                final idx = 23 - diffHours; // 0: 23h ago, 23: current hour
+                tempByHour[idx] ??= entry.temperature;
+                humidityByHour[idx] ??= entry.humidity;
+              }
+
+              final hasAnyData = tempByHour.any((v) => v != null);
+              if (hasAnyData) {
+                final fallbackTemp =
+                    tempByHour.firstWhere((v) => v != null, orElse: () => 0.0) ??
+                        0.0;
+                final fallbackHumidity = humidityByHour.firstWhere(
+                      (v) => v != null,
+                      orElse: () => deviceStatus.humidity > 0
+                          ? deviceStatus.humidity
+                          : 50.0,
+                    ) ??
+                    50.0;
+
+                var lastTemp = fallbackTemp;
+                var lastHumidity = fallbackHumidity;
+                tempSamples = tempByHour.map((v) {
+                  if (v != null) lastTemp = v;
+                  return lastTemp;
+                }).toList(growable: false);
+                humiditySamples = humidityByHour.map((v) {
+                  if (v != null) lastHumidity = v;
+                  return lastHumidity;
+                }).toList(growable: false);
+              }
+            }
+
             if (!context.mounted) return;
 
             Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (context) => TemperatureChartDetailScreen(
                   deviceStatus: deviceStatus,
-                  historySamples:
-                      tempSamples.isNotEmpty ? tempSamples : null,
-                  humidityHistorySamples:
-                      humiditySamples.isNotEmpty ? humiditySamples : null,
+                  historySamples: tempSamples,
+                  humidityHistorySamples: humiditySamples,
                 ),
               ),
             );

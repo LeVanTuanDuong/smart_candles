@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -58,13 +59,30 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   final ImagePicker _picker = ImagePicker();
 
   final ConversationManager _conversationManager = ConversationManager();
+  final FlutterTts _tts = FlutterTts();
+  bool _ttsEnabled = true;
+  bool _ttsReady = false;
 
   @override
   void initState() {
     super.initState();
     // Reset conversation manager
     _conversationManager.reset();
+    _initTts();
     _loadGreeting();
+  }
+
+  Future<void> _initTts() async {
+    try {
+      await _tts.setLanguage('vi-VN');
+      await _tts.setPitch(1.0);
+      await _tts.setSpeechRate(0.45);
+      await _tts.awaitSpeakCompletion(true);
+      _ttsReady = true;
+    } catch (e) {
+      _ttsReady = false;
+      debugPrint('TTS init error: $e');
+    }
   }
 
   // Helper to add and save message
@@ -75,6 +93,22 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       });
       _scrollToBottom();
       ChatHistoryService.saveMessage(msg); // Save persistence
+      if (msg.isBot && _ttsEnabled && _ttsReady) {
+        _speakBotMessage(msg.text);
+      }
+    }
+  }
+
+  Future<void> _speakBotMessage(String text) async {
+    final speakText = text.trim();
+    if (speakText.isEmpty) return;
+    if (!_ttsReady) return;
+    try {
+      await _tts.stop();
+      await _tts.speak(speakText);
+    } catch (e) {
+      _ttsReady = false;
+      debugPrint('TTS speak error: $e');
     }
   }
 
@@ -653,6 +687,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   @override
   void dispose() {
     _speech.stop();
+    if (_ttsReady) {
+      _tts.stop();
+    }
     _speechText.dispose();
     _textController.dispose();
     _scrollController.dispose();
@@ -669,6 +706,33 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              _ttsEnabled ? Icons.volume_up : Icons.volume_off,
+              color: Colors.black54,
+            ),
+            tooltip: _ttsEnabled ? 'Tắt đọc phản hồi' : 'Bật đọc phản hồi',
+            onPressed: () async {
+              if (!_ttsReady) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'TTS chưa sẵn sàng. Hãy tắt app và chạy lại để tải plugin.',
+                      ),
+                    ),
+                  );
+                }
+                return;
+              }
+              setState(() {
+                _ttsEnabled = !_ttsEnabled;
+              });
+              if (!_ttsEnabled) {
+                await _tts.stop();
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.history, color: Colors.black54),
             tooltip: 'Lịch sử tin nhắn',
