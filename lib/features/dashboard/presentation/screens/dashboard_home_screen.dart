@@ -2,13 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:smart_candles/shared/models/device_status.dart';
 import 'package:smart_candles/shared/models/mood_type.dart';
-import 'package:smart_candles/shared/models/smartwatch_data.dart';
 import 'package:smart_candles/features/dashboard/presentation/widgets/temperature_card_home.dart';
 import 'package:smart_candles/features/dashboard/presentation/widgets/chatbot_section_home.dart';
 import 'package:smart_candles/features/essential_oil/presentation/widgets/essential_oil_suggestion_card.dart';
 import 'package:smart_candles/features/music/presentation/widgets/music_suggestion_card.dart';
 import 'package:smart_candles/features/music/presentation/widgets/music_control_home.dart';
-import 'package:smart_candles/features/dashboard/presentation/widgets/smartwatch_card_home.dart';
 import 'package:smart_candles/shared/widgets/danger_alert_dialog.dart';
 import 'package:smart_candles/features/dashboard/presentation/widgets/voice_monitor_widget.dart';
 import 'package:smart_candles/features/profile/presentation/screens/profile_screen.dart';
@@ -22,6 +20,7 @@ import 'package:smart_candles/features/music/services/global_music_player_servic
 import 'package:smart_candles/features/dashboard/services/suggestion_service.dart';
 import 'package:smart_candles/features/music/services/music_service.dart';
 import 'package:smart_candles/shared/services/settings_service.dart';
+import 'package:smart_candles/shared/services/local_notification_service.dart';
 import 'package:smart_candles/shared/services/bluetooth_service.dart';
 import 'package:smart_candles/features/essential_oil/services/essential_oil_service.dart';
 import 'package:smart_candles/features/music/models/music_track.dart';
@@ -47,10 +46,6 @@ class DashboardHomeScreen extends StatefulWidget {
 class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   late DeviceStatus _deviceStatus;
   MoodType? _selectedMood;
-  final SmartwatchData _smartwatchData = SmartwatchData(
-    heartRate: 72,
-    isConnected: true,
-  );
   MoodType? _suggestedMood;
   final GlobalMusicPlayerService _globalMusicPlayer =
       GlobalMusicPlayerService();
@@ -59,6 +54,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   StreamSubscription? _temperatureSubscription;
   MusicTrack? _suggestedMusicTrack; // Track from library to display
   EssentialOil? _suggestedEssentialOil; // EssentialOil from library to display
+  DateTime? _lastTempNotifyAt;
+  DateTime? _lastDisconnectNotifyAt;
 
   @override
   void initState() {
@@ -87,16 +84,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       _startTemperatureReading();
     }
 
-    // Save initial temperature to history
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final historyEntry = TemperatureHistoryEntry(
-        timestamp: DateTime.now(),
-        temperature: _deviceStatus.temperature,
-        status: _deviceStatus.status,
-      );
-      TemperatureHistoryService.saveEntry(historyEntry);
-
-      // Check for danger temperature using settings threshold
+      // Only check thresholds, do not save synthetic startup values.
       _checkTemperatureThreshold(_deviceStatus.temperature);
     });
   }
@@ -104,21 +93,50 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   void _onBluetoothTemperatureUpdate() {
     if (!mounted) return;
 
-    // Update temperature from Bluetooth
+    // Update sensor data from Bluetooth
     final bluetoothTemp = _bluetoothService.currentTemperature;
+    final bluetoothHumidity = _bluetoothService.currentHumidity;
     final isConnected = _bluetoothService.isConnected;
 
-    // Check if temperature or connection status changed
+    // Check if temperature/humidity/connection changed
     final tempChanged = (bluetoothTemp - _deviceStatus.temperature).abs() > 0.1;
+    final humidityChanged =
+        (bluetoothHumidity - _deviceStatus.humidity).abs() > 0.1;
     final connectionChanged = isConnected != _deviceStatus.isBluetoothConnected;
 
-    if (tempChanged || connectionChanged) {
+    if (tempChanged || humidityChanged || connectionChanged) {
+      if (connectionChanged) {
+        _maybeNotifyBluetoothConnection(isConnected);
+      }
       final newStatus = _deviceStatus.copyWith(
         temperature: bluetoothTemp,
+        humidity: bluetoothHumidity,
         isBluetoothConnected: isConnected,
       );
       _updateStatus(newStatus);
     }
+  }
+
+  Future<void> _maybeNotifyBluetoothConnection(bool isConnected) async {
+    final notificationsEnabled =
+        await SettingsService.getNotificationsEnabled();
+    if (!notificationsEnabled) return;
+
+    // Notify only on disconnect, with cooldown.
+    if (isConnected) return;
+
+    final now = DateTime.now();
+    final last = _lastDisconnectNotifyAt;
+    if (last != null && now.difference(last) < const Duration(minutes: 2)) {
+      return;
+    }
+    _lastDisconnectNotifyAt = now;
+
+    await LocalNotificationService.showAlert(
+      id: 2001,
+      title: 'Mất kết nối Bluetooth',
+      body: 'Thiết bị nến thông minh đã ngắt kết nối. Mở app để kết nối lại.',
+    );
   }
 
   void _startTemperatureReading() {
@@ -443,10 +461,14 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
     setState(() {
       // Save temperature history if temperature changed
-      if (_deviceStatus.temperature != newStatus.temperature) {
+      if (_deviceStatus.temperature != newStatus.temperature &&
+          newStatus.isBluetoothConnected &&
+          newStatus.temperature > 0 &&
+          newStatus.humidity > 0) {
         final historyEntry = TemperatureHistoryEntry(
           timestamp: DateTime.now(),
           temperature: newStatus.temperature,
+          humidity: newStatus.humidity,
           status: newStatus.status,
         );
         TemperatureHistoryService.saveEntry(historyEntry);
@@ -470,6 +492,17 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
 
       // Check if temperature exceeds threshold
       if (temperature > threshold && notificationsEnabled && mounted) {
+        final now = DateTime.now();
+        final last = _lastTempNotifyAt;
+        if (last == null || now.difference(last) > const Duration(minutes: 3)) {
+          _lastTempNotifyAt = now;
+          await LocalNotificationService.showAlert(
+            id: 2000,
+            title: 'Cảnh báo nhiệt độ cao',
+            body:
+                'Nhiệt độ ${temperature.toStringAsFixed(1)}°C vượt ngưỡng ${threshold.toStringAsFixed(1)}°C.',
+          );
+        }
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             DangerAlertDialog.show(context, temperature);
@@ -479,6 +512,16 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     } catch (e) {
       // Fallback to default threshold (50.0)
       if (temperature > 50.0 && mounted) {
+        final now = DateTime.now();
+        final last = _lastTempNotifyAt;
+        if (last == null || now.difference(last) > const Duration(minutes: 3)) {
+          _lastTempNotifyAt = now;
+          await LocalNotificationService.showAlert(
+            id: 2000,
+            title: 'Cảnh báo nhiệt độ cao',
+            body: 'Nhiệt độ hiện tại ${temperature.toStringAsFixed(1)}°C.',
+          );
+        }
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             DangerAlertDialog.show(context, temperature);
@@ -519,7 +562,6 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   void _showBluetoothDialog() async {
     final result = await BluetoothDeviceDialog.show(context);
     if (result == true && mounted) {
-      // Background auto-connection will handle the rest
       setState(() {
         _deviceStatus = _deviceStatus.copyWith(isBluetoothConnected: true);
       });
@@ -919,7 +961,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
               ),
 
               // Smartwatch Data Card
-              SmartwatchCardHome(smartwatchData: _smartwatchData),
+              // SmartwatchCardHome(smartwatchData: _smartwatchData),
 
               const SizedBox(height: 20),
             ],

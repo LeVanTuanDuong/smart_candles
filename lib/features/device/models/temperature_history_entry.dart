@@ -4,11 +4,13 @@ import 'package:smart_candles/shared/models/device_status.dart';
 class TemperatureHistoryEntry {
   final DateTime timestamp;
   final double temperature;
+  final double humidity;
   final TemperatureStatus status;
 
   TemperatureHistoryEntry({
     required this.timestamp,
     required this.temperature,
+    required this.humidity,
     required this.status,
   });
 
@@ -16,14 +18,18 @@ class TemperatureHistoryEntry {
     return {
       'timestamp': timestamp.toIso8601String(),
       'temperature': temperature,
+      'humidity': humidity,
       'status': status.name,
     };
   }
 
   factory TemperatureHistoryEntry.fromMap(Map<String, dynamic> map) {
+    final rawTemperature = map['temperature'];
+    final rawHumidity = map['humidity'];
     return TemperatureHistoryEntry(
       timestamp: DateTime.parse(map['timestamp']),
-      temperature: map['temperature'] as double,
+      temperature: rawTemperature is num ? rawTemperature.toDouble() : 0.0,
+      humidity: rawHumidity is num ? rawHumidity.toDouble() : 55.0,
       status: TemperatureStatus.values.firstWhere(
         (e) => e.name == map['status'],
         orElse: () => TemperatureStatus.safe,

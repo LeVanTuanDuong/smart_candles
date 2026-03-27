@@ -5,6 +5,9 @@
     <!-- Speech-to-text -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- Notifications (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Permissions for image picker -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />

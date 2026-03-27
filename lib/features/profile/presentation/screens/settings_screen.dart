@@ -5,7 +5,11 @@ import 'package:smart_candles/shared/services/bluetooth_service.dart';
 import 'package:smart_candles/features/auth/services/auth_service.dart';
 import 'package:smart_candles/features/device/services/wifi_service.dart';
 import 'package:smart_candles/features/auth/presentation/screens/login_screen.dart';
+import 'package:smart_candles/features/dashboard/presentation/widgets/smartsun_control_panel.dart';
 import 'package:smart_candles/features/device/presentation/widgets/bluetooth_device_dialog.dart';
+import 'package:smart_candles/features/habits/presentation/screens/habits_screen.dart';
+import 'package:smart_candles/features/schedule_repeat/presentation/screens/weekly_schedule_screen.dart';
+import 'package:smart_candles/features/sunset_sunrise/presentation/screens/solar_automation_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
@@ -302,6 +306,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _toggleLightFromPanel() async {
+    final value = !_deviceStatus.isLightOn;
+    _updateStatus(_deviceStatus.copyWith(isLightOn: value));
+    final success = await _bluetoothService.setLightOn(value);
+    if (!success && mounted) {
+      _updateStatus(_deviceStatus.copyWith(isLightOn: !value));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ Không thể điều khiển đèn')),
+      );
+    }
+  }
+
+  Future<void> _applyLightingPreset({
+    required String mode,
+    required double brightness,
+  }) async {
+    _updateStatus(
+      _deviceStatus.copyWith(
+        isLightOn: true,
+        lightMode: mode,
+        lightBrightness: brightness,
+      ),
+    );
+    await _bluetoothService.setLightOn(true);
+    await _bluetoothService.setLightMode(mode);
+    await _bluetoothService.setLightBrightness(brightness);
+  }
+
+  void _onPanelBrightnessChanged(double value) {
+    _updateStatus(_deviceStatus.copyWith(lightBrightness: value, isLightOn: true));
+  }
+
+  Future<void> _onPanelBrightnessChangeEnd(double value) async {
+    await _bluetoothService.setLightOn(true);
+    await _bluetoothService.setLightBrightness(value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -386,6 +427,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   trailing: const Icon(Icons.edit),
                   onTap: _showIpDialog,
+                ),
+              ],
+            ),
+
+            // Light Settings
+            SmartsunControlPanel(
+              isLightOn: _deviceStatus.isLightOn,
+              isBluetoothConnected: _deviceStatus.isBluetoothConnected,
+              lightMode: _deviceStatus.lightMode,
+              brightness: _deviceStatus.lightBrightness,
+              onTogglePower: _toggleLightFromPanel,
+              onBrightnessChanged: _onPanelBrightnessChanged,
+              onBrightnessChangeEnd: _onPanelBrightnessChangeEnd,
+              quickModes: [
+                LightingQuickMode(
+                  title: 'Warm',
+                  icon: Icons.wb_sunny_outlined,
+                  color: Colors.orange,
+                  onTap: () =>
+                      _applyLightingPreset(mode: 'warm', brightness: 0.78),
+                ),
+                LightingQuickMode(
+                  title: 'Rest',
+                  icon: Icons.spa_outlined,
+                  color: Colors.indigo,
+                  onTap: () =>
+                      _applyLightingPreset(mode: 'amber', brightness: 0.40),
+                ),
+                LightingQuickMode(
+                  title: 'Sleep',
+                  icon: Icons.nightlight_round,
+                  color: Colors.deepPurple,
+                  onTap: () =>
+                      _applyLightingPreset(mode: 'amber', brightness: 0.28),
+                ),
+                LightingQuickMode(
+                  title: 'Comfort',
+                  icon: Icons.self_improvement,
+                  color: Colors.teal,
+                  onTap: () =>
+                      _applyLightingPreset(mode: 'warm', brightness: 0.62),
+                ),
+                LightingQuickMode(
+                  title: 'Favorite',
+                  icon: Icons.favorite_border,
+                  color: Colors.redAccent,
+                  onTap: () =>
+                      _applyLightingPreset(mode: 'blue', brightness: 0.52),
+                ),
+                LightingQuickMode(
+                  title: 'Play Time',
+                  icon: Icons.bedtime,
+                  color: Colors.blueGrey,
+                  onTap: () =>
+                      _applyLightingPreset(mode: 'blue', brightness: 0.35),
                 ),
               ],
             ),
@@ -621,6 +717,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     await SettingsService.setAutoMusicEnabled(value);
                   },
                   activeColor: Colors.purple[600],
+                ),
+                const Divider(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Text(
+                    'Lịch nâng cao: cấu hình lưu trên điện thoại. '
+                    'Điều khiển đèn theo giờ qua Bluetooth (giống mục Đèn ngủ) '
+                    'chưa được nối vào firmware — hiện chỉ thiết lập & xem trước.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                  ),
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.wb_twilight,
+                    color: _deviceStatus.isBluetoothConnected
+                        ? Colors.deepOrange
+                        : Colors.grey,
+                  ),
+                  title: const Text('Theo hoàng hôn / bình minh'),
+                  subtitle: Text(
+                    _deviceStatus.isBluetoothConnected
+                        ? 'Đã kết nối Bluetooth — sẵn sàng khi có lệnh lịch từ app'
+                        : 'Chưa kết nối Bluetooth (vẫn chỉnh được lịch)',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const SolarAutomationScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: Icon(
+                    Icons.repeat,
+                    color: _deviceStatus.isBluetoothConnected
+                        ? Colors.indigo
+                        : Colors.grey,
+                  ),
+                  title: const Text('Lặp theo ngày (T2–CN)'),
+                  subtitle: const Text('Ví dụ 18:00 bật · 06:00 tắt'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const WeeklyScheduleScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: Icon(
+                    Icons.self_improvement,
+                    color: _deviceStatus.isBluetoothConnected
+                        ? Colors.purple
+                        : Colors.grey,
+                  ),
+                  title: const Text('Thói quen trong ngày'),
+                  subtitle: const Text('Thức dậy, thư giãn, đi ngủ…'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const HabitsScreen(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:smart_candles/core/core.dart';
 import 'package:smart_candles/features/auth/auth.dart';
+import 'package:smart_candles/shared/services/local_notification_service.dart';
 
 void main() {
   // Set up global error handlers first (before any Flutter initialization)
@@ -20,6 +21,7 @@ void main() {
     () async {
       // Ensure Flutter is initialized INSIDE the zone
       WidgetsFlutterBinding.ensureInitialized();
+      await LocalNotificationService.initialize();
       runApp(const MyApp());
     },
     (error, stackTrace) {

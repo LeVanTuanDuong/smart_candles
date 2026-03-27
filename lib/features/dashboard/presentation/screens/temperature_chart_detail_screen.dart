@@ -7,8 +7,7 @@ import 'package:smart_candles/shared/models/device_status.dart';
 
 /// Màn hình biểu đồ nhiệt độ & độ ẩm — mở từ [TemperatureCardHome].
 ///
-/// [historySamples] / [humidityHistorySamples]: nếu có thì vẽ đúng dữ liệu;
-/// nếu null thì tạo đường mẫu quanh giá trị hiện tại.
+/// [historySamples] / [humidityHistorySamples]: nếu có thì vẽ đúng dữ liệu thực từ thiết bị.
 class TemperatureChartDetailScreen extends StatelessWidget {
   final DeviceStatus deviceStatus;
   final List<double>? historySamples;
@@ -21,42 +20,20 @@ class TemperatureChartDetailScreen extends StatelessWidget {
     this.humidityHistorySamples,
   });
 
-  static List<FlSpot> _buildSpotsTemperature(
-    double anchor,
-    List<double>? samples,
-  ) {
-    if (samples != null && samples.isNotEmpty) {
-      return List.generate(
-        samples.length,
-        (i) => FlSpot(i.toDouble(), samples[i]),
-      );
-    }
-    const count = 24;
-    return List.generate(count, (i) {
-      final t = i / (count - 1);
-      final wave =
-          math.sin(t * math.pi * 2) * 1.8 + math.cos(t * math.pi * 3) * 0.9;
-      return FlSpot(i.toDouble(), anchor + wave);
-    });
+  static List<FlSpot> _buildSpotsTemperature(List<double>? samples) {
+    if (samples == null || samples.isEmpty) return const [];
+    return List.generate(
+      samples.length,
+      (i) => FlSpot(i.toDouble(), samples[i]),
+    );
   }
 
-  static List<FlSpot> _buildSpotsHumidity(
-    double anchorPercent,
-    List<double>? samples,
-  ) {
-    if (samples != null && samples.isNotEmpty) {
-      return List.generate(
-        samples.length,
-        (i) => FlSpot(i.toDouble(), samples[i].clamp(0.0, 100.0)),
-      );
-    }
-    const count = 24;
-    return List.generate(count, (i) {
-      final t = i / (count - 1);
-      final wave =
-          math.sin(t * math.pi * 2) * 3.5 + math.cos(t * math.pi * 3) * 2.0;
-      return FlSpot(i.toDouble(), (anchorPercent + wave).clamp(0.0, 100.0));
-    });
+  static List<FlSpot> _buildSpotsHumidity(List<double>? samples) {
+    if (samples == null || samples.isEmpty) return const [];
+    return List.generate(
+      samples.length,
+      (i) => FlSpot(i.toDouble(), samples[i].clamp(0.0, 100.0)),
+    );
   }
 
   static Color _humidityColor(double h) {
@@ -73,27 +50,26 @@ class TemperatureChartDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tempSpots =
-        _buildSpotsTemperature(deviceStatus.temperature, historySamples);
-    final humSpots = _buildSpotsHumidity(
-      deviceStatus.humidity,
-      humidityHistorySamples,
-    );
+    final tempSpots = _buildSpotsTemperature(historySamples);
+    final humSpots = _buildSpotsHumidity(humidityHistorySamples);
+    final hasTempHistory = tempSpots.isNotEmpty;
+    final hasHumidityHistory = humSpots.isNotEmpty;
+    final hasCurrentSensorData = deviceStatus.temperature > 0 && deviceStatus.humidity > 0;
 
-    final tempYs = tempSpots.map((s) => s.y).toList();
+    final tempYs = hasTempHistory ? tempSpots.map((s) => s.y).toList() : <double>[deviceStatus.temperature];
     final minTempY = (tempYs.reduce(math.min) - 2).floorToDouble();
     final maxTempY = (tempYs.reduce(math.max) + 2).ceilToDouble();
     final tempLineColor = deviceStatus.status.color;
 
-    final humYs = humSpots.map((s) => s.y).toList();
+    final humYs = hasHumidityHistory ? humSpots.map((s) => s.y).toList() : <double>[deviceStatus.humidity];
     final minHumY = math.max(0.0, humYs.reduce(math.min) - 5).floorToDouble();
     final maxHumY = math.min(100.0, humYs.reduce(math.max) + 5).ceilToDouble();
     final humLineColor = _humidityColor(deviceStatus.humidity);
 
     final timeFmt = DateFormat('HH:mm');
-    final demoNote = deviceStatus.isBluetoothConnected
-        ? 'Nguồn: thiết bị đã kết nối'
-        : 'Bluetooth chưa kết nối — biểu đồ mẫu quanh giá trị hiện tại';
+    final dataSourceNote = deviceStatus.isBluetoothConnected
+        ? 'Nguồn: dữ liệu thực từ ESP32 qua BLE'
+        : 'Bluetooth chưa kết nối';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F9FC),
@@ -144,7 +120,9 @@ class TemperatureChartDetailScreen extends StatelessWidget {
                               textBaseline: TextBaseline.alphabetic,
                               children: [
                                 Text(
-                                  deviceStatus.temperature.toStringAsFixed(1),
+                                  hasCurrentSensorData
+                                      ? deviceStatus.temperature.toStringAsFixed(1)
+                                      : '--',
                                   style: TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
@@ -208,9 +186,11 @@ class TemperatureChartDetailScreen extends StatelessWidget {
                                 textBaseline: TextBaseline.alphabetic,
                                 children: [
                                   Text(
-                                    deviceStatus.humidity
-                                        .clamp(0, 100)
-                                        .toStringAsFixed(0),
+                                    hasCurrentSensorData
+                                        ? deviceStatus.humidity
+                                            .clamp(0, 100)
+                                            .toStringAsFixed(0)
+                                        : '--',
                                     style: TextStyle(
                                       fontSize: 28,
                                       fontWeight: FontWeight.bold,
@@ -237,7 +217,9 @@ class TemperatureChartDetailScreen extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: Text(
-                                      _humidityLabel(deviceStatus.humidity),
+                                      hasCurrentSensorData
+                                          ? _humidityLabel(deviceStatus.humidity)
+                                          : 'Chưa có',
                                       style: TextStyle(
                                         color: humLineColor,
                                         fontWeight: FontWeight.w600,
@@ -255,7 +237,7 @@ class TemperatureChartDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    demoNote,
+                    dataSourceNote,
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
@@ -264,9 +246,7 @@ class TemperatureChartDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            historySamples == null
-                ? 'Biểu đồ nhiệt độ (mẫu 24 điểm)'
-                : 'Lịch sử nhiệt độ',
+            'Lịch sử nhiệt độ',
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -274,24 +254,27 @@ class TemperatureChartDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            height: 260,
-            child: _TimeSeriesLineChart(
-              spots: tempSpots,
-              minY: minTempY,
-              maxY: maxTempY,
-              lineColor: tempLineColor,
-              leftAxisSuffix: '°',
-              tooltipSuffix: ' °C',
-              timeFmt: timeFmt,
-              horizontalInterval: (maxTempY - minTempY) > 8 ? 4 : 2,
+          if (hasTempHistory)
+            SizedBox(
+              height: 260,
+              child: _TimeSeriesLineChart(
+                spots: tempSpots,
+                minY: minTempY,
+                maxY: maxTempY,
+                lineColor: tempLineColor,
+                leftAxisSuffix: '°',
+                tooltipSuffix: ' °C',
+                timeFmt: timeFmt,
+                horizontalInterval: (maxTempY - minTempY) > 8 ? 4 : 2,
+              ),
+            )
+          else
+            const _NoSensorDataCard(
+              message: 'Chưa có dữ liệu nhiệt độ thực tế từ ESP32.',
             ),
-          ),
           const SizedBox(height: 24),
           Text(
-            humidityHistorySamples == null
-                ? 'Biểu đồ độ ẩm (mẫu 24 điểm)'
-                : 'Lịch sử độ ẩm',
+            'Lịch sử độ ẩm',
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -299,20 +282,53 @@ class TemperatureChartDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            height: 260,
-            child: _TimeSeriesLineChart(
-              spots: humSpots,
-              minY: minHumY,
-              maxY: maxHumY,
-              lineColor: humLineColor,
-              leftAxisSuffix: '%',
-              tooltipSuffix: ' %',
-              timeFmt: timeFmt,
-              horizontalInterval: (maxHumY - minHumY) > 20 ? 10 : 5,
+          if (hasHumidityHistory)
+            SizedBox(
+              height: 260,
+              child: _TimeSeriesLineChart(
+                spots: humSpots,
+                minY: minHumY,
+                maxY: maxHumY,
+                lineColor: humLineColor,
+                leftAxisSuffix: '%',
+                tooltipSuffix: ' %',
+                timeFmt: timeFmt,
+                horizontalInterval: (maxHumY - minHumY) > 20 ? 10 : 5,
+              ),
+            )
+          else
+            const _NoSensorDataCard(
+              message: 'Chưa có dữ liệu độ ẩm thực tế từ ESP32.',
             ),
-          ),
         ],
+      ),
+    );
+  }
+}
+
+class _NoSensorDataCard extends StatelessWidget {
+  final String message;
+
+  const _NoSensorDataCard({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SizedBox(
+        height: 120,
+        child: Center(
+          child: Text(
+            message,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
       ),
     );
   }

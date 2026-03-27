@@ -9,7 +9,6 @@ import 'package:smart_candles/features/favorites/presentation/screens/favorites_
 import 'package:smart_candles/features/history/presentation/screens/statistics_screen.dart';
 import 'package:smart_candles/features/profile/presentation/screens/help_support_screen.dart';
 import 'package:smart_candles/features/profile/presentation/screens/about_screen.dart';
-
 class ProfileScreen extends StatefulWidget {
   final DeviceStatus deviceStatus;
   final Function(DeviceStatus) onStatusChanged;

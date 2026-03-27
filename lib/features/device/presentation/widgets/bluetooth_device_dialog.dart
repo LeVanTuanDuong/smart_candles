@@ -18,6 +18,7 @@ class BluetoothDeviceDialog extends StatefulWidget {
 class _BluetoothDeviceDialogState extends State<BluetoothDeviceDialog> {
   final BluetoothService _bluetoothService = BluetoothService();
   bool _isScanning = false;
+  bool _dialogClosed = false;
 
   @override
   void initState() {
@@ -38,8 +39,12 @@ class _BluetoothDeviceDialogState extends State<BluetoothDeviceDialog> {
       setState(() {
         _isScanning = _bluetoothService.isScanning;
       });
-      if (_bluetoothService.isConnected) {
-        Navigator.of(context).pop(true);
+      if (_bluetoothService.isConnected && !_dialogClosed) {
+        final navigator = Navigator.of(context);
+        if (navigator.canPop()) {
+          _dialogClosed = true;
+          navigator.pop(true);
+        }
       }
     }
   }

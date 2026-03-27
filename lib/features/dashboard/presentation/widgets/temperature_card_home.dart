@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_candles/features/device/services/temperature_history_service.dart';
 import 'package:smart_candles/features/dashboard/presentation/screens/temperature_chart_detail_screen.dart';
 import 'package:smart_candles/shared/models/device_status.dart';
 
@@ -14,6 +15,14 @@ class TemperatureCardHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasRealSensorData = deviceStatus.temperature > 0 && deviceStatus.humidity > 0;
+    final tempText = hasRealSensorData
+        ? '${deviceStatus.status.label} - ${deviceStatus.temperature.toStringAsFixed(1)}°C'
+        : 'Chưa có dữ liệu cảm biến';
+    final humidityText = hasRealSensorData
+        ? 'Độ ẩm ${deviceStatus.humidity.clamp(0, 100).toStringAsFixed(0)}% · Chạm xem biểu đồ'
+        : 'Kết nối BLE để nhận nhiệt độ/độ ẩm thực tế';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Material(
@@ -21,11 +30,25 @@ class TemperatureCardHome extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () {
+          onTap: () async {
+            final entries = await TemperatureHistoryService.loadEntries();
+            final orderedEntries = entries.reversed.toList(); // Oldest -> newest
+            final tempSamples = orderedEntries
+                .map((e) => e.temperature)
+                .toList(growable: false);
+            final humiditySamples = orderedEntries
+                .map((e) => e.humidity)
+                .toList(growable: false);
+            if (!context.mounted) return;
+
             Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (context) => TemperatureChartDetailScreen(
                   deviceStatus: deviceStatus,
+                  historySamples:
+                      tempSamples.isNotEmpty ? tempSamples : null,
+                  humidityHistorySamples:
+                      humiditySamples.isNotEmpty ? humiditySamples : null,
                 ),
               ),
             );
@@ -81,7 +104,7 @@ class TemperatureCardHome extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${deviceStatus.status.label} - ${deviceStatus.temperature.toStringAsFixed(1)}°C',
+                          tempText,
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -90,7 +113,7 @@ class TemperatureCardHome extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Độ ẩm ${deviceStatus.humidity.clamp(0, 100).toStringAsFixed(0)}% · Chạm xem biểu đồ',
+                          humidityText,
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[800],

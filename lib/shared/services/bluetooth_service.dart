@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as ble;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -52,6 +51,7 @@ class BluetoothService extends ChangeNotifier {
   bool _isConnected = false;
   bool _isScanning = false;
   double _currentTemperature = 25.0;
+  double _currentHumidity = 55.0;
 
   // Voice Data State
   String _lastUserText = '';
@@ -69,6 +69,7 @@ class BluetoothService extends ChangeNotifier {
   bool get isConnected => _isConnected;
   ble.BluetoothDevice? get connectedDevice => _connectedDevice;
   double get currentTemperature => _currentTemperature;
+  double get currentHumidity => _currentHumidity;
   String get lastUserText => _lastUserText;
   String get lastAiResponse => _lastAiResponse;
   String get lastDetectedEmotion => _lastDetectedEmotion;
@@ -454,50 +455,67 @@ class BluetoothService extends ChangeNotifier {
     }
   }
 
-  /// Parse temperature value from different formats
+  /// Parse sensor payload from BLE (temperature and optional humidity).
   void _parseTemperatureValue(List<int> value) {
     try {
       double? temperature;
+      double? humidity;
 
-      // Try parsing as float (4 bytes) - most common for ESP32
-      if (value.length >= 4) {
+      // Prefer text payloads first (JSON/CSV) because ESP32 sends JSON.
+      String? text;
+      try {
+        text = utf8.decode(value, allowMalformed: true).trim();
+      } catch (_) {
+        text = null;
+      }
+      if (text != null && text.isNotEmpty) {
+        debugPrint('BLE sensor raw: $text');
+      }
+
+      if (text != null && text.isNotEmpty) {
+        // Try JSON first: {"temperature":30.1,"humidity":65}
+        try {
+          final json = jsonDecode(text);
+          if (json is Map<String, dynamic>) {
+            if (json['temperature'] != null) {
+              temperature = (json['temperature'] as num).toDouble();
+            } else if (json['temp'] != null) {
+              temperature = (json['temp'] as num).toDouble();
+            } else if (json['t'] != null) {
+              temperature = (json['t'] as num).toDouble();
+            }
+
+            if (json['humidity'] != null) {
+              humidity = (json['humidity'] as num).toDouble();
+            } else if (json['hum'] != null) {
+              humidity = (json['hum'] as num).toDouble();
+            } else if (json['h'] != null) {
+              humidity = (json['h'] as num).toDouble();
+            }
+          }
+        } catch (_) {
+          // Not JSON, try CSV and single numeric text.
+        }
+
+        // Try CSV text "temp,humidity"
+        if (temperature == null) {
+          final parts = text.split(',');
+          if (parts.length >= 2) {
+            temperature = double.tryParse(parts[0].trim());
+            humidity = double.tryParse(parts[1].trim());
+          } else {
+            // Fallback to single numeric text as temperature
+            temperature = double.tryParse(text);
+          }
+        }
+      }
+
+      // Fallback to binary float only when text parsing failed.
+      if (temperature == null && value.length >= 4) {
         try {
           final buffer = Uint8List.fromList(value).buffer.asByteData();
           temperature = buffer.getFloat32(0, Endian.little);
-          // Removed print statement: '🌡️ Nhiệt độ (float): ${temperature.toStringAsFixed(1)}°C');
-        } catch (e) {
-          // Not a float, try other formats
-        }
-      }
-
-      // Try parsing as JSON string
-      if (temperature == null) {
-        try {
-          final str = utf8.decode(value);
-          final json = jsonDecode(str);
-          if (json['temperature'] != null) {
-            temperature = (json['temperature'] as num).toDouble();
-            // Removed print statement: '🌡️ Nhiệt độ (JSON): ${temperature.toStringAsFixed(1)}°C');
-          } else if (json['temp'] != null) {
-            temperature = (json['temp'] as num).toDouble();
-            // Removed print statement: '🌡️ Nhiệt độ (JSON temp): ${temperature.toStringAsFixed(1)}°C');
-          }
-        } catch (e) {
-          // Not JSON, try plain string
-        }
-      }
-
-      // Try parsing as plain string number
-      if (temperature == null) {
-        try {
-          final str = utf8.decode(value).trim();
-          temperature = double.tryParse(str);
-          if (temperature != null) {
-            // Removed print statement: '🌡️ Nhiệt độ (string): ${temperature.toStringAsFixed(1)}°C');
-          }
-        } catch (e) {
-          // Not a parseable string
-        }
+        } catch (_) {}
       }
 
       // Try parsing as 2-byte integer (temperature * 10, e.g., 350 = 35.0°C)
@@ -512,16 +530,27 @@ class BluetoothService extends ChangeNotifier {
         }
       }
 
+      bool changed = false;
+
       // Update temperature if successfully parsed
       if (temperature != null && temperature >= -50 && temperature <= 150) {
         // Validate temperature range (reasonable for candle)
         if (_currentTemperature != temperature) {
           _currentTemperature = temperature;
-          // Removed print statement: '🌡️ ✅ Cập nhật nhiệt độ: ${temperature.toStringAsFixed(1)}°C');
-          notifyListeners();
+          changed = true;
         }
-      } else {
-        // Removed print statement: '⚠️ Nhiệt độ không hợp lệ: $temperature');
+      }
+
+      // Update humidity if provided
+      if (humidity != null && humidity >= 0 && humidity <= 100) {
+        if (_currentHumidity != humidity) {
+          _currentHumidity = humidity;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        notifyListeners();
       }
     } catch (e) {
       // Removed print statement: '⚠️ Lỗi khi parse nhiệt độ: $e, Raw data: $value');
